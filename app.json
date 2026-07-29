@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Sanwitch Connect",
+    "slug": "sanwitch-connect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#060b19",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#060b19"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "backgroundColor": "#060b19"
+    },
+    "android": {
+      "package": "com.sanwitch.connect",
+      "backgroundColor": "#060b19",
+      "permissions": [
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#060b19"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f77c34e0-d4e5-4933-97c4-e7f52248f24b"
+      }
+    },
+    "owner": "vaigai-valley"
+  }
+}
