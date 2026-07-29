@@ -30,13 +30,20 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Ensure Android Project & Gradlew Exist
+        run: |
+          if [ ! -f "android/gradlew" ]; then
+            echo "Gradlew not found, running expo prebuild..."
+            npx expo prebuild --platform android --clean
+          fi
+
+      - name: Make Gradlew Executable
+        run: chmod +x android/gradlew
+
       - name: Bundle Offline JavaScript Bundle
         run: |
           mkdir -p android/app/src/main/assets
           npx expo export:embed --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
-
-      - name: Make Gradlew Executable
-        run: chmod +x android/gradlew
 
       - name: Build Native Standalone APK
         run: |
