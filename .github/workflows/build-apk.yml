@@ -1,31 +1,20 @@
-name: Build Android APK
+name: Build Native Android APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build Android APK
+    name: Build Native Android APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Free Disk Space on Runner
-        run: |
-          echo "Free disk space before cleanup:"
-          df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          echo "Free disk space after cleanup:"
-          df -h
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -41,18 +30,15 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Generate Native Android Code (Expo Prebuild)
-        run: npx expo prebuild --platform android --clean
-
-      - name: Make Gradlew Executable
-        run: chmod +x android/gradlew
-
-      - name: Bundle Offline JavaScript Bundle into APK
+      - name: Bundle Offline JavaScript Bundle
         run: |
           mkdir -p android/app/src/main/assets
           npx expo export:embed --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
 
-      - name: Build Standalone Android APK
+      - name: Make Gradlew Executable
+        run: chmod +x android/gradlew
+
+      - name: Build Native Standalone APK
         run: |
           cd android
           ./gradlew assembleDebug --no-daemon
@@ -60,6 +46,6 @@ jobs:
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: SanwitchConnect-Debug-APK
+          name: SanwitchConnect-Native-APK
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
