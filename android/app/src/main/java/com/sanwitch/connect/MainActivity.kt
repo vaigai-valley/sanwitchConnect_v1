@@ -2,32 +2,58 @@ package com.sanwitch.connect
 
 import android.os.Build
 import android.os.Bundle
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-
+import android.os.Handler
+import android.os.Looper
+import android.view.View
+import android.view.ViewGroup
+import android.widget.LinearLayout
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
-
 import expo.modules.ReactActivityDelegateWrapper
 
 class MainActivity : ReactActivity() {
+  private var splashOverlayView: View? = null
+
   override fun onCreate(savedInstanceState: Bundle?) {
-    installSplashScreen()
-    setTheme(R.style.AppTheme);
+    setTheme(R.style.AppTheme)
     super.onCreate(null)
+    setupNativeSplashLauncher()
   }
 
-  /**
-   * Returns the name of the main component registered from JavaScript. This is used to schedule
-   * rendering of the component.
-   */
+  private fun setupNativeSplashLauncher() {
+    try {
+      val rootView = window.decorView.findViewById<ViewGroup>(android.R.id.content)
+      splashOverlayView = layoutInflater.inflate(R.layout.launch_screen, rootView, false)
+      rootView.addView(splashOverlayView)
+
+      val stage1View = splashOverlayView?.findViewById<LinearLayout>(R.id.stage1View)
+      val stage2View = splashOverlayView?.findViewById<LinearLayout>(R.id.stage2View)
+
+      // Stage 1 (0.0s - 1.8s): Vaigai Valley
+      stage1View?.visibility = View.VISIBLE
+      stage2View?.visibility = View.GONE
+
+      // Stage 2 (1.8s - 3.6s): Euantix 8genn AI
+      Handler(Looper.getMainLooper()).postDelayed({
+        stage1View?.visibility = View.GONE
+        stage2View?.visibility = View.VISIBLE
+      }, 1800)
+
+      // Stage 3 (3.6s+): Remove Native Splash Overlay
+      Handler(Looper.getMainLooper()).postDelayed({
+        splashOverlayView?.let { overlay ->
+          (overlay.parent as? ViewGroup)?.removeView(overlay)
+        }
+      }, 3600)
+    } catch (e: Exception) {
+      e.printStackTrace()
+    }
+  }
+
   override fun getMainComponentName(): String = "main"
 
-  /**
-   * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]
-   * which allows you to enable New Architecture with a single boolean flags [fabricEnabled]
-   */
   override fun createReactActivityDelegate(): ReactActivityDelegate {
     return ReactActivityDelegateWrapper(
           this,
@@ -39,22 +65,13 @@ class MainActivity : ReactActivity() {
           ){})
   }
 
-  /**
-    * Align the back button behavior with Android S
-    * where moving root activities to background instead of finishing activities.
-    * @see <a href="https://developer.android.com/reference/android/app/Activity#onBackPressed()">onBackPressed</a>
-    */
   override fun invokeDefaultOnBackPressed() {
       if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
           if (!moveTaskToBack(false)) {
-              // For non-root activities, use the default implementation to finish them.
               super.invokeDefaultOnBackPressed()
           }
           return
       }
-
-      // Use the default back button implementation on Android S
-      // because it's doing more than [Activity.moveTaskToBack] in fact.
       super.invokeDefaultOnBackPressed()
   }
 }

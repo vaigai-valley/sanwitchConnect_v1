@@ -58,13 +58,9 @@ const THEME = {
 
 export default function App() {
   const [activeView, setActiveView] = useState('auth'); // Default to auth until login check
-  const [splashStep, setSplashStep] = useState(0);
-  const [isAppLoading, setIsAppLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
-    const timer1 = setTimeout(() => isMounted && setSplashStep(1), 1800);
-    const timer2 = setTimeout(() => isMounted && setSplashStep(2), 3600);
 
     const init = async () => {
       try {
@@ -98,25 +94,13 @@ export default function App() {
       } catch (e) {
         console.log('Load Error', e);
         if (isMounted) setActiveView('auth');
-      } finally {
-        if (isMounted) setIsAppLoading(false);
       }
     };
 
     init();
 
-    const failSafeTimer = setTimeout(() => {
-      if (isMounted) {
-        setIsAppLoading(false);
-        setSplashStep(2);
-      }
-    }, 3800);
-
     return () => {
       isMounted = false;
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(failSafeTimer);
     };
   }, []);
   const [user, setUser] = useState(null);
@@ -772,44 +756,6 @@ export default function App() {
           </View>
         );
       };
-
-      const RenderSplash = () => (
-        <View style={styles.splashContainer}>
-          <View style={styles.splashMain}>
-            <Image
-              source={require('./assets/icon.png')}
-              style={{ width: 140, height: 140, tintColor: '#ffffff' }}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.splashFooter}>
-            {splashStep === 0 ? (
-              <View style={{ alignItems: 'center' }}>
-                <Text style={styles.splashFrom}>from</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                  <Image
-                    source={require('./assets/logo.png')}
-                    style={{ width: 36, height: 36, marginRight: 10, tintColor: '#ffffff' }}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.splashBrand}>Vaigai Valley</Text>
-                </View>
-              </View>
-            ) : (
-              <View style={{ alignItems: 'center' }}>
-                <Text style={[styles.splashFrom, { fontSize: 11 }]}>Built and maintained by</Text>
-                <Image
-                  source={require('./assets/8genn_ai.png')}
-                  style={{ width: 160, height: 45, marginTop: 8, tintColor: '#ffffff' }}
-                  resizeMode="contain"
-                />
-              </View>
-            )}
-          </View>
-        </View>
-      );
-
-      if (splashStep < 2 || isAppLoading) return <RenderSplash />;
 
       return (
         <SafeAreaProvider>
