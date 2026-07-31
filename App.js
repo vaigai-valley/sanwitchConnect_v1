@@ -17,7 +17,8 @@ import {
   PermissionsAndroid,
   Platform,
   KeyboardAvoidingView,
-  Image
+  Image,
+  Linking
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, LogOut, KeyRound, Download, Smartphone, Share2, PackageCheck, ExternalLink, Sparkles } from 'lucide-react-native';
@@ -228,21 +229,28 @@ export default function App() {
 </html>`;
   };
 
-  const handleGeneratePwa = () => {
+  const handleAutoInstallPwa = async () => {
     const html = generateStandalonePwaHtml(exportAppName || 'My Sanwitch App');
     setExportedHtmlSnippet(html);
     setIsPwaGenerated(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    customAlert('PWA Generated! ⚡', `Your standalone app "${exportAppName}" is ready! Copy the HTML or install directly to home screen.`, 'success');
-  };
 
-  const pinHomeShortcut = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    customAlert(
-      'Pin App Shortcut 📲',
-      `App "${exportAppName}" ready for 1-click home screen pin! In your mobile browser, tap Menu (⋮ or Share) -> "Add to Home Screen".`,
-      'info'
-    );
+    const encodedDataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+
+    try {
+      await Linking.openURL(encodedDataUri);
+      customAlert(
+        '🚀 Launching PWA Installer!',
+        `Opening "${exportAppName}" in Android Browser! Tap Menu (⋮) -> "Add to Home Screen" or "Install App" to place a dedicated app icon on your device home screen in 1 second!`,
+        'success'
+      );
+    } catch (e) {
+      customAlert(
+        'PWA App Ready! ⚡',
+        `Your app "${exportAppName}" is generated! Copy the single-file HTML bundle to install on your Android home screen.`,
+        'success'
+      );
+    }
   };
 
   const customAlert = (title, message, buttonsOrType = null) => {
@@ -1258,14 +1266,14 @@ export default function App() {
               </View>
             </Modal>
 
-            {/* 1-CLICK EXPORT / INSTALL APP MODAL */}
+            {/* 1-CLICK INSTANT PWA APP INSTALL MODAL */}
             <Modal visible={isExportModalVisible} animationType="slide" transparent={true} onRequestClose={() => setIsExportModalVisible(false)}>
               <View style={styles.modalOverlay}>
                 <View style={styles.modalContentLarge}>
                   <View style={styles.modalHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Sparkles size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                      <Text style={styles.modalTitle}>App Creator Engine</Text>
+                      <Text style={styles.modalTitle}>1-Click PWA App Installer</Text>
                     </View>
                     <TouchableOpacity onPress={() => setIsExportModalVisible(false)}>
                       <X size={20} color={THEME.textMuted} />
@@ -1274,7 +1282,7 @@ export default function App() {
 
                   <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
                     <Text style={{ fontSize: 13, color: THEME.textMuted, marginBottom: 16 }}>
-                      Turn your widgets, connection settings, and telemetry into a <Text style={{ color: THEME.primary, fontWeight: '700' }}>Standalone Mobile App</Text> with 1 click!
+                      Convert your custom widgets, connection settings, and telemetry into a <Text style={{ color: THEME.primary, fontWeight: '700' }}>Standalone PWA Mobile App</Text> installed directly on your Android home screen in 1 second!
                     </Text>
 
                     {/* APP NAME INPUT */}
@@ -1289,24 +1297,24 @@ export default function App() {
                       />
                     </View>
 
-                    {/* OPTION 1: 1-CLICK PWA GENERATOR */}
-                    <View style={[styles.exportCardOption, { borderColor: THEME.primary }]}>
+                    {/* 1-CLICK INSTANT PWA APP INSTALLATION CARD */}
+                    <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                        <Zap size={18} color={THEME.primary} style={{ marginRight: 8 }} />
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.text }}>1-Click Instant PWA App</Text>
+                        <Zap size={20} color={THEME.primary} style={{ marginRight: 8 }} />
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>Instant Android PWA Installation</Text>
                       </View>
-                      <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12 }}>
-                        Generates an installable, full-screen offline mobile app. Tap install to place a dedicated app icon on your phone's Home Screen in 1 second!
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 14, lineHeight: 18 }}>
+                        Generates a single-file standalone PWA HTML mobile app with embedded Web App Manifest (`manifest.json`) and offline Service Worker (`sw.js`).
                       </Text>
 
-                      <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleGeneratePwa}>
-                        <Sparkles size={16} color={THEME.background} style={{ marginRight: 6 }} />
-                        <Text style={styles.exportBtnPrimaryText}>⚡ Generate Standalone PWA App</Text>
+                      <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleAutoInstallPwa}>
+                        <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
+                        <Text style={styles.exportBtnPrimaryText}>⚡ INSTALL PWA APP ON ANDROID</Text>
                       </TouchableOpacity>
 
                       {isPwaGenerated && (
-                        <View style={{ marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: 'rgba(56, 189, 248, 0.1)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)' }}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.primary, marginBottom: 8 }}>APP HTML CODE READY! (Single File PWA)</Text>
+                        <View style={{ marginTop: 14, padding: 12, borderRadius: 10, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.4)' }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}>✅ PWA APP GENERATED & READY!</Text>
                           <TouchableOpacity style={styles.exportBtnSecondary} onPress={() => {
                             customAlert('Copied! 📋', 'PWA Single-File HTML bundle copied to clipboard! Save as index.html or open in browser to install to Home Screen.', 'success');
                           }}>
@@ -1315,36 +1323,6 @@ export default function App() {
                           </TouchableOpacity>
                         </View>
                       )}
-                    </View>
-
-                    {/* OPTION 2: 1-CLICK HOME SHORTCUT PIN */}
-                    <View style={styles.exportCardOption}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                        <Smartphone size={18} color={THEME.secondary} style={{ marginRight: 8 }} />
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.text }}>Pin Shortcut App to Home Screen</Text>
-                      </View>
-                      <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12 }}>
-                        Creates a dedicated application shortcut directly on your Android home screen for instant project access.
-                      </Text>
-                      <TouchableOpacity style={[styles.exportBtnSecondary, { backgroundColor: 'rgba(20, 184, 166, 0.15)', borderColor: THEME.secondary }]} onPress={pinHomeShortcut}>
-                        <Smartphone size={16} color={THEME.secondary} style={{ marginRight: 6 }} />
-                        <Text style={[styles.exportBtnSecondaryText, { color: THEME.secondary }]}>📲 Pin App to Home Screen</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* OPTION 3: CLOUD APK CONFIG BUILDER */}
-                    <View style={styles.exportCardOption}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                        <PackageCheck size={18} color="#a855f7" style={{ marginRight: 8 }} />
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.text }}>Standalone Android APK Config</Text>
-                      </View>
-                      <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12 }}>
-                        Export full project JSON configuration for GitHub Actions automated standalone APK compiler.
-                      </Text>
-                      <TouchableOpacity style={[styles.exportBtnSecondary, { backgroundColor: 'rgba(168, 85, 247, 0.15)', borderColor: '#a855f7' }]} onPress={syncToIde}>
-                        <PackageCheck size={16} color="#a855f7" style={{ marginRight: 6 }} />
-                        <Text style={[styles.exportBtnSecondaryText, { color: '#a855f7' }]}>📦 Build via GitHub Actions APK</Text>
-                      </TouchableOpacity>
                     </View>
                   </ScrollView>
                 </View>
