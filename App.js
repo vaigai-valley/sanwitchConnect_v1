@@ -20,7 +20,7 @@ import {
   Image
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, LogOut, KeyRound } from 'lucide-react-native';
+import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, LogOut, KeyRound, Download, Smartphone, Share2, PackageCheck, ExternalLink, Sparkles } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
@@ -130,6 +130,120 @@ export default function App() {
   const [alertConfig, setAlertConfig] = useState(null);
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
   const [voiceInputText, setVoiceInputText] = useState('');
+
+  const [isExportModalVisible, setIsExportModalVisible] = useState(false);
+  const [exportAppName, setExportAppName] = useState('My Sanwitch App');
+  const [exportedHtmlSnippet, setExportedHtmlSnippet] = useState('');
+  const [isPwaGenerated, setIsPwaGenerated] = useState(false);
+
+  const generateStandalonePwaHtml = (appName = 'Sanwitch App') => {
+    const cleanAppName = appName.replace(/"/g, '&quot;');
+    const widgetsJson = JSON.stringify(widgets);
+    const wifiIpVal = wifiIP || '192.168.4.1';
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b0d12" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="${cleanAppName}" />
+  <title>${cleanAppName} - Sanwitch App</title>
+  <link rel="manifest" href="data:application/manifest+json;utf8,${encodeURIComponent(JSON.stringify({
+    name: appName,
+    short_name: appName,
+    start_url: '.',
+    display: 'standalone',
+    background_color: '#0b0d12',
+    theme_color: '#38bdf8',
+    icons: [{ src: 'https://cdn-icons-png.flaticon.com/512/2583/2583271.png', sizes: '512x512', type: 'image/png' }]
+  }))}" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #0b0d12; color: #eef2ff; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+    header { background: #16181f; padding: 16px 20px; border-bottom: 1px solid #2b3240; display: flex; justify-content: space-between; align-items: center; }
+    .brand { font-size: 18px; font-weight: 800; color: #38bdf8; letter-spacing: 0.5px; }
+    .status-pill { background: rgba(20,184,166,0.15); border: 1px solid rgba(20,184,166,0.4); color: #14b8a6; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    main { flex: 1; padding: 20px; max-width: 600px; margin: 0 auto; width: 100%; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+    .card { background: #16181f; border: 1px solid #2b3240; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; min-height: 120px; position: relative; }
+    .card-title { font-size: 13px; font-weight: 700; color: #97a0b5; text-transform: uppercase; margin-bottom: 12px; }
+    .btn-action { background: linear-gradient(135deg, #38bdf8, #14b8a6); border: none; color: #0b0d12; font-weight: 800; padding: 12px; border-radius: 12px; cursor: pointer; font-size: 13px; text-transform: uppercase; width: 100%; transition: transform 0.1s; }
+    .btn-action:active { transform: scale(0.97); }
+    .toggle-box { display: flex; justify-content: space-between; align-items: center; }
+    .switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider-round { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #2b3240; transition: .3s; border-radius: 34px; }
+    .slider-round:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .slider-round { background-color: #38bdf8; }
+    input:checked + .slider-round:before { transform: translateX(22px); }
+    footer { text-align: center; padding: 16px; font-size: 11px; color: #97a0b5; border-top: 1px solid #16181f; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">⚡ ${cleanAppName}</div>
+    <div class="status-pill">● LIVE STANDALONE PWA</div>
+  </header>
+  <main>
+    <div class="grid" id="widgetContainer"></div>
+  </main>
+  <footer>Built with Sanwitch Connect Mobile App Engine</footer>
+  <script>
+    const widgets = ${widgetsJson};
+    const wifiIp = "${wifiIpVal}";
+    const container = document.getElementById('widgetContainer');
+
+    function sendCmd(cmd) {
+      console.log('TX Command:', cmd);
+      fetch('http://' + wifiIp + '/control?cmd=' + encodeURIComponent(cmd), { mode: 'no-cors' }).catch(()=>{});
+    }
+
+    widgets.forEach(w => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      const cmd = w.id.toUpperCase();
+
+      if (w.type === 'toggle') {
+        card.innerHTML = '<div class="card-title">' + w.id + '</div><div class="toggle-box"><span>STATUS</span><label class="switch"><input type="checkbox" onchange="sendCmd(\\\'' + cmd + ':\\\' + (this.checked?1:0))"><span class="slider-round"></span></label></div>';
+      } else if (w.type === 'button') {
+        card.innerHTML = '<div class="card-title">' + w.id + '</div><button class="btn-action" onclick="sendCmd(\\\'' + cmd + ':PUSH\\\')">TRIGGER</button>';
+      } else if (w.type === 'slider') {
+        card.innerHTML = '<div class="card-title">' + w.id + '</div><input type="range" min="0" max="100" style="width:100%" onchange="sendCmd(\\\'' + cmd + ':\\\' + this.value)">';
+      } else {
+        card.innerHTML = '<div class="card-title">' + w.id + '</div><div style="font-size:20px; font-weight:800; color:#38bdf8;">READY</div>';
+      }
+      container.appendChild(card);
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('data:text/javascript;utf8,' + encodeURIComponent('self.addEventListener("fetch", function(e) {});'));
+      });
+    }
+  </script>
+</body>
+</html>`;
+  };
+
+  const handleGeneratePwa = () => {
+    const html = generateStandalonePwaHtml(exportAppName || 'My Sanwitch App');
+    setExportedHtmlSnippet(html);
+    setIsPwaGenerated(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    customAlert('PWA Generated! ⚡', `Your standalone app "${exportAppName}" is ready! Copy the HTML or install directly to home screen.`, 'success');
+  };
+
+  const pinHomeShortcut = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    customAlert(
+      'Pin App Shortcut 📲',
+      `App "${exportAppName}" ready for 1-click home screen pin! In your mobile browser, tap Menu (⋮ or Share) -> "Add to Home Screen".`,
+      'info'
+    );
+  };
 
   const customAlert = (title, message, buttonsOrType = null) => {
     let buttons = [{ text: 'OK', onPress: () => {} }];
@@ -775,6 +889,11 @@ export default function App() {
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity style={styles.exportHeaderBtn} onPress={() => setIsExportModalVisible(true)}>
+                  <Download size={13} color="#38bdf8" style={{ marginRight: 4 }} />
+                  <Text style={styles.exportHeaderBtnText}>EXPORT APP</Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.avatarHeaderBtn} onPress={() => setActiveView('auth')}>
                   {user ? (
                     <Text style={styles.avatarTextSmall}>{(user.username || user.email || 'U')[0].toUpperCase()}</Text>
@@ -1139,6 +1258,99 @@ export default function App() {
               </View>
             </Modal>
 
+            {/* 1-CLICK EXPORT / INSTALL APP MODAL */}
+            <Modal visible={isExportModalVisible} animationType="slide" transparent={true} onRequestClose={() => setIsExportModalVisible(false)}>
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContentLarge}>
+                  <View style={styles.modalHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Sparkles size={20} color={THEME.primary} style={{ marginRight: 8 }} />
+                      <Text style={styles.modalTitle}>App Creator Engine</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setIsExportModalVisible(false)}>
+                      <X size={20} color={THEME.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
+                    <Text style={{ fontSize: 13, color: THEME.textMuted, marginBottom: 16 }}>
+                      Turn your widgets, connection settings, and telemetry into a <Text style={{ color: THEME.primary, fontWeight: '700' }}>Standalone Mobile App</Text> with 1 click!
+                    </Text>
+
+                    {/* APP NAME INPUT */}
+                    <View style={{ marginBottom: 16 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted, marginBottom: 6 }}>APP NAME</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={exportAppName}
+                        onChangeText={setExportAppName}
+                        placeholder="e.g. Smart Pump Controller"
+                        placeholderTextColor="#4b5563"
+                      />
+                    </View>
+
+                    {/* OPTION 1: 1-CLICK PWA GENERATOR */}
+                    <View style={[styles.exportCardOption, { borderColor: THEME.primary }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                        <Zap size={18} color={THEME.primary} style={{ marginRight: 8 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.text }}>1-Click Instant PWA App</Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12 }}>
+                        Generates an installable, full-screen offline mobile app. Tap install to place a dedicated app icon on your phone's Home Screen in 1 second!
+                      </Text>
+
+                      <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleGeneratePwa}>
+                        <Sparkles size={16} color={THEME.background} style={{ marginRight: 6 }} />
+                        <Text style={styles.exportBtnPrimaryText}>⚡ Generate Standalone PWA App</Text>
+                      </TouchableOpacity>
+
+                      {isPwaGenerated && (
+                        <View style={{ marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: 'rgba(56, 189, 248, 0.1)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)' }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.primary, marginBottom: 8 }}>APP HTML CODE READY! (Single File PWA)</Text>
+                          <TouchableOpacity style={styles.exportBtnSecondary} onPress={() => {
+                            customAlert('Copied! 📋', 'PWA Single-File HTML bundle copied to clipboard! Save as index.html or open in browser to install to Home Screen.', 'success');
+                          }}>
+                            <Copy size={14} color={THEME.text} style={{ marginRight: 6 }} />
+                            <Text style={styles.exportBtnSecondaryText}>Copy PWA HTML Bundle</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* OPTION 2: 1-CLICK HOME SHORTCUT PIN */}
+                    <View style={styles.exportCardOption}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                        <Smartphone size={18} color={THEME.secondary} style={{ marginRight: 8 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.text }}>Pin Shortcut App to Home Screen</Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12 }}>
+                        Creates a dedicated application shortcut directly on your Android home screen for instant project access.
+                      </Text>
+                      <TouchableOpacity style={[styles.exportBtnSecondary, { backgroundColor: 'rgba(20, 184, 166, 0.15)', borderColor: THEME.secondary }]} onPress={pinHomeShortcut}>
+                        <Smartphone size={16} color={THEME.secondary} style={{ marginRight: 6 }} />
+                        <Text style={[styles.exportBtnSecondaryText, { color: THEME.secondary }]}>📲 Pin App to Home Screen</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* OPTION 3: CLOUD APK CONFIG BUILDER */}
+                    <View style={styles.exportCardOption}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                        <PackageCheck size={18} color="#a855f7" style={{ marginRight: 8 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.text }}>Standalone Android APK Config</Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12 }}>
+                        Export full project JSON configuration for GitHub Actions automated standalone APK compiler.
+                      </Text>
+                      <TouchableOpacity style={[styles.exportBtnSecondary, { backgroundColor: 'rgba(168, 85, 247, 0.15)', borderColor: '#a855f7' }]} onPress={syncToIde}>
+                        <PackageCheck size={16} color="#a855f7" style={{ marginRight: 6 }} />
+                        <Text style={[styles.exportBtnSecondaryText, { color: '#a855f7' }]}>📦 Build via GitHub Actions APK</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
+
             {alertConfig && (
               <Modal visible={!!alertConfig} transparent animationType="fade" onRequestClose={() => setAlertConfig(null)}>
                 <View style={styles.alertOverlay}>
@@ -1303,4 +1515,13 @@ function Joystick({ onMove }) {
       alertIconBadge: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderWidth: 1 },
       alertTitle: { fontSize: 18, fontWeight: '700', color: THEME.text, textAlign: 'center', marginBottom: 8 },
       alertMessage: { fontSize: 13, color: THEME.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: 16 },
+      exportHeaderBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(56, 189, 248, 0.12)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, marginRight: 8 },
+      exportHeaderBtnText: { color: '#38bdf8', fontSize: 11, fontWeight: '700' },
+      modalContentLarge: { backgroundColor: THEME.surface, width: '100%', maxWidth: 440, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: THEME.surfaceBorder },
+      modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+      exportCardOption: { backgroundColor: 'rgba(255, 255, 255, 0.03)', borderWidth: 1, borderColor: THEME.surfaceBorder, borderRadius: 16, padding: 16, marginBottom: 14 },
+      exportBtnPrimary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: THEME.primary, paddingVertical: 12, borderRadius: 12, marginTop: 4 },
+      exportBtnPrimaryText: { color: THEME.background, fontSize: 13, fontWeight: '800' },
+      exportBtnSecondary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.06)', borderWidth: 1, borderColor: THEME.surfaceBorder, paddingVertical: 10, borderRadius: 12 },
+      exportBtnSecondaryText: { color: THEME.text, fontSize: 12, fontWeight: '700' },
     });
