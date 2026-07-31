@@ -229,25 +229,25 @@ export default function App() {
 </html>`;
   };
 
-  const handleAutoInstallPwa = async () => {
+  const handleExportAsApp = async () => {
     const html = generateStandalonePwaHtml(exportAppName || 'My Sanwitch App');
     setExportedHtmlSnippet(html);
     setIsPwaGenerated(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    const encodedDataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+    const pwaBridgeUrl = `${API_BASE_URL.replace('/api', '')}/pwa?name=${encodeURIComponent(exportAppName || 'My Sanwitch App')}&data=${encodeURIComponent(JSON.stringify(widgets))}`;
 
     try {
-      await Linking.openURL(encodedDataUri);
+      await Linking.openURL(pwaBridgeUrl);
       customAlert(
-        '🚀 Launching PWA Installer!',
-        `Opening "${exportAppName}" in Android Browser! Tap Menu (⋮) -> "Add to Home Screen" or "Install App" to place a dedicated app icon on your device home screen in 1 second!`,
+        '🚀 Exporting App to Browser!',
+        `Opening "${exportAppName}" in Android Chrome! Tap Menu (⋮) -> "Add to Home Screen" or "Install App" to place a dedicated app icon on your home screen in 1 second!`,
         'success'
       );
     } catch (e) {
       customAlert(
-        'PWA App Ready! ⚡',
-        `Your app "${exportAppName}" is generated! Copy the single-file HTML bundle to install on your Android home screen.`,
+        'App Exported! ⚡',
+        `Standalone PWA bundle generated for "${exportAppName}"! Copy HTML to install on your Android home screen.`,
         'success'
       );
     }
@@ -899,7 +899,7 @@ export default function App() {
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TouchableOpacity style={styles.exportHeaderBtn} onPress={() => setIsExportModalVisible(true)}>
                   <Download size={13} color="#38bdf8" style={{ marginRight: 4 }} />
-                  <Text style={styles.exportHeaderBtnText}>EXPORT APP</Text>
+                  <Text style={styles.exportHeaderBtnText}>EXPORT AS APP</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.avatarHeaderBtn} onPress={() => setActiveView('auth')}>
@@ -1273,7 +1273,7 @@ export default function App() {
                   <View style={styles.modalHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Sparkles size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                      <Text style={styles.modalTitle}>1-Click PWA App Installer</Text>
+                      <Text style={styles.modalTitle}>Export as App</Text>
                     </View>
                     <TouchableOpacity onPress={() => setIsExportModalVisible(false)}>
                       <X size={20} color={THEME.textMuted} />
@@ -1282,7 +1282,7 @@ export default function App() {
 
                   <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
                     <Text style={{ fontSize: 13, color: THEME.textMuted, marginBottom: 16 }}>
-                      Convert your custom widgets, connection settings, and telemetry into a <Text style={{ color: THEME.primary, fontWeight: '700' }}>Standalone PWA Mobile App</Text> installed directly on your Android home screen in 1 second!
+                      Export your custom widgets, connection settings, and telemetry into a <Text style={{ color: THEME.primary, fontWeight: '700' }}>Standalone Mobile App</Text> that installs directly on your Android home screen!
                     </Text>
 
                     {/* APP NAME INPUT */}
@@ -1301,15 +1301,15 @@ export default function App() {
                     <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                         <Zap size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                        <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>Instant Android PWA Installation</Text>
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>Instant Home Screen App Creation</Text>
                       </View>
                       <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 14, lineHeight: 18 }}>
-                        Generates a single-file standalone PWA HTML mobile app with embedded Web App Manifest (`manifest.json`) and offline Service Worker (`sw.js`).
+                        Generates a single-file standalone PWA HTML mobile app with embedded Web App Manifest (`manifest.json`) and offline Service Worker (`sw.js`). Opens directly in browser to add an instant app icon to your Android home screen!
                       </Text>
 
-                      <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleAutoInstallPwa}>
+                      <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleExportAsApp}>
                         <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                        <Text style={styles.exportBtnPrimaryText}>⚡ INSTALL PWA APP ON ANDROID</Text>
+                        <Text style={styles.exportBtnPrimaryText}>⚡ EXPORT AS APP</Text>
                       </TouchableOpacity>
 
                       {isPwaGenerated && (
