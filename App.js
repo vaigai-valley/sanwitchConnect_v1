@@ -18,7 +18,8 @@ import {
   Platform,
   KeyboardAvoidingView,
   Image,
-  Linking
+  Linking,
+  NativeModules
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, LogOut, KeyRound, Download, Smartphone, Share2, PackageCheck, ExternalLink, Sparkles } from 'lucide-react-native';
@@ -230,24 +231,40 @@ export default function App() {
   };
 
   const handleExportAsApp = async () => {
-    const html = generateStandalonePwaHtml(exportAppName || 'My Sanwitch App');
+    const appTitle = exportAppName || 'My Sanwitch App';
+    const html = generateStandalonePwaHtml(appTitle);
     setExportedHtmlSnippet(html);
     setIsPwaGenerated(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    const pwaBridgeUrl = `${API_BASE_URL.replace('/api', '')}/pwa?name=${encodeURIComponent(exportAppName || 'My Sanwitch App')}&data=${encodeURIComponent(JSON.stringify(widgets))}`;
+    // 1-CLICK INSTANT NATIVE ANDROID HOME SCREEN APP ICON PINNING
+    if (NativeModules.ShortcutModule && NativeModules.ShortcutModule.pinShortcut) {
+      try {
+        NativeModules.ShortcutModule.pinShortcut(appTitle);
+        customAlert(
+          '⚡ App Icon Requested!',
+          `App "${appTitle}" shortcut requested! Tap "Add to Home Screen" on the system prompt to place your app icon directly on your home screen in 1 second!`,
+          'success'
+        );
+        return;
+      } catch (e) {
+        console.log('Native shortcut pin fallback:', e);
+      }
+    }
 
+    // Web PWA Fallback
+    const pwaBridgeUrl = `${API_BASE_URL.replace('/api', '')}/pwa?name=${encodeURIComponent(appTitle)}&data=${encodeURIComponent(JSON.stringify(widgets))}`;
     try {
       await Linking.openURL(pwaBridgeUrl);
       customAlert(
         '🚀 Exporting App to Browser!',
-        `Opening "${exportAppName}" in Android Chrome! Tap Menu (⋮) -> "Add to Home Screen" or "Install App" to place a dedicated app icon on your home screen in 1 second!`,
+        `Opening "${appTitle}" in Chrome! Tap Menu (⋮) -> "Add to Home Screen" to place the app icon on your home screen in 1 second!`,
         'success'
       );
     } catch (e) {
       customAlert(
         'App Exported! ⚡',
-        `Standalone PWA bundle generated for "${exportAppName}"! Copy HTML to install on your Android home screen.`,
+        `Standalone PWA bundle generated for "${appTitle}"!`,
         'success'
       );
     }
