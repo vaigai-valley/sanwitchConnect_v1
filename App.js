@@ -93,6 +93,7 @@ export default function App() {
           setActiveView('panel');
           const tourDone = await AsyncStorage.getItem('@sanwitch_tour_completed').catch(() => null);
           if (!tourDone && isMounted) {
+            setTourMode('overall');
             setTourStep(1);
             setIsTourModalVisible(true);
           }
@@ -624,6 +625,7 @@ export default function App() {
           setActiveView('panel');
           const tourDone = await AsyncStorage.getItem('@sanwitch_tour_completed').catch(() => null);
           if (!tourDone) {
+            setTourMode('overall');
             setTourStep(1);
             setIsTourModalVisible(true);
           }
@@ -649,6 +651,7 @@ export default function App() {
         setActiveView('panel');
         const tourDone = await AsyncStorage.getItem('@sanwitch_tour_completed').catch(() => null);
         if (!tourDone) {
+          setTourMode('overall');
           setTourStep(1);
           setIsTourModalVisible(true);
         }
@@ -730,6 +733,7 @@ export default function App() {
         setActiveView('panel');
         const tourDone = await AsyncStorage.getItem('@sanwitch_tour_completed').catch(() => null);
         if (!tourDone) {
+          setTourMode('overall');
           setTourStep(1);
           setIsTourModalVisible(true);
         }
@@ -1257,7 +1261,7 @@ export default function App() {
             <TouchableOpacity
               style={[styles.avatarHeaderBtn, { marginRight: 8, backgroundColor: 'rgba(56, 189, 248, 0.12)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}
               onPress={() => {
-                setTourMode('overall');
+                setTourMode('guided');
                 setTourStep(1);
                 setIsTourModalVisible(true);
               }}
@@ -1999,22 +2003,42 @@ export default function App() {
                       <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
                         Use <Text style={{ color: THEME.success, fontWeight: '700' }}>PUSH TO IDE</Text> on the CODE tab to stream block logic directly into Desktop IDE, and use <Text style={{ color: THEME.primary, fontWeight: '700' }}>EXPORT APP</Text> (bottom menu) to pin native WebAPKs to your phone!
                       </Text>
-                      <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+
+                      <View style={{ backgroundColor: 'rgba(56, 189, 248, 0.1)', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', marginBottom: 12, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.primary, textAlign: 'center' }}>
+                          ⚡ Next: Take the 2-Step Guided Quickstart Tour to create your 1st widget & push to IDE!
+                        </Text>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
                         <TouchableOpacity
-                          style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: THEME.surfaceBorder, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
+                          style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: THEME.surfaceBorder, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
                           onPress={() => setTourStep(3)}
                         >
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted }}>Back</Text>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.textMuted }}>Back</Text>
                         </TouchableOpacity>
+
                         <TouchableOpacity
-                          style={{ flex: 2, backgroundColor: THEME.success, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                          style={{ flex: 2, backgroundColor: THEME.primary, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
                           onPress={() => {
+                            setTourMode('guided');
+                            setTourStep(1);
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.background, marginRight: 4 }}>2-Step Quickstart ➔</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={{ flex: 1.2, backgroundColor: THEME.success, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                          onPress={async () => {
                             setIsTourModalVisible(false);
+                            try {
+                              await AsyncStorage.setItem('@sanwitch_tour_completed', 'true');
+                            } catch (e) {}
                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                           }}
                         >
-                          <CheckCircle2 size={16} color={THEME.background} style={{ marginRight: 6 }} />
-                          <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.background }}>Close Tour</Text>
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.background }}>Done 🚀</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
