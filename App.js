@@ -23,7 +23,7 @@ import {
   Share
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, LogOut, KeyRound, Download, Smartphone, Share2, PackageCheck, ExternalLink, Sparkles } from 'lucide-react-native';
+import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, LogOut, KeyRound, Download, Smartphone, Share2, PackageCheck, ExternalLink, Sparkles, ChevronsUp } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
@@ -140,6 +140,7 @@ export default function App() {
   const [isPwaGenerated, setIsPwaGenerated] = useState(false);
   const [isNativeAppRunnerVisible, setIsNativeAppRunnerVisible] = useState(false);
   const [runnerActiveTab, setRunnerActiveTab] = useState('panel');
+  const [isSideMenuVisible, setIsSideMenuVisible] = useState(false);
 
   const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App') => {
     const cleanAppName = appName.replace(/"/g, '&quot;');
@@ -997,21 +998,6 @@ export default function App() {
                   <Mic size={18} color={THEME.text} />
                 </TouchableOpacity>
               </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <TouchableOpacity style={styles.exportHeaderBtn} onPress={() => setIsExportModalVisible(true)}>
-                  <Download size={13} color="#38bdf8" style={{ marginRight: 4 }} />
-                  <Text style={styles.exportHeaderBtnText}>EXPORT AS APP</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.avatarHeaderBtn} onPress={() => setActiveView('auth')}>
-                  {user ? (
-                    <Text style={styles.avatarTextSmall}>{(user.username || user.email || 'U')[0].toUpperCase()}</Text>
-                  ) : (
-                    <KeyRound size={16} color={THEME.primary} />
-                  )}
-                </TouchableOpacity>
-              </View>
             </View>
 
             <View style={styles.nav}>
@@ -1558,10 +1544,108 @@ export default function App() {
               </Modal>
             )}
 
+            {/* BOTTOM-LEFT SIDE MENU DRAWER MODAL */}
+            <Modal visible={isSideMenuVisible} animationType="slide" transparent={true} onRequestClose={() => setIsSideMenuVisible(false)}>
+              <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsSideMenuVisible(false)}>
+                <View style={styles.sideMenuDrawerContent} pointerEvents="auto">
+                  <View style={styles.sideMenuHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <ChevronsUp size={22} color={THEME.primary} />
+                      <Text style={styles.sideMenuTitle}>App Menu & Tools</Text>
+                    </View>
+                    <TouchableOpacity style={styles.sideMenuCloseBtn} onPress={() => setIsSideMenuVisible(false)}>
+                      <X size={18} color={THEME.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{ gap: 10, marginTop: 12 }}>
+                    <TouchableOpacity
+                      style={[styles.sideMenuItemBtn, { backgroundColor: 'rgba(56, 189, 248, 0.12)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}
+                      onPress={() => {
+                        setIsSideMenuVisible(false);
+                        setIsExportModalVisible(true);
+                      }}
+                    >
+                      <Download size={20} color={THEME.primary} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.sideMenuItemText, { color: THEME.primary }]}>EXPORT AS APP</Text>
+                        <Text style={styles.sideMenuItemSubtext}>Generate standalone PWA or Android App</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.sideMenuItemBtn, { backgroundColor: 'rgba(16, 185, 129, 0.12)', borderColor: 'rgba(16, 185, 129, 0.3)' }]}
+                      onPress={() => {
+                        setIsSideMenuVisible(false);
+                        setIsNativeAppRunnerVisible(true);
+                      }}
+                    >
+                      <Zap size={20} color={THEME.success} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.sideMenuItemText, { color: THEME.success }]}>RUN NATIVE APP</Text>
+                        <Text style={styles.sideMenuItemSubtext}>Fullscreen in-app execution without browser</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.sideMenuItemBtn}
+                      onPress={() => {
+                        setIsSideMenuVisible(false);
+                        setActiveView('auth');
+                      }}
+                    >
+                      <QrCode size={20} color={THEME.text} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.sideMenuItemText}>PAIR WITH DESKTOP IDE</Text>
+                        <Text style={styles.sideMenuItemSubtext}>Scan QR code to push blocks to Desktop</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.sideMenuItemBtn}
+                      onPress={() => {
+                        setIsSideMenuVisible(false);
+                        startVoice();
+                      }}
+                    >
+                      <Mic size={20} color={THEME.text} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.sideMenuItemText}>VOICE ASSISTANT</Text>
+                        <Text style={styles.sideMenuItemSubtext}>Control IoT widgets using speech</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.sideMenuItemBtn}
+                      onPress={() => {
+                        setIsSideMenuVisible(false);
+                        setActiveView('connect');
+                      }}
+                    >
+                      <Wifi size={20} color={THEME.text} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.sideMenuItemText}>HARDWARE LINK</Text>
+                        <Text style={styles.sideMenuItemSubtext}>Configure WiFi or Bluetooth connection</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </Modal>
+
             <View style={styles.bottomStatusWrap} pointerEvents="box-none">
-              <View style={[styles.statusBadge, (connectedDevice || wifiConnected) && styles.statusBadgeConnected]}>
-                <View style={[styles.statusDot, (connectedDevice || wifiConnected) && styles.statusDotConnected]} />
-                <Text style={styles.statusText}>{connectedDevice ? 'Linked' : (wifiConnected ? 'WiFi' : 'Ready')}</Text>
+              <View style={styles.bottomBarRow} pointerEvents="box-none">
+                <TouchableOpacity
+                  style={styles.sideMenuTriggerBtn}
+                  onPress={() => setIsSideMenuVisible(true)}
+                >
+                  <ChevronsUp size={22} color={THEME.primary} />
+                </TouchableOpacity>
+
+                <View style={[styles.statusBadge, (connectedDevice || wifiConnected) && styles.statusBadgeConnected]}>
+                  <View style={[styles.statusDot, (connectedDevice || wifiConnected) && styles.statusDotConnected]} />
+                  <Text style={styles.statusText}>{connectedDevice ? 'Linked' : (wifiConnected ? 'WiFi' : 'Ready')}</Text>
+                </View>
               </View>
             </View>
           </SafeAreaView>
@@ -1597,7 +1681,16 @@ function Joystick({ onMove }) {
       statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: THEME.textMuted },
       statusDotConnected: { backgroundColor: THEME.primary },
       statusText: { color: THEME.text, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
-      bottomStatusWrap: { position: 'absolute', bottom: 18, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', zIndex: 99 },
+      bottomStatusWrap: { position: 'absolute', bottom: 18, left: 18, right: 18, zIndex: 99 },
+      bottomBarRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+      sideMenuTriggerBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(22, 24, 31, 0.9)', borderWidth: 1.5, borderColor: 'rgba(56, 189, 248, 0.4)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8 },
+      sideMenuDrawerContent: { width: '100%', maxWidth: 400, backgroundColor: THEME.surface, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: THEME.surfaceBorder, marginBottom: 10 },
+      sideMenuHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: THEME.surfaceBorder },
+      sideMenuTitle: { fontSize: 16, fontWeight: '800', color: THEME.text },
+      sideMenuCloseBtn: { padding: 6, borderRadius: 8, backgroundColor: 'rgba(255, 255, 255, 0.05)' },
+      sideMenuItemBtn: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255, 255, 255, 0.03)', borderWidth: 1, borderColor: THEME.surfaceBorder, borderRadius: 16, padding: 14 },
+      sideMenuItemText: { fontSize: 13, fontWeight: '800', color: THEME.text },
+      sideMenuItemSubtext: { fontSize: 11, color: THEME.textMuted, marginTop: 2 },
       nav: { flexDirection: 'row', backgroundColor: THEME.surface, margin: 15, padding: 4, borderRadius: 12, borderWidth: 1, borderColor: THEME.surfaceBorder },
       navBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
       navBtnActive: { backgroundColor: 'rgba(255,255,255,0.05)' },
