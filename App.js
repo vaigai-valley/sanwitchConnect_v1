@@ -413,7 +413,7 @@ export default function App() {
 </html>`;
   };
 
-  // OPTION 1: INSTALL APP (Ready to Use) - Opens in Internal PWA Runner Engine
+  // OPTION 1: INSTALL APP (Ready to Use) - Triggers Native Android Shortcut & WebAPK OS Prompt
   const handleInstallReadyApp = async () => {
     const appTitle = exportAppName.trim() || 'My Sanwitch App';
     const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`;
@@ -440,7 +440,7 @@ export default function App() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsExportModalVisible(false);
 
-    // Trigger Native Android PackageInstaller / ShortcutManager to pin icon in App Drawer
+    // 1. Trigger Native Android ShortcutManager to pin icon directly in App Drawer
     if (Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut) {
       try {
         NativeModules.ShortcutModule.pinShortcut(appTitle);
@@ -449,12 +449,19 @@ export default function App() {
       }
     }
 
-    // Open internally in Sanwitch Standalone PWA Engine View!
-    setActiveRunningPwaApp(newApp);
-    setIsPwaViewerVisible(true);
+    // 2. Launch system browser for WebAPK synthesis & OS install prompt handoff
+    const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+    try {
+      await Linking.openURL(dataUri);
+    } catch (e) {
+      try {
+        await Share.share({ title: fileName, message: html });
+      } catch (err) {}
+    }
+
     customAlert(
-      'Standalone PWA Installed!',
-      `"${appTitle}" has been pinned to your Android App Drawer & is running in Sanwitch PWA Engine!`,
+      'App Installed to App Drawer!',
+      `"${appTitle}" shortcut pinned to your Android App Drawer & Home Screen with OS install prompt!`,
       'success'
     );
   };
