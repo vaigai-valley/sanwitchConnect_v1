@@ -23,7 +23,7 @@ import {
   Share
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, LogOut, KeyRound, Download, Smartphone, Share2, PackageCheck, ExternalLink, Sparkles, ChevronsUp, Folder, Play, Edit3, FileText, Save } from 'lucide-react-native';
+import { Mic, Bluetooth, Wifi, Plus, X, LayoutGrid, Trash2, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, LogOut, KeyRound, Smartphone, ExternalLink, Sparkles, ChevronsUp, Folder, Edit3, FileText } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
@@ -115,13 +115,10 @@ export default function App() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-  const [showManualLogin, setShowManualLogin] = useState(false);
-  const [showQrScannerInProfile, setShowQrScannerInProfile] = useState(false);
   const [isNameModalVisible, setIsNameModalVisible] = useState(false);
   const [pendingType, setPendingType] = useState(null);
   const [newName, setNewName] = useState('');
   const [connectionMode, setConnectionMode] = useState('ble');
-  const [helperMode, setHelperMode] = useState('code');
   const [logs, setLogs] = useState([{ id: '1', msg: 'Sanwitch Native Super Mode', type: 'info' }]);
   const [wifiIP, setWifiIP] = useState('192.168.4.1');
   const [wifiSSID, setWifiSSID] = useState('MyWiFi');
@@ -136,9 +133,6 @@ export default function App() {
 
   const [isExportModalVisible, setIsExportModalVisible] = useState(false);
   const [exportAppName, setExportAppName] = useState('My Sanwitch App');
-  const [exportedHtmlSnippet, setExportedHtmlSnippet] = useState('');
-  const [isPwaGenerated, setIsPwaGenerated] = useState(false);
-  const [isSideMenuVisible, setIsSideMenuVisible] = useState(false);
 
   const [savedApps, setSavedApps] = useState([]);
   const [isBottomMenuVisible, setIsBottomMenuVisible] = useState(false);
@@ -416,8 +410,6 @@ export default function App() {
     const appTitle = exportAppName.trim() || 'My Sanwitch App';
     const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`;
     const html = generateCompleteStandaloneAppHtml(appTitle);
-    setExportedHtmlSnippet(html);
-    setIsPwaGenerated(true);
 
     const newApp = {
       id: Date.now().toString(),
