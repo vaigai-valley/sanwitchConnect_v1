@@ -751,10 +751,34 @@ export default function App() {
   };
 
   const startVoice = async () => {
+    if (!user && !token) {
+      customAlert(
+        'Login Required',
+        'You must log in (via Password or Desktop QR Code) to access Voice Assistant.',
+        [
+          { text: 'Log In / Scan QR', onPress: () => setActiveView('auth') }
+        ]
+      );
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     Speech.speak("Sanwitch Voice active. Speak or choose a command.", { rate: 1.0 });
     setVoiceInputText('');
     setIsVoiceModalVisible(true);
+  };
+
+  const openArrowMenu = () => {
+    if (!user && !token) {
+      customAlert(
+        'Login Required',
+        'You must log in (via Password or Desktop QR Code) to access My Apps & Export features.',
+        [
+          { text: 'Log In / Scan QR', onPress: () => setActiveView('auth') }
+        ]
+      );
+      return;
+    }
+    setIsBottomMenuVisible(true);
   };
 
   const processVoice = (text) => {
@@ -1721,7 +1745,7 @@ export default function App() {
         <View style={styles.bottomStatusWrap} pointerEvents="box-none">
           <TouchableOpacity
             style={styles.sideMenuTriggerBtn}
-            onPress={() => setIsBottomMenuVisible(true)}
+            onPress={openArrowMenu}
           >
             <ChevronsUp size={22} color={THEME.primary} />
           </TouchableOpacity>
