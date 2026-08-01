@@ -1553,18 +1553,16 @@ export default function App() {
             )}
 
             <View style={styles.bottomStatusWrap} pointerEvents="box-none">
-              <View style={styles.bottomBarRow} pointerEvents="box-none">
-                <TouchableOpacity
-                  style={styles.sideMenuTriggerBtn}
-                  onPress={() => setIsExportModalVisible(true)}
-                >
-                  <ChevronsUp size={22} color={THEME.primary} />
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sideMenuTriggerBtn}
+                onPress={() => setIsExportModalVisible(true)}
+              >
+                <ChevronsUp size={22} color={THEME.primary} />
+              </TouchableOpacity>
 
-                <View style={[styles.statusBadge, (connectedDevice || wifiConnected) && styles.statusBadgeConnected]}>
-                  <View style={[styles.statusDot, (connectedDevice || wifiConnected) && styles.statusDotConnected]} />
-                  <Text style={styles.statusText}>{connectedDevice ? 'Linked' : (wifiConnected ? 'WiFi' : 'Ready')}</Text>
-                </View>
+              <View style={[styles.statusBadge, (connectedDevice || wifiConnected) && styles.statusBadgeConnected]}>
+                <View style={[styles.statusDot, (connectedDevice || wifiConnected) && styles.statusDotConnected]} />
+                <Text style={styles.statusText}>{connectedDevice ? 'Linked' : (wifiConnected ? 'WiFi' : 'Ready')}</Text>
               </View>
             </View>
           </SafeAreaView>
@@ -1600,9 +1598,8 @@ function Joystick({ onMove }) {
       statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: THEME.textMuted },
       statusDotConnected: { backgroundColor: THEME.primary },
       statusText: { color: THEME.text, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
-      bottomStatusWrap: { position: 'absolute', bottom: 18, left: 18, right: 18, zIndex: 99 },
-      bottomBarRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-      sideMenuTriggerBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(22, 24, 31, 0.9)', borderWidth: 1.5, borderColor: 'rgba(56, 189, 248, 0.4)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8 },
+      bottomStatusWrap: { position: 'absolute', bottom: 18, left: 18, right: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', zIndex: 99 },
+      sideMenuTriggerBtn: { position: 'absolute', left: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(22, 24, 31, 0.9)', borderWidth: 1.5, borderColor: 'rgba(56, 189, 248, 0.4)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8, zIndex: 100 },
       nav: { flexDirection: 'row', backgroundColor: THEME.surface, margin: 15, padding: 4, borderRadius: 12, borderWidth: 1, borderColor: THEME.surfaceBorder },
       navBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
       navBtnActive: { backgroundColor: 'rgba(255,255,255,0.05)' },
