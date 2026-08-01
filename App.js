@@ -19,7 +19,8 @@ import {
   KeyboardAvoidingView,
   Image,
   Linking,
-  NativeModules
+  NativeModules,
+  Share
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, LogOut, KeyRound, Download, Smartphone, Share2, PackageCheck, ExternalLink, Sparkles } from 'lucide-react-native';
@@ -138,7 +139,7 @@ export default function App() {
   const [exportedHtmlSnippet, setExportedHtmlSnippet] = useState('');
   const [isPwaGenerated, setIsPwaGenerated] = useState(false);
 
-  const generateStandalonePwaHtml = (appName = 'Sanwitch App') => {
+  const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App') => {
     const cleanAppName = appName.replace(/"/g, '&quot;');
     const widgetsJson = JSON.stringify(widgets);
     const wifiIpVal = wifiIP || '192.168.4.1';
@@ -150,57 +151,101 @@ export default function App() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0b0d12" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="${cleanAppName}" />
-  <title>${cleanAppName} - Sanwitch App</title>
-  <link rel="manifest" href="data:application/manifest+json;utf8,${encodeURIComponent(JSON.stringify({
-    name: appName,
-    short_name: appName,
-    start_url: '.',
-    display: 'standalone',
-    background_color: '#0b0d12',
-    theme_color: '#38bdf8',
-    icons: [{ src: 'https://cdn-icons-png.flaticon.com/512/2583/2583271.png', sizes: '512x512', type: 'image/png' }]
-  }))}" />
+  <title>${cleanAppName} - Standalone Sanwitch App</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     body { background: #0b0d12; color: #eef2ff; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
-    header { background: #16181f; padding: 16px 20px; border-bottom: 1px solid #2b3240; display: flex; justify-content: space-between; align-items: center; }
-    .brand { font-size: 18px; font-weight: 800; color: #38bdf8; letter-spacing: 0.5px; }
-    .status-pill { background: rgba(20,184,166,0.15); border: 1px solid rgba(20,184,166,0.4); color: #14b8a6; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-    main { flex: 1; padding: 20px; max-width: 600px; margin: 0 auto; width: 100%; }
+    header { background: #16181f; padding: 14px 20px; border-bottom: 1px solid #2b3240; display: flex; justify-content: space-between; align-items: center; }
+    .brand { font-size: 16px; font-weight: 800; color: #38bdf8; letter-spacing: 0.5px; }
+    .status-pill { background: rgba(20,184,166,0.15); border: 1px solid rgba(20,184,166,0.4); color: #14b8a6; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    nav { display: flex; background: #16181f; border-bottom: 1px solid #2b3240; }
+    .nav-btn { flex: 1; padding: 12px; text-align: center; font-size: 12px; font-weight: 700; color: #97a0b5; cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; }
+    .nav-btn.active { color: #38bdf8; border-bottom-color: #38bdf8; background: rgba(56,189,248,0.05); }
+    main { flex: 1; padding: 16px; max-width: 600px; margin: 0 auto; width: 100%; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
-    .card { background: #16181f; border: 1px solid #2b3240; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; min-height: 120px; position: relative; }
-    .card-title { font-size: 13px; font-weight: 700; color: #97a0b5; text-transform: uppercase; margin-bottom: 12px; }
-    .btn-action { background: linear-gradient(135deg, #38bdf8, #14b8a6); border: none; color: #0b0d12; font-weight: 800; padding: 12px; border-radius: 12px; cursor: pointer; font-size: 13px; text-transform: uppercase; width: 100%; transition: transform 0.1s; }
+    .card { background: #16181f; border: 1px solid #2b3240; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; min-height: 120px; position: relative; }
+    .card-title { font-size: 11px; font-weight: 700; color: #97a0b5; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .btn-action { background: linear-gradient(135deg, #38bdf8, #14b8a6); border: none; color: #0b0d12; font-weight: 800; padding: 12px; border-radius: 12px; cursor: pointer; font-size: 13px; text-transform: uppercase; width: 100%; }
     .btn-action:active { transform: scale(0.97); }
     .toggle-box { display: flex; justify-content: space-between; align-items: center; }
-    .switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+    .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider-round { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #2b3240; transition: .3s; border-radius: 34px; }
-    .slider-round:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; }
+    .slider-round:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; }
     input:checked + .slider-round { background-color: #38bdf8; }
     input:checked + .slider-round:before { transform: translateX(22px); }
-    footer { text-align: center; padding: 16px; font-size: 11px; color: #97a0b5; border-top: 1px solid #16181f; }
+    .gauge-val { font-size: 28px; font-weight: 800; color: #38bdf8; text-align: center; }
+    .term-box { background: #000; border: 1px solid #2b3240; border-radius: 16px; padding: 14px; height: 380px; font-family: monospace; font-size: 11px; overflow-y: auto; color: #14b8a6; }
+    .term-line { margin-bottom: 6px; word-break: break-all; }
+    .link-card { background: #16181f; border: 1px solid #2b3240; border-radius: 16px; padding: 20px; }
+    .input-field { width: 100%; background: #0b0d12; border: 1px solid #2b3240; border-radius: 10px; padding: 12px; color: #eef2ff; font-size: 14px; margin-top: 6px; margin-bottom: 14px; }
+    footer { text-align: center; padding: 14px; font-size: 11px; color: #97a0b5; border-top: 1px solid #16181f; }
   </style>
 </head>
 <body>
   <header>
     <div class="brand">⚡ ${cleanAppName}</div>
-    <div class="status-pill">● LIVE STANDALONE PWA</div>
+    <div class="status-pill" id="connStatus">● LINK READY</div>
   </header>
+  <nav>
+    <div class="nav-btn active" onclick="switchTab('panel', event)">PANEL</div>
+    <div class="nav-btn" onclick="switchTab('link', event)">LINK</div>
+    <div class="nav-btn" onclick="switchTab('term', event)">TERMINAL</div>
+  </nav>
   <main>
-    <div class="grid" id="widgetContainer"></div>
+    <div id="tab-panel" class="tab-content active">
+      <div class="grid" id="widgetContainer"></div>
+    </div>
+    <div id="tab-link" class="tab-content">
+      <div class="link-card">
+        <h3 style="font-size:14px; color:#38bdf8; margin-bottom:12px;">WIFI HARDWARE TARGET</h3>
+        <label style="font-size:11px; color:#97a0b5;">TARGET IP ADDRESS</label>
+        <input type="text" id="targetIp" class="input-field" value="${wifiIpVal}">
+        <button class="btn-action" onclick="saveLinkConfig()">CONNECT TARGET</button>
+      </div>
+    </div>
+    <div id="tab-term" class="tab-content">
+      <div class="term-box" id="termLog">
+        <div class="term-line" style="color:#97a0b5;">[SYSTEM] Standalone App Engine Initialized</div>
+      </div>
+    </div>
   </main>
-  <footer>Built with Sanwitch Connect Mobile App Engine</footer>
+  <footer>Built with Sanwitch Connect Standalone Exporter</footer>
   <script>
     const widgets = ${widgetsJson};
-    const wifiIp = "${wifiIpVal}";
+    let targetIp = "${wifiIpVal}";
     const container = document.getElementById('widgetContainer');
+    const termLog = document.getElementById('termLog');
+
+    function logTerm(msg, type='TX') {
+      const line = document.createElement('div');
+      line.className = 'term-line';
+      line.style.color = type === 'TX' ? '#38bdf8' : (type === 'RX' ? '#14b8a6' : '#ef4444');
+      line.textContent = '[' + new Date().toLocaleTimeString() + '] [' + type + '] ' + msg;
+      termLog.appendChild(line);
+      termLog.scrollTop = termLog.scrollHeight;
+    }
 
     function sendCmd(cmd) {
-      console.log('TX Command:', cmd);
-      fetch('http://' + wifiIp + '/control?cmd=' + encodeURIComponent(cmd), { mode: 'no-cors' }).catch(()=>{});
+      logTerm(cmd, 'TX');
+      fetch('http://' + targetIp + '/control?cmd=' + encodeURIComponent(cmd), { mode: 'no-cors' })
+        .then(() => logTerm('OK: ' + cmd, 'RX'))
+        .catch(e => logTerm('ERR: ' + e.message, 'ERR'));
+    }
+
+    function saveLinkConfig() {
+      targetIp = document.getElementById('targetIp').value;
+      logTerm('Target IP updated to ' + targetIp, 'SYS');
+      alert('Target IP Saved: ' + targetIp);
+    }
+
+    function switchTab(tab, evt) {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      evt.target.classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
     }
 
     widgets.forEach(w => {
@@ -209,22 +254,18 @@ export default function App() {
       const cmd = w.id.toUpperCase();
 
       if (w.type === 'toggle') {
-        card.innerHTML = '<div class="card-title">' + w.id + '</div><div class="toggle-box"><span>STATUS</span><label class="switch"><input type="checkbox" onchange="sendCmd(\\\'' + cmd + ':\\\' + (this.checked?1:0))"><span class="slider-round"></span></label></div>';
+        card.innerHTML = '<div class="card-title">' + w.id + '</div><div class="toggle-box"><span style="font-size:12px; color:#97a0b5;">STATUS</span><label class="switch"><input type="checkbox" onchange="sendCmd(\\\'' + cmd + ':\\\' + (this.checked?1:0))"><span class="slider-round"></span></label></div>';
       } else if (w.type === 'button') {
         card.innerHTML = '<div class="card-title">' + w.id + '</div><button class="btn-action" onclick="sendCmd(\\\'' + cmd + ':PUSH\\\')">TRIGGER</button>';
       } else if (w.type === 'slider') {
         card.innerHTML = '<div class="card-title">' + w.id + '</div><input type="range" min="0" max="100" style="width:100%" onchange="sendCmd(\\\'' + cmd + ':\\\' + this.value)">';
+      } else if (w.type === 'gauge') {
+        card.innerHTML = '<div class="card-title">' + w.id + '</div><div class="gauge-val" id="g_' + w.id + '">0.0</div>';
       } else {
-        card.innerHTML = '<div class="card-title">' + w.id + '</div><div style="font-size:20px; font-weight:800; color:#38bdf8;">READY</div>';
+        card.innerHTML = '<div class="card-title">' + w.id + '</div><button class="btn-action" onclick="sendCmd(\\\'' + cmd + ':ACTIVATE\\\')">EXECUTE</button>';
       }
       container.appendChild(card);
     });
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('data:text/javascript;utf8,' + encodeURIComponent('self.addEventListener("fetch", function(e) {});'));
-      });
-    }
   </script>
 </body>
 </html>`;
@@ -232,39 +273,25 @@ export default function App() {
 
   const handleExportAsApp = async () => {
     const appTitle = exportAppName || 'My Sanwitch App';
-    const html = generateStandalonePwaHtml(appTitle);
+    const html = generateCompleteStandaloneAppHtml(appTitle);
     setExportedHtmlSnippet(html);
     setIsPwaGenerated(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // 1-CLICK INSTANT NATIVE ANDROID HOME SCREEN APP ICON PINNING
-    if (NativeModules.ShortcutModule && NativeModules.ShortcutModule.pinShortcut) {
-      try {
-        NativeModules.ShortcutModule.pinShortcut(appTitle);
-        customAlert(
-          '⚡ App Icon Requested!',
-          `App "${appTitle}" shortcut requested! Tap "Add to Home Screen" on the system prompt to place your app icon directly on your home screen in 1 second!`,
-          'success'
-        );
-        return;
-      } catch (e) {
-        console.log('Native shortcut pin fallback:', e);
-      }
-    }
-
-    // Web PWA Fallback
-    const pwaBridgeUrl = `${API_BASE_URL.replace('/api', '')}/pwa?name=${encodeURIComponent(appTitle)}&data=${encodeURIComponent(JSON.stringify(widgets))}`;
     try {
-      await Linking.openURL(pwaBridgeUrl);
+      await Share.share({
+        title: `${appTitle}.html`,
+        message: html
+      });
       customAlert(
-        '🚀 Exporting App to Browser!',
-        `Opening "${appTitle}" in Chrome! Tap Menu (⋮) -> "Add to Home Screen" to place the app icon on your home screen in 1 second!`,
+        '🚀 Standalone App Exported!',
+        `Standalone App "${appTitle}" with functional PANEL, LINK, and TERMINAL views is ready! Save the file or share it to open as a dedicated app on any device.`,
         'success'
       );
     } catch (e) {
       customAlert(
         'App Exported! ⚡',
-        `Standalone PWA bundle generated for "${appTitle}"!`,
+        `Standalone App bundle generated for "${appTitle}"!`,
         'success'
       );
     }
@@ -1314,14 +1341,14 @@ export default function App() {
                       />
                     </View>
 
-                    {/* 1-CLICK INSTANT PWA APP INSTALLATION CARD */}
+                    {/* STANDALONE APP EXPORTER CARD */}
                     <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                         <Zap size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                        <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>Instant Home Screen App Creation</Text>
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>Standalone IoT App Bundle</Text>
                       </View>
                       <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 14, lineHeight: 18 }}>
-                        Generates a single-file standalone PWA HTML mobile app with embedded Web App Manifest (`manifest.json`) and offline Service Worker (`sw.js`). Opens directly in browser to add an instant app icon to your Android home screen!
+                        Generates a complete standalone web application containing your custom project widgets (<Text style={{ color: THEME.primary }}>PANEL</Text>), target connection controls (<Text style={{ color: THEME.success }}>LINK</Text>), and telemetry console (<Text style={{ color: '#a855f7' }}>TERMINAL</Text>).
                       </Text>
 
                       <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleExportAsApp}>
@@ -1331,12 +1358,12 @@ export default function App() {
 
                       {isPwaGenerated && (
                         <View style={{ marginTop: 14, padding: 12, borderRadius: 10, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.4)' }}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}>✅ PWA APP GENERATED & READY!</Text>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}>✅ STANDALONE APP READY!</Text>
                           <TouchableOpacity style={styles.exportBtnSecondary} onPress={() => {
-                            customAlert('Copied! 📋', 'PWA Single-File HTML bundle copied to clipboard! Save as index.html or open in browser to install to Home Screen.', 'success');
+                            customAlert('Copied! 📋', 'Standalone App HTML bundle copied to clipboard! Save as index.html to run your project app anywhere.', 'success');
                           }}>
                             <Copy size={14} color={THEME.text} style={{ marginRight: 6 }} />
-                            <Text style={styles.exportBtnSecondaryText}>Copy PWA HTML Bundle</Text>
+                            <Text style={styles.exportBtnSecondaryText}>Copy App HTML Bundle</Text>
                           </TouchableOpacity>
                         </View>
                       )}
