@@ -629,12 +629,29 @@ export default function App() {
           try { activeUser = JSON.parse(activeUserStr); } catch (e) { }
         }
 
-        // Adopt scanned user & token from Desktop QR if present
+        // Adopt scanned user profile from Desktop QR
         if (parsed.user) {
           if (typeof parsed.user === 'object') {
-            activeUser = parsed.user;
+            const nameVal = parsed.user.name || parsed.user.username || 'Chef';
+            const emailVal = parsed.user.email || `${parsed.user.username || 'chef'}@sanwitch.io`;
+            activeUser = {
+              ...activeUser,
+              ...parsed.user,
+              username: parsed.user.username || nameVal,
+              name: nameVal,
+              email: emailVal,
+              profilePhoto: parsed.user.profilePhoto || parsed.user.avatar || null,
+              importedFromIde: true,
+              pairedAt: new Date().toLocaleDateString()
+            };
           } else if (typeof parsed.user === 'string' && parsed.user.trim()) {
-            activeUser = { username: parsed.user.trim() };
+            activeUser = {
+              username: parsed.user.trim(),
+              name: parsed.user.trim(),
+              email: `${parsed.user.trim()}@sanwitch.io`,
+              importedFromIde: true,
+              pairedAt: new Date().toLocaleDateString()
+            };
           }
         }
 
@@ -1388,14 +1405,18 @@ export default function App() {
 
                 <View style={styles.profileHeader}>
                   <View style={styles.avatarLarge}>
-                    <Text style={styles.avatarTextLarge}>{(user.username || user.email || 'C')[0].toUpperCase()}</Text>
+                    {user.profilePhoto || user.avatar ? (
+                      <Image source={{ uri: user.profilePhoto || user.avatar }} style={{ width: 80, height: 80, borderRadius: 40 }} />
+                    ) : (
+                      <Text style={styles.avatarTextLarge}>{(user.name || user.username || user.email || 'C')[0].toUpperCase()}</Text>
+                    )}
                   </View>
-                  <Text style={styles.profileName}>{user.username || 'Chef'}</Text>
-                  <Text style={styles.profileEmail}>{user.email || 'Sanwitch Connect User'}</Text>
+                  <Text style={styles.profileName}>{user.name || user.username || 'Chef'}</Text>
+                  <Text style={styles.profileEmail}>{user.email || (pairedSessionId ? `Sanwitch IDE User (${user.username || 'Chef'})` : 'Sanwitch Connect User')}</Text>
 
                   <View style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: pairedSessionId ? 'rgba(20, 184, 166, 0.15)' : 'rgba(245, 158, 11, 0.15)', borderWidth: 1, borderColor: pairedSessionId ? 'rgba(20, 184, 166, 0.4)' : 'rgba(245, 158, 11, 0.4)' }}>
                     <Text style={{ fontSize: 11, fontWeight: '700', color: pairedSessionId ? THEME.success : '#f59e0b' }}>
-                      {pairedSessionId ? ' Desktop IDE Paired (Session Bridge Live)' : ' Password Login (Scan Desktop QR to Push)'}
+                      {pairedSessionId ? ' Desktop IDE Profile Imported & Live' : ' Password Login (Scan Desktop QR to Import)'}
                     </Text>
                   </View>
                 </View>
