@@ -143,8 +143,6 @@ export default function App() {
   const [savedApps, setSavedApps] = useState([]);
   const [isBottomMenuVisible, setIsBottomMenuVisible] = useState(false);
   const [isMyAppsModalVisible, setIsMyAppsModalVisible] = useState(false);
-  const [activeRunningPwaApp, setActiveRunningPwaApp] = useState(null);
-  const [isPwaViewerVisible, setIsPwaViewerVisible] = useState(false);
 
   useEffect(() => {
     const loadSavedApps = async () => {
