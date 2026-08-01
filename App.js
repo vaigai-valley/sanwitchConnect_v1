@@ -1558,8 +1558,14 @@ export default function App() {
               </TouchableOpacity>
 
               <View style={[styles.statusBadge, (connectedDevice || wifiConnected) && styles.statusBadgeConnected]}>
-                <View style={[styles.statusDot, (connectedDevice || wifiConnected) && styles.statusDotConnected]} />
-                <Text style={styles.statusText}>{connectedDevice ? 'Linked' : (wifiConnected ? 'WiFi' : 'Ready')}</Text>
+                {connectedDevice ? (
+                  <Bluetooth size={13} color={THEME.primary} />
+                ) : wifiConnected ? (
+                  <Wifi size={13} color={THEME.primary} />
+                ) : (
+                  <View style={styles.statusDot} />
+                )}
+                <Text style={styles.statusText}>{connectedDevice || wifiConnected ? 'LINKED' : 'READY'}</Text>
               </View>
 
               <TouchableOpacity
