@@ -117,6 +117,7 @@ export default function App() {
   const [pairedSessionId, setPairedSessionId] = useState(null);
   const [authMode, setAuthMode] = useState('login'); // login, register, profile
   const [authForm, setAuthForm] = useState({ username: '', email: '', password: '' });
+  const [showManualLogin, setShowManualLogin] = useState(false);
 
   // Real-time Mobile Pairing Logout Sync Effect
   useEffect(() => {
