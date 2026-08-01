@@ -1554,7 +1554,12 @@ export default function App() {
                         );
                       })}
                     </View>
-                   <View style={styles.bottomStatusWrap} pointerEvents="box-none">
+                  </View>
+                </View>
+              </Modal>
+            )}
+
+            <View style={styles.bottomStatusWrap} pointerEvents="box-none">
               <View style={[styles.statusBadge, (connectedDevice || wifiConnected) && styles.statusBadgeConnected]}>
                 <View style={[styles.statusDot, (connectedDevice || wifiConnected) && styles.statusDotConnected]} />
                 <Text style={styles.statusText}>{connectedDevice ? 'Linked' : (wifiConnected ? 'WiFi' : 'Ready')}</Text>
@@ -1594,15 +1599,6 @@ function Joystick({ onMove }) {
       statusDotConnected: { backgroundColor: THEME.primary },
       statusText: { color: THEME.text, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
       bottomStatusWrap: { position: 'absolute', bottom: 18, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', zIndex: 99 },
-      bottomBarRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-      sideMenuTriggerBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(22, 24, 31, 0.9)', borderWidth: 1.5, borderColor: 'rgba(56, 189, 248, 0.4)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8 },
-      sideMenuDrawerContent: { width: '100%', maxWidth: 400, backgroundColor: THEME.surface, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: THEME.surfaceBorder, marginBottom: 10 },
-      sideMenuHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: THEME.surfaceBorder },
-      sideMenuTitle: { fontSize: 16, fontWeight: '800', color: THEME.text },
-      sideMenuCloseBtn: { padding: 6, borderRadius: 8, backgroundColor: 'rgba(255, 255, 255, 0.05)' },
-      sideMenuItemBtn: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255, 255, 255, 0.03)', borderWidth: 1, borderColor: THEME.surfaceBorder, borderRadius: 16, padding: 14 },
-      sideMenuItemText: { fontSize: 13, fontWeight: '800', color: THEME.text },
-      sideMenuItemSubtext: { fontSize: 11, color: THEME.textMuted, marginTop: 2 },
       nav: { flexDirection: 'row', backgroundColor: THEME.surface, margin: 15, padding: 4, borderRadius: 12, borderWidth: 1, borderColor: THEME.surfaceBorder },
       navBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
       navBtnActive: { backgroundColor: 'rgba(255,255,255,0.05)' },
