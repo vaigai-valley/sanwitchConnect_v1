@@ -213,11 +213,16 @@ export default function App() {
       <div class="grid" id="widgetContainer"></div>
     </div>
     <div id="tab-link" class="tab-content">
-      <div class="link-card">
-        <h3 style="font-size:14px; color:#38bdf8; margin-bottom:12px;">WIFI HARDWARE TARGET</h3>
+      <div class="link-card" style="margin-bottom:14px;">
+        <h3 style="font-size:14px; color:#38bdf8; margin-bottom:12px;">🌐 WIFI HARDWARE TARGET</h3>
         <label style="font-size:11px; color:#97a0b5;">TARGET IP ADDRESS</label>
         <input type="text" id="targetIp" class="input-field" value="${wifiIpVal}">
-        <button class="btn-action" onclick="saveLinkConfig()">CONNECT TARGET</button>
+        <button class="btn-action" onclick="saveLinkConfig()">CONNECT WIFI TARGET</button>
+      </div>
+      <div class="link-card">
+        <h3 style="font-size:14px; color:#a855f7; margin-bottom:12px;">⚡ BLUETOOTH (BLE) TARGET</h3>
+        <p style="font-size:11px; color:#97a0b5; margin-bottom:14px;">Scan & connect directly to ESP32 / Arduino / BLE hardware via Web Bluetooth.</p>
+        <button class="btn-action" style="background:linear-gradient(135deg, #a855f7, #38bdf8);" onclick="connectBle()">SCAN BLE HARDWARE</button>
       </div>
     </div>
     <div id="tab-term" class="tab-content">
@@ -237,6 +242,8 @@ export default function App() {
   <script>
     const widgets = ${widgetsJson};
     let targetIp = "${wifiIpVal}";
+    let bleDevice = null;
+    let bleCharacteristic = null;
     const container = document.getElementById('widgetContainer');
     const termLog = document.getElementById('termLog');
     const connStatus = document.getElementById('connStatus');
@@ -250,17 +257,58 @@ export default function App() {
       termLog.scrollTop = termLog.scrollHeight;
     }
 
+    async function connectBle() {
+      if (!navigator.bluetooth) {
+        alert('Web Bluetooth is supported on Chrome on Android & Desktop!');
+        return;
+      }
+      try {
+        logTerm('Scanning BLE devices...', 'SYS');
+        bleDevice = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb', '6e400001-b5a3-f393-e0a9-e50e24dcca9e']
+        });
+        logTerm('Connecting to ' + bleDevice.name, 'SYS');
+        const server = await bleDevice.gatt.connect();
+        const services = await server.getPrimaryServices();
+        if (services.length > 0) {
+          const chars = await services[0].getCharacteristics();
+          bleCharacteristic = chars[0];
+          logTerm('BLE Linked: ' + bleDevice.name, 'SYS');
+          if (connStatus) {
+            connStatus.textContent = '⚡ BLE LINKED';
+            connStatus.style.borderColor = 'rgba(168, 85, 247, 0.6)';
+          }
+        }
+      } catch (e) {
+        logTerm('BLE ERR: ' + e.message, 'ERR');
+      }
+    }
+
     function sendCmd(cmd) {
       logTerm(cmd, 'TX');
-      fetch('http://' + targetIp + '/control?cmd=' + encodeURIComponent(cmd), { mode: 'no-cors' })
-        .then(() => {
-          logTerm('OK: ' + cmd, 'RX');
-          if (connStatus) {
-            connStatus.textContent = '● LINKED';
-            connStatus.style.borderColor = 'rgba(20, 184, 166, 0.6)';
-          }
-        })
-        .catch(e => logTerm('ERR: ' + e.message, 'ERR'));
+      if (bleCharacteristic) {
+        const encoder = new TextEncoder();
+        bleCharacteristic.writeValue(encoder.encode(cmd + '\n'))
+          .then(() => {
+            logTerm('BLE OK: ' + cmd, 'RX');
+            if (connStatus) {
+              connStatus.textContent = '⚡ BLE LINKED';
+              connStatus.style.borderColor = 'rgba(168, 85, 247, 0.6)';
+            }
+          })
+          .catch(e => logTerm('BLE ERR: ' + e.message, 'ERR'));
+      } else {
+        fetch('http://' + targetIp + '/control?cmd=' + encodeURIComponent(cmd), { mode: 'no-cors' })
+          .then(() => {
+            logTerm('WIFI OK: ' + cmd, 'RX');
+            if (connStatus) {
+              connStatus.textContent = '🌐 WIFI LINKED';
+              connStatus.style.borderColor = 'rgba(20, 184, 166, 0.6)';
+            }
+          })
+          .catch(e => logTerm('ERR: ' + e.message, 'ERR'));
+      }
     }
 
     function sendManualCmd() {
