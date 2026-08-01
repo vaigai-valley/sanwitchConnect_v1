@@ -440,12 +440,21 @@ export default function App() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsExportModalVisible(false);
 
+    // Trigger Native Android PackageInstaller / ShortcutManager to pin icon in App Drawer
+    if (Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut) {
+      try {
+        NativeModules.ShortcutModule.pinShortcut(appTitle);
+      } catch (e) {
+        console.log('ShortcutModule Pin Error:', e);
+      }
+    }
+
     // Open internally in Sanwitch Standalone PWA Engine View!
     setActiveRunningPwaApp(newApp);
     setIsPwaViewerVisible(true);
     customAlert(
       'Standalone PWA Installed!',
-      `"${appTitle}" is installed and running in Sanwitch PWA Engine!`,
+      `"${appTitle}" has been pinned to your Android App Drawer & is running in Sanwitch PWA Engine!`,
       'success'
     );
   };
@@ -1668,20 +1677,40 @@ export default function App() {
             <View style={{ flexDirection: 'row', padding: 12, backgroundColor: 'rgba(56, 189, 248, 0.08)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.2)', margin: 12, borderRadius: 14, justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.primary }}>Running Standalone PWA App</Text>
-                <Text style={{ fontSize: 10, color: THEME.textMuted }}>Installed & executed in Sanwitch Internal Browser Engine</Text>
+                <Text style={{ fontSize: 10, color: THEME.textMuted }}>Installed & executed in Sanwitch Native Engine</Text>
               </View>
-              <TouchableOpacity
-                style={{ backgroundColor: THEME.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}
-                onPress={async () => {
-                  if (activeRunningPwaApp?.html) {
-                    const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(activeRunningPwaApp.html)}`;
-                    try { await Linking.openURL(dataUri); } catch (e) {}
-                  }
-                }}
-              >
-                <ExternalLink size={12} color={THEME.background} style={{ marginRight: 4 }} />
-                <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.background }}>PIN HOME SCREEN</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut && (
+                  <TouchableOpacity
+                    style={{ backgroundColor: THEME.secondary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}
+                    onPress={() => {
+                      if (activeRunningPwaApp?.name) {
+                        try {
+                          NativeModules.ShortcutModule.pinShortcut(activeRunningPwaApp.name);
+                          customAlert('Pinned!', `"${activeRunningPwaApp.name}" pinned to Android App Drawer & Home Screen!`, 'success');
+                        } catch (e) {
+                          console.log('Pin Error:', e);
+                        }
+                      }
+                    }}
+                  >
+                    <Smartphone size={12} color={THEME.background} style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.background }}>PIN TO APP DRAWER</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={{ backgroundColor: THEME.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}
+                  onPress={async () => {
+                    if (activeRunningPwaApp?.html) {
+                      const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(activeRunningPwaApp.html)}`;
+                      try { await Linking.openURL(dataUri); } catch (e) {}
+                    }
+                  }}
+                >
+                  <ExternalLink size={12} color={THEME.background} style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.background }}>CHROME PWA</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* PWA DASHBOARD CONTAINER */}
