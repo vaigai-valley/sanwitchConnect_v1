@@ -151,7 +151,18 @@ export default function App() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0b0d12" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="${cleanAppName}" />
   <title>${cleanAppName} - Standalone Sanwitch App</title>
+  <link rel="manifest" href="data:application/manifest+json;utf8,${encodeURIComponent(JSON.stringify({
+    name: appName,
+    short_name: appName,
+    start_url: '.',
+    display: 'standalone',
+    background_color: '#0b0d12',
+    theme_color: '#38bdf8',
+    icons: [{ src: 'https://cdn-icons-png.flaticon.com/512/2583/2583271.png', sizes: '512x512', type: 'image/png' }]
+  }))}" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     body { background: #0b0d12; color: #eef2ff; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
@@ -266,6 +277,12 @@ export default function App() {
       }
       container.appendChild(card);
     });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('data:text/javascript;utf8,' + encodeURIComponent('self.addEventListener("fetch", function(e) {});')).catch(()=>{});
+      });
+    }
   </script>
 </body>
 </html>`;
