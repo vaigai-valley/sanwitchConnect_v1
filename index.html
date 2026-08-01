@@ -187,6 +187,72 @@
       document.getElementById('tab-' + tab).classList.add('active');
     }
 
+    // DYNAMIC MULTI-USER CONFIGURATION PARSER
+    function loadDynamicUserConfig() {
+      let config = null;
+      const hash = window.location.hash;
+      if (hash && hash.includes('config=')) {
+        try {
+          const rawHash = hash.split('config=')[1];
+          const jsonStr = decodeURIComponent(atob(rawHash));
+          config = JSON.parse(jsonStr);
+          localStorage.setItem('sanwitch_user_pwa_config', jsonStr);
+          history.replaceState(null, null, ' ');
+        } catch (e) {
+          console.error('Failed to parse URL config hash', e);
+        }
+      }
+      
+      if (!config) {
+        const stored = localStorage.getItem('sanwitch_user_pwa_config');
+        if (stored) {
+          try { config = JSON.parse(stored); } catch (e) {}
+        }
+      }
+
+      if (config) {
+        if (config.appName) {
+          document.title = config.appName + ' - Standalone PWA';
+          const brandEl = document.querySelector('.brand');
+          if (brandEl) brandEl.textContent = '⚡ ' + config.appName;
+        }
+        if (config.wifiIp) {
+          targetIp = config.wifiIp;
+          const ipInput = document.getElementById('targetIp');
+          if (ipInput) ipInput.value = config.wifiIp;
+        }
+        if (config.widgets && Array.isArray(config.widgets)) {
+          renderDynamicWidgets(config.widgets);
+        }
+      }
+    }
+
+    function renderDynamicWidgets(widgetsList) {
+      const container = document.getElementById('widgetContainer');
+      if (!container) return;
+      container.innerHTML = '';
+      widgetsList.forEach(w => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const cmd = (w.id || 'WIDGET').toUpperCase();
+
+        if (w.type === 'toggle') {
+          card.innerHTML = '<div class="card-title">' + (w.name || w.id) + '</div><div class="toggle-box"><span style="font-size:12px; color:#97a0b5;">STATUS</span><label class="switch"><input type="checkbox" onchange="sendCmd(\'' + cmd + ':\' + (this.checked?1:0))"><span class="slider-round"></span></label></div>';
+        } else if (w.type === 'button') {
+          card.innerHTML = '<div class="card-title">' + (w.name || w.id) + '</div><button class="btn-action" onclick="sendCmd(\'' + cmd + ':PUSH\')">TRIGGER</button>';
+        } else if (w.type === 'slider') {
+          card.innerHTML = '<div class="card-title">' + (w.name || w.id) + '</div><input type="range" min="0" max="100" style="width:100%" onchange="sendCmd(\'' + cmd + ':\' + this.value)">';
+        } else if (w.type === 'gauge') {
+          card.innerHTML = '<div class="card-title">' + (w.name || w.id) + '</div><div class="gauge-val" id="g_' + w.id + '">0.0</div>';
+        } else {
+          card.innerHTML = '<div class="card-title">' + (w.name || w.id) + '</div><button class="btn-action" onclick="sendCmd(\'' + cmd + ':ACTIVATE\')">EXECUTE</button>';
+        }
+        container.appendChild(card);
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', loadDynamicUserConfig);
+
     // PWA INSTALLATION PROMPT HANDLER
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', (e) => {

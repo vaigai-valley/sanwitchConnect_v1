@@ -1510,7 +1510,20 @@ export default function App() {
                   </Text>
                   <TouchableOpacity
                     style={[styles.exportBtnPrimary, { backgroundColor: '#10b981' }]}
-                    onPress={() => Linking.openURL('https://vaigai-valley.github.io/sanwitchConnect_wrap/')}
+                    onPress={() => {
+                      const userConfig = {
+                        appName: exportAppName || 'My Sanwitch App',
+                        widgets,
+                        wifiIp
+                      };
+                      const jsonStr = JSON.stringify(userConfig);
+                      let b64 = jsonStr;
+                      try {
+                        b64 = btoa(encodeURIComponent(jsonStr));
+                      } catch (e) {}
+                      const dynamicUrl = `https://vaigai-valley.github.io/sanwitchConnect_wrap/#config=${b64}`;
+                      Linking.openURL(dynamicUrl);
+                    }}
                   >
                     <ExternalLink size={16} color={THEME.background} style={{ marginRight: 6 }} />
                     <Text style={styles.exportBtnPrimaryText}>🌐 OPEN GITHUB PAGES PWA</Text>
