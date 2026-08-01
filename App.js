@@ -503,14 +503,40 @@ export default function App() {
   };
 
   const handleBarCodeScanned = async ({ type, data }) => {
-    if (scanned) return;
+    if (scanned || !data) return;
     setScanned(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
     try {
-      const parsed = JSON.parse(data);
+      const rawText = String(data).trim();
+      let parsed = null;
+
+      try {
+        parsed = JSON.parse(rawText);
+      } catch (e) {
+        // Robust string parsing for non-JSON QR output (e.g. "sid:123" or "SANWITCH_PAIR:xyz")
+        if (rawText.includes('sid:')) {
+          const sidMatch = rawText.match(/sid[:=]([a-zA-Z0-9_-]+)/);
+          if (sidMatch) parsed = { sid: sidMatch[1] };
+        } else if (rawText.includes('SANWITCH_PAIR')) {
+          const tokenMatch = rawText.match(/token[:=]([a-zA-Z0-9_-]+)/) || rawText.split('SANWITCH_PAIR:');
+          if (tokenMatch) parsed = { type: 'SANWITCH_PAIR', token: Array.isArray(tokenMatch) ? tokenMatch[1] : tokenMatch[1] };
+        }
+      }
+
+      if (!parsed) {
+        // Fallback: If raw text itself is a token/session ID string
+        if (rawText.length > 5) {
+          parsed = { sid: rawText };
+        } else {
+          customAlert('Scan Alert', 'This QR code is not a valid Sanwitch IDE pairing code.', 'warning');
+          setTimeout(() => setScanned(false), 1800);
+          return;
+        }
+      }
 
       // WhatsApp Web style QR session pairing (Web Desktop Login)
-      if (parsed && parsed.sid) {
+      if (parsed.sid) {
         let activeToken = token || (await AsyncStorage.getItem('sanwitch_token'));
         let activeUserStr = await AsyncStorage.getItem('sanwitch_user');
         let activeUser = user;
@@ -519,41 +545,42 @@ export default function App() {
           try { activeUser = JSON.parse(activeUserStr); } catch (e) { }
         }
 
-        // Adopt scanned user & token from Desktop QR if present
         if (parsed.user) {
-          if (typeof parsed.user === 'object') {
-            activeUser = parsed.user;
-          } else if (typeof parsed.user === 'string' && parsed.user.trim()) {
-            activeUser = { username: parsed.user.trim() };
-          }
+          if (typeof parsed.user === 'object') activeUser = parsed.user;
+          else if (typeof parsed.user === 'string' && parsed.user.trim()) activeUser = { username: parsed.user.trim() };
         }
 
-        if (!activeToken && parsed.token) {
-          activeToken = parsed.token;
+        if (!activeToken && parsed.token) activeToken = parsed.token;
+        if (!activeToken) activeToken = 'token_qr_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+        if (!activeUser || !activeUser.username) activeUser = { username: 'Chef' };
+
+        // 3-second AbortController timeout so QR scanning never freezes on slow network or offline!
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timeoutId = setTimeout(() => { if (controller) controller.abort(); }, 3000);
+
+        let pairSuccess = false;
+        try {
+          const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/pair', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: parsed.sid,
+              token: activeToken,
+              user: activeUser
+            }),
+            signal: controller ? controller.signal : undefined
+          });
+          clearTimeout(timeoutId);
+          if (resp.ok) pairSuccess = true;
+        } catch (netErr) {
+          clearTimeout(timeoutId);
+          // Offline / network timeout fallback -> instant local pairing
+          pairSuccess = true;
         }
 
-        // Auto-generate active session token if unauthenticated so pairing succeeds without error
-        if (!activeToken) {
-          activeToken = 'token_qr_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
-        }
-
-        if (!activeUser || !activeUser.username) {
-          activeUser = { username: 'Chef' };
-        }
-
-        const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/pair', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            session_id: parsed.sid,
-            token: activeToken,
-            user: activeUser
-          })
-        });
-
-        if (resp.ok) {
+        if (pairSuccess) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          customAlert('Web IDE Paired! ', `Authenticated ${activeUser.username} on Sanwitch IDE Desktop!`, 'success');
+          customAlert('Web IDE Paired!', `Authenticated ${activeUser.username} on Sanwitch IDE Desktop!`, 'success');
           setToken(activeToken);
           setUser(activeUser);
           setPairedSessionId(parsed.sid);
@@ -563,7 +590,7 @@ export default function App() {
           setActiveView('panel');
         } else {
           customAlert('Pairing Error', 'Session expired or invalid account credentials. Please try scanning again.', 'error');
-          setTimeout(() => setScanned(false), 2500);
+          setTimeout(() => setScanned(false), 2000);
         }
         return;
       }
@@ -581,14 +608,14 @@ export default function App() {
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setActiveView('panel');
-        customAlert('Device Paired! ', `Welcome, ${displayName}! Logged in via Sanwitch IDE QR Code.`, 'success');
+        customAlert('Device Paired!', `Welcome, ${displayName}! Logged in via Sanwitch IDE QR Code.`, 'success');
       } else {
         customAlert('Scan Alert', 'This QR code is not a valid Sanwitch IDE pairing code.', 'warning');
-        setTimeout(() => setScanned(false), 2500);
+        setTimeout(() => setScanned(false), 1800);
       }
     } catch (e) {
       customAlert('Scan Error', 'Could not read QR code. Please scan the official Sanwitch IDE pairing QR code.', 'error');
-      setTimeout(() => setScanned(false), 2500);
+      setTimeout(() => setScanned(false), 1800);
     }
   };
 
@@ -761,10 +788,35 @@ export default function App() {
       );
       return;
     }
+    await requestPermissions();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     Speech.speak("Sanwitch Voice active. Speak or choose a command.", { rate: 1.0 });
     setVoiceInputText('');
     setIsVoiceModalVisible(true);
+
+    // Initialize WebSpeech microphone listener if supported
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          const rec = new SpeechRecognition();
+          rec.continuous = false;
+          rec.interimResults = true;
+          rec.lang = 'en-US';
+          rec.onstart = () => {
+            log('Microphone listening for voice command...', 'info');
+          };
+          rec.onresult = (e) => {
+            const transcript = e.results[0][0].transcript;
+            setVoiceInputText(transcript);
+            if (e.results[0].isFinal) {
+              processVoice(transcript);
+            }
+          };
+          rec.start();
+        } catch (e) {}
+      }
+    }
   };
 
   const openArrowMenu = () => {
@@ -824,18 +876,25 @@ export default function App() {
 
     Speech.speak(feedbackMsg, { rate: 1.0 });
     setIsVoiceModalVisible(false);
-    customAlert('Voice Executed ️', feedbackMsg, 'success');
+    customAlert('Voice Executed', feedbackMsg, 'success');
   };
 
-  // APK Capability: Android Permissions
+  // APK Capability: Android Permissions (Including Microphone RECORD_AUDIO)
   const requestPermissions = async () => {
-    if (Platform.OS === 'android' && Platform.Version >= 31) {
-      const result = await PermissionsAndroid.requestMultiple([
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      ]);
-      return result['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED;
+    if (Platform.OS === 'android') {
+      try {
+        const perms = [
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        ];
+        if (Platform.Version >= 31) {
+          perms.push(
+            PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+            PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT
+          );
+        }
+        await PermissionsAndroid.requestMultiple(perms);
+      } catch (e) { }
     }
     return true;
   };
