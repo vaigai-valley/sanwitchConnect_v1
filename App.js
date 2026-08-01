@@ -278,6 +278,33 @@ export default function App() {
       container.appendChild(card);
     });
 
+    // 1-TAP PWA INSTALLER PROMPT EVENT LISTENER
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const installBtn = document.getElementById('pwaInstallBanner');
+      if (installBtn) installBtn.style.display = 'flex';
+      // Auto trigger 1-tap install prompt
+      setTimeout(() => {
+        if (deferredPrompt) deferredPrompt.prompt();
+      }, 500);
+    });
+
+    function trigger1TapInstall() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted PWA installation');
+          }
+          deferredPrompt = null;
+        });
+      } else {
+        alert('Tap Menu (⋮) in Chrome -> "Add to Home Screen" to install!');
+      }
+    }
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('data:text/javascript;utf8,' + encodeURIComponent('self.addEventListener("fetch", function(e) {});')).catch(()=>{});
@@ -295,22 +322,22 @@ export default function App() {
     setIsPwaGenerated(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+    const pwaBridgeUrl = `https://sanwitch.vaigaivalley.workers.dev/pwa?name=${encodeURIComponent(appTitle)}&widgets=${encodeURIComponent(JSON.stringify(widgets))}`;
+
     try {
-      await Share.share({
-        title: `${appTitle}.html`,
-        message: html
-      });
+      await Linking.openURL(pwaBridgeUrl);
       customAlert(
-        '🚀 Standalone App Exported!',
-        `Standalone App "${appTitle}" with functional PANEL, LINK, and TERMINAL views is ready! Save the file or share it to open as a dedicated app on any device.`,
+        '⚡ 1-Tap PWA Launching!',
+        `Opening "${appTitle}" in Chrome! Tap "INSTALL APP" on the top banner or system prompt to add your app icon to your Android home screen immediately!`,
         'success'
       );
     } catch (e) {
-      customAlert(
-        'App Exported! ⚡',
-        `Standalone App bundle generated for "${appTitle}"!`,
-        'success'
-      );
+      try {
+        await Share.share({
+          title: `${appTitle}.html`,
+          message: html
+        });
+      } catch (err) {}
     }
   };
 
