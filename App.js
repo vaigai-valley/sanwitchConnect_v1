@@ -23,7 +23,7 @@ import {
   Share
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Mic, Bluetooth, Wifi, Plus, X, LayoutGrid, Trash2, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, LogOut, KeyRound, Smartphone, ExternalLink, Sparkles, ChevronsUp, Folder, Edit3, FileText } from 'lucide-react-native';
+import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, LogOut, KeyRound, Smartphone, ExternalLink, Sparkles, ChevronsUp, Folder, Edit3, FileText, Play, Save, Copy, RefreshCw, Share2 } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
