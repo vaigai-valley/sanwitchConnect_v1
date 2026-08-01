@@ -1610,7 +1610,10 @@ export default function App() {
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsBottomMenuVisible(false)}>
             <View style={[styles.modalContent, { position: 'absolute', bottom: 75, left: 16, width: 280, borderRadius: 20, padding: 16, backgroundColor: '#16181f', borderWidth: 1, borderColor: '#2b3240' }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: THEME.primary, letterSpacing: 0.5 }}> SANWITCH CONNECT</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Zap size={14} color={THEME.primary} style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: THEME.primary, letterSpacing: 0.5 }}>SANWITCH CONNECT</Text>
+                </View>
                 <TouchableOpacity onPress={() => setIsBottomMenuVisible(false)}>
                   <X size={16} color={THEME.textMuted} />
                 </TouchableOpacity>
@@ -1626,7 +1629,7 @@ export default function App() {
                 <Folder size={20} color={THEME.primary} style={{ marginRight: 10 }} />
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}> MY APPS</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}>MY APPS</Text>
                     <View style={{ backgroundColor: THEME.primary, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 }}>
                       <Text style={{ fontSize: 10, fontWeight: '900', color: THEME.background }}>{savedApps.length}</Text>
                     </View>
@@ -1644,7 +1647,7 @@ export default function App() {
               >
                 <Sparkles size={20} color={THEME.success} style={{ marginRight: 10 }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}> EXPORT APP</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}>EXPORT APP</Text>
                   <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Save layout & run PWA app</Text>
                 </View>
               </TouchableOpacity>
@@ -1659,7 +1662,7 @@ export default function App() {
               <View style={styles.modalHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Folder size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                  <Text style={styles.modalTitle}> My Saved Apps ({savedApps.length})</Text>
+                  <Text style={styles.modalTitle}>My Saved Apps ({savedApps.length})</Text>
                 </View>
                 <TouchableOpacity onPress={() => setIsMyAppsModalVisible(false)}>
                   <X size={20} color={THEME.textMuted} />
@@ -1671,14 +1674,17 @@ export default function App() {
                   <View style={{ padding: 30, alignItems: 'center' }}>
                     <FileText size={40} color={THEME.textMuted} style={{ marginBottom: 10, opacity: 0.5 }} />
                     <Text style={{ fontSize: 14, color: THEME.textMuted, textAlign: 'center' }}>No saved apps in local phone storage.</Text>
-                    <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', marginTop: 6 }}>Tap " EXPORT APP" to save your current layout as a local app!</Text>
+                    <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', marginTop: 6 }}>Tap "EXPORT APP" to save your current layout as a local app!</Text>
                   </View>
                 ) : (
                   savedApps.map((app) => (
                     <View key={app.id} style={{ backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.border, borderRadius: 14, padding: 14, marginBottom: 12 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}> {app.name}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Zap size={14} color={THEME.primary} style={{ marginRight: 6 }} />
+                            <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>{app.name}</Text>
+                          </View>
                           <Text style={{ fontSize: 11, color: THEME.primary, fontWeight: '700', marginTop: 2 }}>{app.fileName}</Text>
                           <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Created: {app.createdAt} • Widgets: {app.widgets?.length || 0}</Text>
                         </View>
