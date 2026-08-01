@@ -503,40 +503,14 @@ export default function App() {
   };
 
   const handleBarCodeScanned = async ({ type, data }) => {
-    if (scanned || !data) return;
+    if (scanned) return;
     setScanned(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
     try {
-      const rawText = String(data).trim();
-      let parsed = null;
-
-      try {
-        parsed = JSON.parse(rawText);
-      } catch (e) {
-        // Robust string parsing for non-JSON QR output (e.g. "sid:123" or "SANWITCH_PAIR:xyz")
-        if (rawText.includes('sid:')) {
-          const sidMatch = rawText.match(/sid[:=]([a-zA-Z0-9_-]+)/);
-          if (sidMatch) parsed = { sid: sidMatch[1] };
-        } else if (rawText.includes('SANWITCH_PAIR')) {
-          const tokenMatch = rawText.match(/token[:=]([a-zA-Z0-9_-]+)/) || rawText.split('SANWITCH_PAIR:');
-          if (tokenMatch) parsed = { type: 'SANWITCH_PAIR', token: Array.isArray(tokenMatch) ? tokenMatch[1] : tokenMatch[1] };
-        }
-      }
-
-      if (!parsed) {
-        // Fallback: If raw text itself is a token/session ID string
-        if (rawText.length > 5) {
-          parsed = { sid: rawText };
-        } else {
-          customAlert('Scan Alert', 'This QR code is not a valid Sanwitch IDE pairing code.', 'warning');
-          setTimeout(() => setScanned(false), 1800);
-          return;
-        }
-      }
+      const parsed = JSON.parse(data);
 
       // WhatsApp Web style QR session pairing (Web Desktop Login)
-      if (parsed.sid) {
+      if (parsed && parsed.sid) {
         let activeToken = token || (await AsyncStorage.getItem('sanwitch_token'));
         let activeUserStr = await AsyncStorage.getItem('sanwitch_user');
         let activeUser = user;
@@ -545,40 +519,39 @@ export default function App() {
           try { activeUser = JSON.parse(activeUserStr); } catch (e) { }
         }
 
+        // Adopt scanned user & token from Desktop QR if present
         if (parsed.user) {
-          if (typeof parsed.user === 'object') activeUser = parsed.user;
-          else if (typeof parsed.user === 'string' && parsed.user.trim()) activeUser = { username: parsed.user.trim() };
+          if (typeof parsed.user === 'object') {
+            activeUser = parsed.user;
+          } else if (typeof parsed.user === 'string' && parsed.user.trim()) {
+            activeUser = { username: parsed.user.trim() };
+          }
         }
 
-        if (!activeToken && parsed.token) activeToken = parsed.token;
-        if (!activeToken) activeToken = 'token_qr_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
-        if (!activeUser || !activeUser.username) activeUser = { username: 'Chef' };
-
-        // 3-second AbortController timeout so QR scanning never freezes on slow network or offline!
-        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        const timeoutId = setTimeout(() => { if (controller) controller.abort(); }, 3000);
-
-        let pairSuccess = false;
-        try {
-          const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/pair', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              session_id: parsed.sid,
-              token: activeToken,
-              user: activeUser
-            }),
-            signal: controller ? controller.signal : undefined
-          });
-          clearTimeout(timeoutId);
-          if (resp.ok) pairSuccess = true;
-        } catch (netErr) {
-          clearTimeout(timeoutId);
-          // Offline / network timeout fallback -> instant local pairing
-          pairSuccess = true;
+        if (!activeToken && parsed.token) {
+          activeToken = parsed.token;
         }
 
-        if (pairSuccess) {
+        // Auto-generate active session token if unauthenticated so pairing succeeds without error
+        if (!activeToken) {
+          activeToken = 'token_qr_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+        }
+
+        if (!activeUser || !activeUser.username) {
+          activeUser = { username: 'Chef' };
+        }
+
+        const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/pair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: parsed.sid,
+            token: activeToken,
+            user: activeUser
+          })
+        });
+
+        if (resp.ok) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           customAlert('Web IDE Paired!', `Authenticated ${activeUser.username} on Sanwitch IDE Desktop!`, 'success');
           setToken(activeToken);
@@ -590,7 +563,7 @@ export default function App() {
           setActiveView('panel');
         } else {
           customAlert('Pairing Error', 'Session expired or invalid account credentials. Please try scanning again.', 'error');
-          setTimeout(() => setScanned(false), 2000);
+          setTimeout(() => setScanned(false), 2500);
         }
         return;
       }
@@ -611,11 +584,11 @@ export default function App() {
         customAlert('Device Paired!', `Welcome, ${displayName}! Logged in via Sanwitch IDE QR Code.`, 'success');
       } else {
         customAlert('Scan Alert', 'This QR code is not a valid Sanwitch IDE pairing code.', 'warning');
-        setTimeout(() => setScanned(false), 1800);
+        setTimeout(() => setScanned(false), 2500);
       }
     } catch (e) {
       customAlert('Scan Error', 'Could not read QR code. Please scan the official Sanwitch IDE pairing QR code.', 'error');
-      setTimeout(() => setScanned(false), 1800);
+      setTimeout(() => setScanned(false), 2500);
     }
   };
 
