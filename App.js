@@ -1629,7 +1629,7 @@ export default function App() {
           </Modal>
         )}
 
-        {/* BOTTOM-LEFT ^^^ POPUP MENU (MY APPS & EXPORT APP) */}
+        {/* BOTTOM-LEFT ^^^ POPUP MENU (1st: EXPORT APP, 2nd: MY APPS) */}
         <Modal visible={isBottomMenuVisible} animationType="fade" transparent={true} onRequestClose={() => setIsBottomMenuVisible(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsBottomMenuVisible(false)}>
             <View style={[styles.modalContent, { position: 'absolute', bottom: 75, left: 16, width: 280, borderRadius: 20, padding: 16, backgroundColor: '#16181f', borderWidth: 1, borderColor: '#2b3240' }]}>
@@ -1643,8 +1643,24 @@ export default function App() {
                 </TouchableOpacity>
               </View>
 
+              {/* 1st BUTTON: EXPORT APP */}
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(56, 189, 248, 0.08)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', padding: 12, borderRadius: 12, marginBottom: 10 }}
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(20, 184, 166, 0.08)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.3)', padding: 12, borderRadius: 12, marginBottom: 10 }}
+                onPress={() => {
+                  setIsBottomMenuVisible(false);
+                  setIsExportModalVisible(true);
+                }}
+              >
+                <Sparkles size={20} color={THEME.success} style={{ marginRight: 10 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}>EXPORT APP</Text>
+                  <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Save layout & run PWA app</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* 2nd BUTTON: MY APPS */}
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(56, 189, 248, 0.08)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', padding: 12, borderRadius: 12 }}
                 onPress={() => {
                   setIsBottomMenuVisible(false);
                   setIsMyAppsModalVisible(true);
@@ -1659,20 +1675,6 @@ export default function App() {
                     </View>
                   </View>
                   <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Saved local .html app layouts</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(20, 184, 166, 0.08)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.3)', padding: 12, borderRadius: 12 }}
-                onPress={() => {
-                  setIsBottomMenuVisible(false);
-                  setIsExportModalVisible(true);
-                }}
-              >
-                <Sparkles size={20} color={THEME.success} style={{ marginRight: 10 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}>EXPORT APP</Text>
-                  <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Save layout & run PWA app</Text>
                 </View>
               </TouchableOpacity>
             </View>
