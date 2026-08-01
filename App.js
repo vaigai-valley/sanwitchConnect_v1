@@ -1665,11 +1665,7 @@ export default function App() {
         <Modal visible={isBottomMenuVisible} animationType="fade" transparent={true} onRequestClose={() => setIsBottomMenuVisible(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsBottomMenuVisible(false)}>
             <View style={[styles.modalContent, { position: 'absolute', bottom: 75, left: 16, width: 280, borderRadius: 20, padding: 16, backgroundColor: '#16181f', borderWidth: 1, borderColor: '#2b3240' }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Zap size={14} color={THEME.primary} style={{ marginRight: 6 }} />
-                  <Text style={{ fontSize: 13, fontWeight: '900', color: THEME.primary, letterSpacing: 0.5 }}>SANWITCH CONNECT</Text>
-                </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 10 }}>
                 <TouchableOpacity onPress={() => setIsBottomMenuVisible(false)}>
                   <X size={16} color={THEME.textMuted} />
                 </TouchableOpacity>
