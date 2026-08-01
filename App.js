@@ -87,16 +87,15 @@ export default function App() {
         const savedToken = await AsyncStorage.getItem('sanwitch_token').catch(() => null);
         const savedUser = await AsyncStorage.getItem('sanwitch_user').catch(() => null);
 
-        const tourDone = await AsyncStorage.getItem('@sanwitch_tour_completed').catch(() => null);
-        if (!tourDone && isMounted) {
-          setTourStep(1);
-          setIsTourModalVisible(true);
-        }
-
         if (savedToken && savedUser && isMounted) {
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
           setActiveView('panel');
+          const tourDone = await AsyncStorage.getItem('@sanwitch_tour_completed').catch(() => null);
+          if (!tourDone && isMounted) {
+            setTourStep(1);
+            setIsTourModalVisible(true);
+          }
         } else if (isMounted) {
           setActiveView('auth');
         }
@@ -622,6 +621,11 @@ export default function App() {
           await AsyncStorage.setItem('sanwitch_user', JSON.stringify(activeUser));
           await AsyncStorage.setItem('sanwitch_paired_session_id', parsed.sid);
           setActiveView('panel');
+          const tourDone = await AsyncStorage.getItem('@sanwitch_tour_completed').catch(() => null);
+          if (!tourDone) {
+            setTourStep(1);
+            setIsTourModalVisible(true);
+          }
         } else {
           customAlert('Pairing Error', 'Session expired or invalid account credentials. Please try scanning again.', 'error');
           setTimeout(() => setScanned(false), 2500);
@@ -642,6 +646,11 @@ export default function App() {
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setActiveView('panel');
+        const tourDone = await AsyncStorage.getItem('@sanwitch_tour_completed').catch(() => null);
+        if (!tourDone) {
+          setTourStep(1);
+          setIsTourModalVisible(true);
+        }
         customAlert('Device Paired!', `Welcome, ${displayName}! Logged in via Sanwitch IDE QR Code.`, 'success');
       } else {
         customAlert('Scan Alert', 'This QR code is not a valid Sanwitch IDE pairing code.', 'warning');
@@ -718,6 +727,11 @@ export default function App() {
         await AsyncStorage.setItem('sanwitch_token', tokenVal);
         await AsyncStorage.setItem('sanwitch_user', JSON.stringify(userData));
         setActiveView('panel');
+        const tourDone = await AsyncStorage.getItem('@sanwitch_tour_completed').catch(() => null);
+        if (!tourDone) {
+          setTourStep(1);
+          setIsTourModalVisible(true);
+        }
         customAlert('Success', `Welcome back, ${displayName}!`, 'success');
       } else {
         setAuthMode('login');
