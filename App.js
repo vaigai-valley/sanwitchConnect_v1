@@ -194,12 +194,14 @@ export default function App() {
     .link-card { background: #16181f; border: 1px solid #2b3240; border-radius: 16px; padding: 20px; }
     .input-field { width: 100%; background: #0b0d12; border: 1px solid #2b3240; border-radius: 10px; padding: 12px; color: #eef2ff; font-size: 14px; margin-top: 6px; margin-bottom: 14px; }
     footer { text-align: center; padding: 14px; font-size: 11px; color: #97a0b5; border-top: 1px solid #16181f; }
+    .voice-fab { position: fixed; bottom: 20px; right: 20px; width: 44px; height: 44px; border-radius: 22px; background: rgba(22, 24, 31, 0.9); border: 1.5px solid rgba(56, 189, 248, 0.5); color: #38bdf8; font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 999; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    .voice-fab:active { transform: scale(0.9); }
   </style>
 </head>
 <body>
   <header>
     <div class="brand">⚡ ${cleanAppName}</div>
-    <div class="status-pill" id="connStatus">● LINK READY</div>
+    <div class="status-pill" id="connStatus">● READY</div>
   </header>
   <nav>
     <div class="nav-btn active" onclick="switchTab('panel', event)">PANEL</div>
@@ -228,12 +230,16 @@ export default function App() {
       </div>
     </div>
   </main>
+
+  <button class="voice-fab" onclick="startVoice()" title="Voice Assistant">🎙️</button>
   <footer>Built with Sanwitch Connect Standalone Exporter</footer>
+
   <script>
     const widgets = ${widgetsJson};
     let targetIp = "${wifiIpVal}";
     const container = document.getElementById('widgetContainer');
     const termLog = document.getElementById('termLog');
+    const connStatus = document.getElementById('connStatus');
 
     function logTerm(msg, type='TX') {
       const line = document.createElement('div');
@@ -247,7 +253,13 @@ export default function App() {
     function sendCmd(cmd) {
       logTerm(cmd, 'TX');
       fetch('http://' + targetIp + '/control?cmd=' + encodeURIComponent(cmd), { mode: 'no-cors' })
-        .then(() => logTerm('OK: ' + cmd, 'RX'))
+        .then(() => {
+          logTerm('OK: ' + cmd, 'RX');
+          if (connStatus) {
+            connStatus.textContent = '● LINKED';
+            connStatus.style.borderColor = 'rgba(20, 184, 166, 0.6)';
+          }
+        })
         .catch(e => logTerm('ERR: ' + e.message, 'ERR'));
     }
 
@@ -262,6 +274,10 @@ export default function App() {
     function saveLinkConfig() {
       targetIp = document.getElementById('targetIp').value;
       logTerm('Target IP updated to ' + targetIp, 'SYS');
+      if (connStatus) {
+        connStatus.textContent = '● LINKED';
+        connStatus.style.borderColor = 'rgba(20, 184, 166, 0.6)';
+      }
       alert('Target IP Saved: ' + targetIp);
     }
 
@@ -270,6 +286,29 @@ export default function App() {
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       evt.target.classList.add('active');
       document.getElementById('tab-' + tab).classList.add('active');
+    }
+
+    function startVoice() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert('Voice Assistant is supported on Chrome!');
+        return;
+      }
+      const rec = new SpeechRecognition();
+      rec.onstart = () => logTerm('Listening for voice command...', 'SYS');
+      rec.onresult = (e) => {
+        const text = e.results[0][0].transcript.toUpperCase();
+        logTerm('Voice Input: "' + text + '"', 'TX');
+        widgets.forEach(w => {
+          const name = w.id.toUpperCase();
+          if (text.includes(name)) {
+            if (text.includes('ON') || text.includes('START') || text.includes('ENABLE')) sendCmd(name + ':1');
+            else if (text.includes('OFF') || text.includes('STOP') || text.includes('DISABLE')) sendCmd(name + ':0');
+            else sendCmd(name + ':PUSH');
+          }
+        });
+      };
+      rec.start();
     }
 
     widgets.forEach(w => {
@@ -296,27 +335,7 @@ export default function App() {
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      const installBtn = document.getElementById('pwaInstallBanner');
-      if (installBtn) installBtn.style.display = 'flex';
-      // Auto trigger 1-tap install prompt
-      setTimeout(() => {
-        if (deferredPrompt) deferredPrompt.prompt();
-      }, 500);
     });
-
-    function trigger1TapInstall() {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') {
-            console.log('User accepted PWA installation');
-          }
-          deferredPrompt = null;
-        });
-      } else {
-        alert('Tap Menu (⋮) in Chrome -> "Add to Home Screen" to install!');
-      }
-    }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
