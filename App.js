@@ -216,7 +216,7 @@ export default function App() {
 </head>
 <body>
   <header>
-    <div class="brand">⚡ ${cleanAppName}</div>
+    <div class="brand"> ${cleanAppName}</div>
     <div class="status-pill" id="connStatus">● READY</div>
   </header>
   <nav>
@@ -230,13 +230,13 @@ export default function App() {
     </div>
     <div id="tab-link" class="tab-content">
       <div class="link-card" style="margin-bottom:14px;">
-        <h3 style="font-size:14px; color:#38bdf8; margin-bottom:12px;">🌐 WIFI HARDWARE TARGET</h3>
+        <h3 style="font-size:14px; color:#38bdf8; margin-bottom:12px;"> WIFI HARDWARE TARGET</h3>
         <label style="font-size:11px; color:#97a0b5;">TARGET IP ADDRESS</label>
         <input type="text" id="targetIp" class="input-field" value="${wifiIpVal}">
         <button class="btn-action" onclick="saveLinkConfig()">CONNECT WIFI TARGET</button>
       </div>
       <div class="link-card">
-        <h3 style="font-size:14px; color:#a855f7; margin-bottom:12px;">⚡ BLUETOOTH (BLE) TARGET</h3>
+        <h3 style="font-size:14px; color:#a855f7; margin-bottom:12px;"> BLUETOOTH (BLE) TARGET</h3>
         <p style="font-size:11px; color:#97a0b5; margin-bottom:14px;">Scan & connect directly to ESP32 / Arduino / BLE hardware via Web Bluetooth.</p>
         <button class="btn-action" style="background:linear-gradient(135deg, #a855f7, #38bdf8);" onclick="connectBle()">SCAN BLE HARDWARE</button>
       </div>
@@ -252,7 +252,7 @@ export default function App() {
     </div>
   </main>
 
-  <button class="voice-fab" onclick="startVoice()" title="Voice Assistant">🎙️</button>
+  <button class="voice-fab" onclick="startVoice()" title="Voice Assistant">️</button>
   <footer>Built with Sanwitch Connect Standalone Exporter</footer>
 
   <script>
@@ -292,7 +292,7 @@ export default function App() {
           bleCharacteristic = chars[0];
           logTerm('BLE Linked: ' + bleDevice.name, 'SYS');
           if (connStatus) {
-            connStatus.textContent = '⚡ BLE LINKED';
+            connStatus.textContent = ' BLE LINKED';
             connStatus.style.borderColor = 'rgba(168, 85, 247, 0.6)';
           }
         }
@@ -309,7 +309,7 @@ export default function App() {
           .then(() => {
             logTerm('BLE OK: ' + cmd, 'RX');
             if (connStatus) {
-              connStatus.textContent = '⚡ BLE LINKED';
+              connStatus.textContent = ' BLE LINKED';
               connStatus.style.borderColor = 'rgba(168, 85, 247, 0.6)';
             }
           })
@@ -319,7 +319,7 @@ export default function App() {
           .then(() => {
             logTerm('WIFI OK: ' + cmd, 'RX');
             if (connStatus) {
-              connStatus.textContent = '🌐 WIFI LINKED';
+              connStatus.textContent = ' WIFI LINKED';
               connStatus.style.borderColor = 'rgba(20, 184, 166, 0.6)';
             }
           })
@@ -441,7 +441,7 @@ export default function App() {
     try {
       await Linking.openURL(dataUri);
       customAlert(
-        '⚡ Local PWA App Saved & Running!',
+        ' Local PWA App Saved & Running!',
         `Saved "${fileName}" into phone storage! Browser opening to trigger PWA install prompt!`,
         'success'
       );
@@ -457,7 +457,7 @@ export default function App() {
     if (appItem.wifiIP) setWifiIP(appItem.wifiIP);
     setExportAppName(appItem.name);
     setIsMyAppsModalVisible(false);
-    customAlert('App Loaded! 📁', `Loaded "${appItem.name}" widget layout back into Sanwitch Connect for editing!`, 'success');
+    customAlert('App Loaded! ', `Loaded "${appItem.name}" widget layout back into Sanwitch Connect for editing!`, 'success');
   };
 
   const handleLaunchSavedApp = async (appItem) => {
@@ -478,7 +478,7 @@ export default function App() {
     try {
       await AsyncStorage.setItem('@sanwitch_saved_apps', JSON.stringify(filtered));
     } catch (e) {}
-    customAlert('Deleted 🗑️', 'App layout removed from local phone storage.', 'info');
+    customAlert('Deleted ️', 'App layout removed from local phone storage.', 'info');
   };
 
   const customAlert = (title, message, buttonsOrType = null) => {
@@ -553,7 +553,7 @@ export default function App() {
 
         if (resp.ok) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          customAlert('Web IDE Paired! 🎉', `Authenticated ${activeUser.username} on Sanwitch IDE Desktop!`, 'success');
+          customAlert('Web IDE Paired! ', `Authenticated ${activeUser.username} on Sanwitch IDE Desktop!`, 'success');
           setToken(activeToken);
           setUser(activeUser);
           setPairedSessionId(parsed.sid);
@@ -581,7 +581,7 @@ export default function App() {
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setActiveView('panel');
-        customAlert('Device Paired! 🎉', `Welcome, ${displayName}! Logged in via Sanwitch IDE QR Code.`, 'success');
+        customAlert('Device Paired! ', `Welcome, ${displayName}! Logged in via Sanwitch IDE QR Code.`, 'success');
       } else {
         customAlert('Scan Alert', 'This QR code is not a valid Sanwitch IDE pairing code.', 'warning');
         setTimeout(() => setScanned(false), 2500);
@@ -597,7 +597,7 @@ export default function App() {
   const navigateToView = (targetView) => {
     if (!user && !token && targetView !== 'auth') {
       customAlert(
-        'Login Required 🔒',
+        'Login Required ',
         'You must log in (via Password or Desktop QR Code) to access app features.',
         [
           { text: 'Log In / Scan QR', onPress: () => setActiveView('auth') }
@@ -800,7 +800,7 @@ export default function App() {
 
     Speech.speak(feedbackMsg, { rate: 1.0 });
     setIsVoiceModalVisible(false);
-    customAlert('Voice Executed 🎙️', feedbackMsg, 'success');
+    customAlert('Voice Executed ️', feedbackMsg, 'success');
   };
 
   // APK Capability: Android Permissions
@@ -953,7 +953,7 @@ export default function App() {
     try {
       if (!token && !user) {
         customAlert(
-          'Login Required 🔒',
+          'Login Required ',
           'You must log in (via Password or Desktop QR Code) to use the app and sync with Sanwitch IDE.',
           [{ text: 'Log In / Scan QR', onPress: () => setActiveView('auth') }]
         );
@@ -965,7 +965,7 @@ export default function App() {
 
       if (!activeSessionId) {
         customAlert(
-          'Desktop QR Scan Required 📱',
+          'Desktop QR Scan Required ',
           'You are logged in! To push your mobile layout directly to Sanwitch Web IDE, please scan the desktop QR code to link your session.',
           [
             { text: 'Cancel', style: 'cancel' },
@@ -1024,7 +1024,7 @@ export default function App() {
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      customAlert('Synced! ⚡', 'Your mobile layout has been sent to Sanwitch Web IDE instantly via DB-Less Session Bridge!', 'success');
+      customAlert('Synced! ', 'Your mobile layout has been sent to Sanwitch Web IDE instantly via DB-Less Session Bridge!', 'success');
     } catch (e) {
       customAlert('Sync Error', e.message, 'error');
     }
@@ -1153,7 +1153,7 @@ export default function App() {
 
                   <View style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: pairedSessionId ? 'rgba(20, 184, 166, 0.15)' : 'rgba(245, 158, 11, 0.15)', borderWidth: 1, borderColor: pairedSessionId ? 'rgba(20, 184, 166, 0.4)' : 'rgba(245, 158, 11, 0.4)' }}>
                     <Text style={{ fontSize: 11, fontWeight: '700', color: pairedSessionId ? THEME.success : '#f59e0b' }}>
-                      {pairedSessionId ? '⚡ Desktop IDE Paired (Session Bridge Live)' : '🔑 Password Login (Scan Desktop QR to Push)'}
+                      {pairedSessionId ? ' Desktop IDE Paired (Session Bridge Live)' : ' Password Login (Scan Desktop QR to Push)'}
                     </Text>
                   </View>
                 </View>
@@ -1212,7 +1212,7 @@ export default function App() {
                     </View>
                     <Text style={{ fontSize: 18, fontWeight: '700', color: THEME.text }}>Scan IDE QR Code</Text>
                     <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', marginTop: 4, paddingHorizontal: 10, lineHeight: 18 }}>
-                      Open <Text style={{ color: '#fff', fontWeight: '600' }}>Sanwitch IDE</Text> on your desktop, click <Text style={{ color: THEME.primary, fontWeight: '700' }}>📱 Pair Mobile App</Text> and scan the code below.
+                      Open <Text style={{ color: '#fff', fontWeight: '600' }}>Sanwitch IDE</Text> on your desktop, click <Text style={{ color: THEME.primary, fontWeight: '700' }}> Pair Mobile App</Text> and scan the code below.
                     </Text>
                   </View>
 
@@ -1415,7 +1415,7 @@ export default function App() {
                 <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(56, 189, 248, 0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.primary, marginBottom: 8 }}>
                   <Mic size={24} color={THEME.primary} />
                 </View>
-                <Text style={styles.modalTitle}>Voice Assistant 🎙️</Text>
+                <Text style={styles.modalTitle}>Voice Assistant ️</Text>
                 <Text style={[styles.textMuted, { textAlign: 'center' }]}>Speak or choose a live voice command:</Text>
               </View>
 
@@ -1440,29 +1440,29 @@ export default function App() {
                         return (
                           <React.Fragment key={w.id}>
                             <TouchableOpacity style={styles.optBtn} onPress={() => processVoice(`${w.id} ON`)}>
-                              <Text style={styles.navBtnText}>🗣️ {w.id} ON</Text>
+                              <Text style={styles.navBtnText}>️ {w.id} ON</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.optBtn} onPress={() => processVoice(`${w.id} OFF`)}>
-                              <Text style={styles.navBtnText}>🗣️ {w.id} OFF</Text>
+                              <Text style={styles.navBtnText}>️ {w.id} OFF</Text>
                             </TouchableOpacity>
                           </React.Fragment>
                         );
                       } else if (w.type === 'button') {
                         return (
                           <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`Action ${w.id}`)}>
-                            <Text style={styles.navBtnText}>🗣️ ACTION {w.id.toUpperCase()}</Text>
+                            <Text style={styles.navBtnText}>️ ACTION {w.id.toUpperCase()}</Text>
                           </TouchableOpacity>
                         );
                       } else if (w.type === 'slider') {
                         return (
                           <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`${w.id} 75`)}>
-                            <Text style={styles.navBtnText}>🗣️ {w.id.toUpperCase()} 75%</Text>
+                            <Text style={styles.navBtnText}>️ {w.id.toUpperCase()} 75%</Text>
                           </TouchableOpacity>
                         );
                       } else if (w.type === 'rgb') {
                         return (
                           <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`${w.id} Red`)}>
-                            <Text style={styles.navBtnText}>🗣️ {w.id.toUpperCase()} RED</Text>
+                            <Text style={styles.navBtnText}>️ {w.id.toUpperCase()} RED</Text>
                           </TouchableOpacity>
                         );
                       }
@@ -1535,14 +1535,14 @@ export default function App() {
 
                   <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleSaveAndRunLocalApp}>
                     <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                    <Text style={styles.exportBtnPrimaryText}>⚡ SAVE & RUN LOCAL PWA</Text>
+                    <Text style={styles.exportBtnPrimaryText}> SAVE & RUN LOCAL PWA</Text>
                   </TouchableOpacity>
 
                   {isPwaGenerated && (
                     <View style={{ marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.4)' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}>✅ STANDALONE APP SAVED!</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}> STANDALONE APP SAVED!</Text>
                       <TouchableOpacity style={styles.exportBtnSecondary} onPress={() => {
-                        customAlert('Copied! 📋', 'App HTML bundle copied to clipboard!', 'success');
+                        customAlert('Copied! ', 'App HTML bundle copied to clipboard!', 'success');
                       }}>
                         <Copy size={14} color={THEME.text} style={{ marginRight: 6 }} />
                         <Text style={styles.exportBtnSecondaryText}>Copy App HTML Code</Text>
@@ -1610,7 +1610,7 @@ export default function App() {
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsBottomMenuVisible(false)}>
             <View style={[styles.modalContent, { position: 'absolute', bottom: 75, left: 16, width: 280, borderRadius: 20, padding: 16, backgroundColor: '#16181f', borderWidth: 1, borderColor: '#2b3240' }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: THEME.primary, letterSpacing: 0.5 }}>⚡ SANWITCH CONNECT</Text>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: THEME.primary, letterSpacing: 0.5 }}> SANWITCH CONNECT</Text>
                 <TouchableOpacity onPress={() => setIsBottomMenuVisible(false)}>
                   <X size={16} color={THEME.textMuted} />
                 </TouchableOpacity>
@@ -1626,7 +1626,7 @@ export default function App() {
                 <Folder size={20} color={THEME.primary} style={{ marginRight: 10 }} />
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}>📁 MY APPS</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}> MY APPS</Text>
                     <View style={{ backgroundColor: THEME.primary, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 }}>
                       <Text style={{ fontSize: 10, fontWeight: '900', color: THEME.background }}>{savedApps.length}</Text>
                     </View>
@@ -1644,7 +1644,7 @@ export default function App() {
               >
                 <Sparkles size={20} color={THEME.success} style={{ marginRight: 10 }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}>⚡ EXPORT APP</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}> EXPORT APP</Text>
                   <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Save layout & run PWA app</Text>
                 </View>
               </TouchableOpacity>
@@ -1659,7 +1659,7 @@ export default function App() {
               <View style={styles.modalHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Folder size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                  <Text style={styles.modalTitle}>📁 My Saved Apps ({savedApps.length})</Text>
+                  <Text style={styles.modalTitle}> My Saved Apps ({savedApps.length})</Text>
                 </View>
                 <TouchableOpacity onPress={() => setIsMyAppsModalVisible(false)}>
                   <X size={20} color={THEME.textMuted} />
@@ -1671,14 +1671,14 @@ export default function App() {
                   <View style={{ padding: 30, alignItems: 'center' }}>
                     <FileText size={40} color={THEME.textMuted} style={{ marginBottom: 10, opacity: 0.5 }} />
                     <Text style={{ fontSize: 14, color: THEME.textMuted, textAlign: 'center' }}>No saved apps in local phone storage.</Text>
-                    <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', marginTop: 6 }}>Tap "⚡ EXPORT APP" to save your current layout as a local app!</Text>
+                    <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', marginTop: 6 }}>Tap " EXPORT APP" to save your current layout as a local app!</Text>
                   </View>
                 ) : (
                   savedApps.map((app) => (
                     <View key={app.id} style={{ backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.border, borderRadius: 14, padding: 14, marginBottom: 12 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>⚡ {app.name}</Text>
+                          <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}> {app.name}</Text>
                           <Text style={{ fontSize: 11, color: THEME.primary, fontWeight: '700', marginTop: 2 }}>{app.fileName}</Text>
                           <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Created: {app.createdAt} • Widgets: {app.widgets?.length || 0}</Text>
                         </View>
