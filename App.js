@@ -117,6 +117,54 @@ export default function App() {
   const [pairedSessionId, setPairedSessionId] = useState(null);
   const [authMode, setAuthMode] = useState('login'); // login, register, profile
   const [authForm, setAuthForm] = useState({ username: '', email: '', password: '' });
+
+  // Real-time Mobile Pairing Logout Sync Effect
+  useEffect(() => {
+    if (!pairedSessionId) return;
+
+    const heartbeat = setInterval(async () => {
+      try {
+        const resp = await fetch(`https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/status?session_id=${pairedSessionId}`, { cache: 'no-store' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.status === 'unpaired' || data.status === 'expired') {
+            await AsyncStorage.removeItem('sanwitch_token');
+            await AsyncStorage.removeItem('sanwitch_user');
+            await AsyncStorage.removeItem('sanwitch_paired_session_id');
+            setToken(null);
+            setUser(null);
+            setPairedSessionId(null);
+            setActiveView('auth');
+            customAlert('Session Unpaired 🔓', 'Your pairing session was logged out from Desktop IDE.', 'warning');
+          }
+        }
+      } catch (e) {}
+    }, 2500);
+
+    return () => clearInterval(heartbeat);
+  }, [pairedSessionId]);
+
+  const handleLogout = async () => {
+    try {
+      const sid = pairedSessionId || (await AsyncStorage.getItem('sanwitch_paired_session_id'));
+      if (sid) {
+        await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/unpair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sid })
+        }).catch(() => {});
+      }
+    } catch (e) {}
+
+    await AsyncStorage.removeItem('sanwitch_token');
+    await AsyncStorage.removeItem('sanwitch_user');
+    await AsyncStorage.removeItem('sanwitch_paired_session_id');
+    setToken(null);
+    setUser(null);
+    setPairedSessionId(null);
+    setActiveView('auth');
+    customAlert('Logged Out', 'Successfully logged out and unpaired from Sanwitch IDE.', 'info');
+  };
   const [widgets, setWidgets] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -603,13 +651,15 @@ export default function App() {
           activeUser = { username: 'Chef' };
         }
 
+        const realDeviceName = Platform.OS === 'android' ? 'Vivo Y20' : (Platform.OS === 'ios' ? 'iPhone 14' : 'Sanwitch Mobile');
         const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/pair', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             session_id: parsed.sid,
             token: activeToken,
-            user: activeUser
+            user: activeUser,
+            deviceName: realDeviceName
           })
         });
 
