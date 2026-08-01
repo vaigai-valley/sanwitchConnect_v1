@@ -70,7 +70,7 @@ export default function App() {
         await Promise.race([
           requestPermissions(),
           new Promise(res => setTimeout(res, 1500))
-        ]).catch(() => {});
+        ]).catch(() => { });
 
         const saved = await AsyncStorage.getItem('sanwitch_layout').catch(() => null);
         if (saved && isMounted) setWidgets(JSON.parse(saved));
@@ -156,14 +156,14 @@ export default function App() {
   <meta name="apple-mobile-web-app-title" content="${cleanAppName}" />
   <title>${cleanAppName} - Standalone Sanwitch App</title>
   <link rel="manifest" href="data:application/manifest+json;utf8,${encodeURIComponent(JSON.stringify({
-    name: appName,
-    short_name: appName,
-    start_url: '.',
-    display: 'standalone',
-    background_color: '#0b0d12',
-    theme_color: '#38bdf8',
-    icons: [{ src: 'https://cdn-icons-png.flaticon.com/512/2583/2583271.png', sizes: '512x512', type: 'image/png' }]
-  }))}" />
+      name: appName,
+      short_name: appName,
+      start_url: '.',
+      display: 'standalone',
+      background_color: '#0b0d12',
+      theme_color: '#38bdf8',
+      icons: [{ src: 'https://cdn-icons-png.flaticon.com/512/2583/2583271.png', sizes: '512x512', type: 'image/png' }]
+    }))}" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     body { background: #0b0d12; color: #eef2ff; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
@@ -350,12 +350,12 @@ export default function App() {
           title: `${appTitle}.html`,
           message: html
         });
-      } catch (err) {}
+      } catch (err) { }
     }
   };
 
   const customAlert = (title, message, buttonsOrType = null) => {
-    let buttons = [{ text: 'OK', onPress: () => {} }];
+    let buttons = [{ text: 'OK', onPress: () => { } }];
     let type = 'info';
 
     if (Array.isArray(buttonsOrType)) {
@@ -893,7 +893,7 @@ export default function App() {
             },
             body: JSON.stringify(projectData)
           });
-        } catch (e) {}
+        } catch (e) { }
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -920,699 +920,717 @@ export default function App() {
     return py;
   };
 
-      const renderWidget = (w) => {
-        const cmd = w.id.toUpperCase();
-        const isActive = widgetStates[w.id];
-        return (
-          <View key={w.id} style={[styles.card, (w.type === 'gauge' || w.type === 'joystick') && styles.cardWide]}>
-            <TouchableOpacity style={styles.removeBtn} onPress={() => setWidgets(widgets.filter(i => i.id !== w.id))}>
-              <X size={14} color={THEME.error} />
+  const renderWidget = (w) => {
+    const cmd = w.id.toUpperCase();
+    const isActive = widgetStates[w.id];
+    return (
+      <View key={w.id} style={[styles.card, (w.type === 'gauge' || w.type === 'joystick') && styles.cardWide]}>
+        <TouchableOpacity style={styles.removeBtn} onPress={() => setWidgets(widgets.filter(i => i.id !== w.id))}>
+          <X size={14} color={THEME.error} />
+        </TouchableOpacity>
+        <Text style={styles.cardTitle}>{w.id}</Text>
+
+        {w.type === 'toggle' && (
+          <View style={styles.widgetControl}>
+            <Text style={styles.textMuted}>{isActive ? 'ACTIVE' : 'READY'}</Text>
+            <TouchableOpacity
+              style={[styles.toggleTrack, isActive && { backgroundColor: THEME.primary }]}
+              onPress={() => {
+                const newState = !isActive;
+                setWidgetStates({ ...widgetStates, [w.id]: newState });
+                sendData(`${cmd}:${newState ? '1' : '0'}\n`);
+              }}
+            >
+              <View style={[styles.toggleThumb, isActive && { marginLeft: 'auto' }]} />
             </TouchableOpacity>
-            <Text style={styles.cardTitle}>{w.id}</Text>
-
-            {w.type === 'toggle' && (
-              <View style={styles.widgetControl}>
-                <Text style={styles.textMuted}>{isActive ? 'ACTIVE' : 'READY'}</Text>
-                <TouchableOpacity
-                  style={[styles.toggleTrack, isActive && { backgroundColor: THEME.primary }]}
-                  onPress={() => {
-                    const newState = !isActive;
-                    setWidgetStates({ ...widgetStates, [w.id]: newState });
-                    sendData(`${cmd}:${newState ? '1' : '0'}\n`);
-                  }}
-                >
-                  <View style={[styles.toggleThumb, isActive && { marginLeft: 'auto' }]} />
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {w.type === 'button' && (
-              <TouchableOpacity style={styles.nativeBtn} onPress={() => sendData(`${cmd}:PUSH\n`)}>
-                <Zap size={14} color={THEME.background} />
-                <Text style={styles.nativeBtnText}>ACTION</Text>
-              </TouchableOpacity>
-            )}
-
-            {w.type === 'slider' && (
-              <Slider minimumValue={0} maximumValue={100} minimumTrackTintColor={THEME.primary} thumbTintColor={THEME.primary}
-                onSlidingComplete={(v) => sendData(`${cmd}:${Math.round(v)}\n`, true)} />
-            )}
-
-            {w.type === 'gauge' && (
-              <View style={styles.gaugeBox}>
-                <Text style={styles.gaugeValue}>{sensorData[sensorData.length - 1].toFixed(1)}</Text>
-                <LineChart data={{ labels: [], datasets: [{ data: sensorData }] }} width={width - 80} height={70} withDots={false} withInnerLines={false} withOuterLines={false} withHorizontalLabels={false}
-                  chartConfig={{ backgroundColor: THEME.surface, backgroundGradientFrom: THEME.surface, backgroundGradientTo: THEME.surface, color: (o = 1) => `rgba(56, 189, 248, ${o})`, strokeWidth: 2 }} bezier style={{ borderRadius: 16, marginTop: 5 }} />
-              </View>
-            )}
-
-            {w.type === 'rgb' && (
-              <View style={styles.colorGrid}>
-                {['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff'].map(c => (
-                  <TouchableOpacity key={c} style={[styles.colorDot, { backgroundColor: c }, widgetStates[w.id] === c && styles.colorSelected]}
-                    onPress={() => { setWidgetStates({ ...widgetStates, [w.id]: c }); sendData(`RGB:${c.substring(1)}\n`); }} />
-                ))}
-              </View>
-            )}
-
-            {w.type === 'joystick' && <Joystick onMove={(x, y) => sendData(`JOY:${x},${y}\n`, true)} />}
           </View>
-        );
-      };
+        )}
 
-      return (
-        <SafeAreaProvider>
-          <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-            <StatusBar barStyle="light-content" />
-            <View style={styles.header}>
-              <View style={styles.logoWrap}>
-                <Image
-                  source={require('./assets/icon.png')}
-                  style={{ width: 32, height: 32, borderRadius: 6, tintColor: '#ffffff' }}
-                  resizeMode="contain"
-                />
-                <Text style={styles.logoText}>Sanwitch <Text style={{ color: THEME.primary }}>Connect</Text></Text>
-              </View>
+        {w.type === 'button' && (
+          <TouchableOpacity style={styles.nativeBtn} onPress={() => sendData(`${cmd}:PUSH\n`)}>
+            <Zap size={14} color={THEME.background} />
+            <Text style={styles.nativeBtnText}>ACTION</Text>
+          </TouchableOpacity>
+        )}
 
-              <TouchableOpacity style={styles.avatarHeaderBtn} onPress={() => setActiveView('auth')}>
-                {user ? (
-                  <Text style={styles.avatarTextSmall}>{(user.username || user.email || 'U')[0].toUpperCase()}</Text>
-                ) : (
-                  <KeyRound size={16} color={THEME.primary} />
-                )}
-              </TouchableOpacity>
-            </View>
+        {w.type === 'slider' && (
+          <Slider minimumValue={0} maximumValue={100} minimumTrackTintColor={THEME.primary} thumbTintColor={THEME.primary}
+            onSlidingComplete={(v) => sendData(`${cmd}:${Math.round(v)}\n`, true)} />
+        )}
 
-            <View style={styles.nav}>
-              {['panel', 'connect', 'code', 'term'].map((view) => (
-                <TouchableOpacity key={view} style={[styles.navBtn, activeView === view && styles.navBtnActive]} onPress={() => navigateToView(view)}>
-                  <Text style={[styles.navBtnText, activeView === view && styles.navBtnTextActive]}>
-                    {view === 'connect' ? 'LINK' : view.toUpperCase()}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+        {w.type === 'gauge' && (
+          <View style={styles.gaugeBox}>
+            <Text style={styles.gaugeValue}>{sensorData[sensorData.length - 1].toFixed(1)}</Text>
+            <LineChart data={{ labels: [], datasets: [{ data: sensorData }] }} width={width - 80} height={70} withDots={false} withInnerLines={false} withOuterLines={false} withHorizontalLabels={false}
+              chartConfig={{ backgroundColor: THEME.surface, backgroundGradientFrom: THEME.surface, backgroundGradientTo: THEME.surface, color: (o = 1) => `rgba(56, 189, 248, ${o})`, strokeWidth: 2 }} bezier style={{ borderRadius: 16, marginTop: 5 }} />
+          </View>
+        )}
 
-            {activeView === 'auth' && (
-              <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
-                {user ? (
-                  <View style={styles.profileCard}>
-                    <View style={styles.profileHeader}>
-                      <View style={styles.avatarLarge}>
-                        <Text style={styles.avatarTextLarge}>{(user.username || user.email || 'C')[0].toUpperCase()}</Text>
-                      </View>
-                      <Text style={styles.profileName}>{user.username || 'Chef'}</Text>
-                      <Text style={styles.profileEmail}>{user.email || 'Sanwitch Connect User'}</Text>
+        {w.type === 'rgb' && (
+          <View style={styles.colorGrid}>
+            {['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff'].map(c => (
+              <TouchableOpacity key={c} style={[styles.colorDot, { backgroundColor: c }, widgetStates[w.id] === c && styles.colorSelected]}
+                onPress={() => { setWidgetStates({ ...widgetStates, [w.id]: c }); sendData(`RGB:${c.substring(1)}\n`); }} />
+            ))}
+          </View>
+        )}
 
-                      <View style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: pairedSessionId ? 'rgba(20, 184, 166, 0.15)' : 'rgba(245, 158, 11, 0.15)', borderWidth: 1, borderColor: pairedSessionId ? 'rgba(20, 184, 166, 0.4)' : 'rgba(245, 158, 11, 0.4)' }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: pairedSessionId ? THEME.success : '#f59e0b' }}>
-                          {pairedSessionId ? '⚡ Desktop IDE Paired (Session Bridge Live)' : '🔑 Password Login (Scan Desktop QR to Push)'}
-                        </Text>
-                      </View>
-                    </View>
+        {w.type === 'joystick' && <Joystick onMove={(x, y) => sendData(`JOY:${x},${y}\n`, true)} />}
+      </View>
+    );
+  };
 
-                    {(!pairedSessionId || showQrScannerInProfile) && (
-                      <View style={{ width: '100%', marginBottom: 15, alignItems: 'center' }}>
-                        <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 10, textAlign: 'center' }}>
-                          Scan your desktop <Text style={{ color: THEME.primary, fontWeight: '700' }}>Sanwitch IDE QR Code</Text> to link instant block pushing:
-                        </Text>
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.header}>
+          <View style={styles.logoWrap}>
+            <Image
+              source={require('./assets/icon.png')}
+              style={{ width: 32, height: 32, borderRadius: 6, tintColor: '#ffffff' }}
+              resizeMode="contain"
+            />
+            <Text style={styles.logoText}>Sanwitch <Text style={{ color: THEME.primary }}>Connect</Text></Text>
+          </View>
 
-                        {!cameraPermission?.granted ? (
-                          <TouchableOpacity style={styles.nativeBtn} onPress={requestCameraPermission}>
-                            <Text style={styles.nativeBtnText}>Grant Camera Access</Text>
+          <TouchableOpacity style={styles.avatarHeaderBtn} onPress={() => setActiveView('auth')}>
+            {user ? (
+              <Text style={styles.avatarTextSmall}>{(user.username || user.email || 'U')[0].toUpperCase()}</Text>
+            ) : (
+              <KeyRound size={16} color={THEME.primary} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.nav}>
+          {['panel', 'connect', 'code', 'term'].map((view) => (
+            <TouchableOpacity key={view} style={[styles.navBtn, activeView === view && styles.navBtnActive]} onPress={() => navigateToView(view)}>
+              <Text style={[styles.navBtnText, activeView === view && styles.navBtnTextActive]}>
+                {view === 'connect' ? 'LINK' : view.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {activeView === 'auth' && (
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
+            {user ? (
+              <View style={styles.profileCard}>
+                <View style={styles.profileHeader}>
+                  <View style={styles.avatarLarge}>
+                    <Text style={styles.avatarTextLarge}>{(user.username || user.email || 'C')[0].toUpperCase()}</Text>
+                  </View>
+                  <Text style={styles.profileName}>{user.username || 'Chef'}</Text>
+                  <Text style={styles.profileEmail}>{user.email || 'Sanwitch Connect User'}</Text>
+
+                  <View style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: pairedSessionId ? 'rgba(20, 184, 166, 0.15)' : 'rgba(245, 158, 11, 0.15)', borderWidth: 1, borderColor: pairedSessionId ? 'rgba(20, 184, 166, 0.4)' : 'rgba(245, 158, 11, 0.4)' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: pairedSessionId ? THEME.success : '#f59e0b' }}>
+                      {pairedSessionId ? '⚡ Desktop IDE Paired (Session Bridge Live)' : '🔑 Password Login (Scan Desktop QR to Push)'}
+                    </Text>
+                  </View>
+                </View>
+
+                {(!pairedSessionId || showQrScannerInProfile) && (
+                  <View style={{ width: '100%', marginBottom: 15, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 10, textAlign: 'center' }}>
+                      Scan your desktop <Text style={{ color: THEME.primary, fontWeight: '700' }}>Sanwitch IDE QR Code</Text> to link instant block pushing:
+                    </Text>
+
+                    {!cameraPermission?.granted ? (
+                      <TouchableOpacity style={styles.nativeBtn} onPress={requestCameraPermission}>
+                        <Text style={styles.nativeBtnText}>Grant Camera Access</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={[styles.cameraContainer, { height: 200 }]}>
+                        <CameraView
+                          style={styles.cameraPreview}
+                          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+                          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                        >
+                          <View style={[styles.qrTargetOverlay, { width: 140, height: 140 }]} />
+                        </CameraView>
+                        {scanned && (
+                          <TouchableOpacity style={[styles.nativeBtn, { position: 'absolute', bottom: 10, alignSelf: 'center' }]} onPress={() => setScanned(false)}>
+                            <RefreshCw size={12} color={THEME.background} />
+                            <Text style={styles.nativeBtnText}>Rescan QR Code</Text>
                           </TouchableOpacity>
-                        ) : (
-                          <View style={[styles.cameraContainer, { height: 200 }]}>
-                            <CameraView
-                              style={styles.cameraPreview}
-                              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-                              onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-                            >
-                              <View style={[styles.qrTargetOverlay, { width: 140, height: 140 }]} />
-                            </CameraView>
-                            {scanned && (
-                              <TouchableOpacity style={[styles.nativeBtn, { position: 'absolute', bottom: 10, alignSelf: 'center' }]} onPress={() => setScanned(false)}>
-                                <RefreshCw size={12} color={THEME.background} />
-                                <Text style={styles.nativeBtnText}>Rescan QR Code</Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
                         )}
                       </View>
                     )}
-
-                    {pairedSessionId && !showQrScannerInProfile && (
-                      <TouchableOpacity
-                        style={[styles.nativeBtn, { backgroundColor: 'rgba(255,255,255,0.08)', width: '100%', marginBottom: 10 }]}
-                        onPress={() => { setShowQrScannerInProfile(true); setScanned(false); }}
-                      >
-                        <QrCode size={16} color={THEME.primary} />
-                        <Text style={[styles.nativeBtnText, { color: THEME.text }]}>Pair with New Desktop IDE QR</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    <TouchableOpacity style={[styles.nativeBtn, { backgroundColor: THEME.error, width: '100%', marginTop: 5 }]} onPress={logout}>
-                      <LogOut size={16} color="#fff" />
-                      <Text style={[styles.nativeBtnText, { color: '#fff' }]}>Logout</Text>
-                    </TouchableOpacity>
                   </View>
-                ) : (
-                  !showManualLogin ? (
-                    <View style={styles.qrAuthCard}>
-                      <View style={{ alignItems: 'center', marginBottom: 15 }}>
-                        <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(56, 189, 248, 0.12)', justifyContent: 'center', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)' }}>
-                          <QrCode size={24} color={THEME.primary} />
-                        </View>
-                        <Text style={{ fontSize: 18, fontWeight: '700', color: THEME.text }}>Scan IDE QR Code</Text>
-                        <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', marginTop: 4, paddingHorizontal: 10, lineHeight: 18 }}>
-                          Open <Text style={{ color: '#fff', fontWeight: '600' }}>Sanwitch IDE</Text> on your desktop, click <Text style={{ color: THEME.primary, fontWeight: '700' }}>📱 Pair Mobile App</Text> and scan the code below.
-                        </Text>
-                      </View>
+                )}
 
-                      {!cameraPermission?.granted ? (
-                        <View style={styles.cameraPlaceholder}>
-                          <CameraIcon size={36} color={THEME.textMuted} />
-                          <Text style={{ color: THEME.textMuted, fontSize: 12, textAlign: 'center', marginVertical: 12 }}>
-                            Camera permission is required to scan the login QR code.
-                          </Text>
-                          <TouchableOpacity style={styles.nativeBtn} onPress={requestCameraPermission}>
-                            <Text style={styles.nativeBtnText}>Grant Camera Access</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <View style={styles.cameraContainer}>
-                          <CameraView
-                            style={styles.cameraPreview}
-                            barcodeScannerSettings={{
-                              barcodeTypes: ['qr'],
-                            }}
-                            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-                          >
-                            <View style={styles.qrTargetOverlay} />
-                          </CameraView>
-                          {scanned && (
-                            <TouchableOpacity style={[styles.nativeBtn, { position: 'absolute', bottom: 15, alignSelf: 'center' }]} onPress={() => setScanned(false)}>
-                              <RefreshCw size={14} color={THEME.background} />
-                              <Text style={styles.nativeBtnText}>Tap to Scan Again</Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      )}
+                {pairedSessionId && !showQrScannerInProfile && (
+                  <TouchableOpacity
+                    style={[styles.nativeBtn, { backgroundColor: 'rgba(255,255,255,0.08)', width: '100%', marginBottom: 10 }]}
+                    onPress={() => { setShowQrScannerInProfile(true); setScanned(false); }}
+                  >
+                    <QrCode size={16} color={THEME.primary} />
+                    <Text style={[styles.nativeBtnText, { color: THEME.text }]}>Pair with New Desktop IDE QR</Text>
+                  </TouchableOpacity>
+                )}
 
-                      <TouchableOpacity
-                        style={{ marginTop: 20, alignItems: 'center' }}
-                        onPress={() => setShowManualLogin(true)}
-                      >
-                        <Text style={{ color: THEME.textMuted, fontSize: 12, textDecorationLine: 'underline' }}>
-                          Or switch to Manual Password Login
-                        </Text>
+                <TouchableOpacity style={[styles.nativeBtn, { backgroundColor: THEME.error, width: '100%', marginTop: 5 }]} onPress={logout}>
+                  <LogOut size={16} color="#fff" />
+                  <Text style={[styles.nativeBtnText, { color: '#fff' }]}>Logout</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              !showManualLogin ? (
+                <View style={styles.qrAuthCard}>
+                  <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                    <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(56, 189, 248, 0.12)', justifyContent: 'center', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)' }}>
+                      <QrCode size={24} color={THEME.primary} />
+                    </View>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: THEME.text }}>Scan IDE QR Code</Text>
+                    <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', marginTop: 4, paddingHorizontal: 10, lineHeight: 18 }}>
+                      Open <Text style={{ color: '#fff', fontWeight: '600' }}>Sanwitch IDE</Text> on your desktop, click <Text style={{ color: THEME.primary, fontWeight: '700' }}>📱 Pair Mobile App</Text> and scan the code below.
+                    </Text>
+                  </View>
+
+                  {!cameraPermission?.granted ? (
+                    <View style={styles.cameraPlaceholder}>
+                      <CameraIcon size={36} color={THEME.textMuted} />
+                      <Text style={{ color: THEME.textMuted, fontSize: 12, textAlign: 'center', marginVertical: 12 }}>
+                        Camera permission is required to scan the login QR code.
+                      </Text>
+                      <TouchableOpacity style={styles.nativeBtn} onPress={requestCameraPermission}>
+                        <Text style={styles.nativeBtnText}>Grant Camera Access</Text>
                       </TouchableOpacity>
                     </View>
                   ) : (
-                    <View style={styles.authCard}>
-                      <Text style={styles.cardTitle}>{authMode === 'login' ? 'Welcome Back Chef' : 'Join the Kitchen'}</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Username"
-                        placeholderTextColor={THEME.textMuted}
-                        value={authForm.username}
-                        onChangeText={(t) => setAuthForm({ ...authForm, username: t })}
-                        autoCapitalize="none"
-                      />
-                      {authMode === 'register' && (
-                        <TextInput
-                          style={styles.input}
-                          placeholder="Email"
-                          placeholderTextColor={THEME.textMuted}
-                          value={authForm.email}
-                          onChangeText={(t) => setAuthForm({ ...authForm, email: t })}
-                          autoCapitalize="none"
-                          keyboardType="email-address"
-                        />
-                      )}
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Password"
-                        placeholderTextColor={THEME.textMuted}
-                        value={authForm.password}
-                        onChangeText={(t) => setAuthForm({ ...authForm, password: t })}
-                        secureTextEntry
-                      />
-                      <TouchableOpacity style={styles.nativeBtn} onPress={handleAuth}>
-                        <CheckCircle2 size={16} color={THEME.background} />
-                        <Text style={styles.nativeBtnText}>{authMode === 'login' ? 'Sign In' : 'Create Account'}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={{ marginTop: 15, alignItems: 'center' }}
-                        onPress={() => setShowManualLogin(false)}
+                    <View style={styles.cameraContainer}>
+                      <CameraView
+                        style={styles.cameraPreview}
+                        barcodeScannerSettings={{
+                          barcodeTypes: ['qr'],
+                        }}
+                        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
                       >
-                        <Text style={{ color: THEME.primary, fontSize: 12, fontWeight: '600' }}>
-                          ← Back to QR Code Camera Scanner
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )
-                )}
-              </KeyboardAvoidingView>
-            )}
-
-            {activeView === 'panel' && (
-              <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                <View style={styles.grid}>{widgets.map(renderWidget)}</View>
-                <TouchableOpacity style={styles.addBtn} onPress={() => setIsModalVisible(true)}><Plus size={24} color={THEME.background} /><Text style={styles.addBtnText}>Add Widget</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.clearBtn} onPress={() => setWidgets([])}><Trash2 size={16} color={THEME.textMuted} /><Text style={styles.textMuted}>Clear Layout</Text></TouchableOpacity>
-              </ScrollView>
-            )}
-
-            {activeView === 'connect' && (
-              <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
-                <Text style={styles.cardTitle}>Hardware Connection</Text>
-                <View style={styles.modeRow}>
-                  {['ble', 'wifi'].map(c => (
-                    <TouchableOpacity key={c} onPress={() => setMode(c)} style={[styles.modePill, connectionMode === c && styles.modePillActive]}><Text style={styles.navBtnText}>{c.toUpperCase()}</Text></TouchableOpacity>
-                  ))}
-                </View>
-                {connectionMode === 'ble' ? (
-                  <View style={{ marginTop: 20 }}>
-                    <Text style={styles.textMuted}>{connectedDevice ? `Linked to ${connectedDevice.name}` : 'Awaiting Connection...'}</Text>
-                    <TouchableOpacity style={styles.nativeBtn} onPress={scanAndConnect}><Bluetooth size={16} color={THEME.background} /><Text style={styles.nativeBtnText}>Discover Devices</Text></TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={{ marginTop: 20 }}>
-                    <Text style={styles.textMuted}>ESP32 IP Address</Text>
-                    <TextInput style={styles.input} value={wifiIP} onChangeText={setWifiIP} keyboardType="numeric" />
-                    <Text style={styles.textMuted}>WiFi SSID</Text>
-                    <TextInput style={styles.input} value={wifiSSID} onChangeText={setWifiSSID} placeholder="Network Name" />
-                    <Text style={styles.textMuted}>WiFi Password</Text>
-                    <TextInput style={styles.input} value={wifiPass} onChangeText={setWifiPass} placeholder="Password" secureTextEntry />
-
-                    <TouchableOpacity
-                      style={[styles.nativeBtn, { backgroundColor: wifiConnected ? THEME.secondary : THEME.primary, marginTop: 15 }]}
-                      onPress={testWiFi}
-                    >
-                      <Wifi size={16} color={THEME.background} />
-                      <Text style={styles.nativeBtnText}>{wifiConnected ? 'WiFi Linked' : 'Connect & Verify'}</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </KeyboardAvoidingView>
-            )}
-
-            {activeView === 'code' && (
-              <View style={styles.content}>
-                <View style={styles.tabBar}>
-                  {['code', 'blueprint', 'sync'].map(m => (
-                    <TouchableOpacity key={m} onPress={() => m === 'sync' ? syncToIde() : setHelperMode(m)} style={[styles.tab, helperMode === m && m !== 'sync' && styles.tabActive, m === 'sync' && { backgroundColor: THEME.success, borderColor: THEME.success }]}>
-                      <Text style={[styles.navBtnText, m === 'sync' && { color: THEME.background }]}>{m === 'sync' ? 'PUSH TO IDE' : m.toUpperCase()}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <View style={styles.codeTerminal}>
-                  {helperMode === 'code' ? (
-                    <ScrollView showsVerticalScrollIndicator={false}><Text style={styles.codeText}>{generateCode()}</Text></ScrollView>
-                  ) : (
-                    <View style={{ gap: 12 }}>
-                      <View style={[styles.block, { borderLeftColor: '#c2185b' }]}>
-                        <Text style={[styles.blockTitle, { color: '#c2185b' }]}>BLOCK 1: HARDWARE INIT</Text>
-                        <Text style={styles.blockText}>
-                          {connectionMode === 'ble'
-                            ? 'Drag [Bluetooth Setup] and [Bluetooth Receive] to Loop. Assign to variable "msg".'
-                            : 'Drag [Connect to WiFi] then [Start Web Server]. Use [Handle Web Request] assigned to "msg".'}
-                        </Text>
-                      </View>
-                      {widgets.map(w => {
-                        let logic = "";
-                        const cmd = w.id.toUpperCase();
-                        const color = w.type === 'gauge' ? '#14b8a6' : THEME.primary;
-
-                        if (w.type === 'toggle') logic = `Drag IF Block. Condition: msg == "${cmd}:1" (ON) or msg == "${cmd}:0" (OFF)`;
-                        else if (w.type === 'slider') logic = `Drag IF Block. Condition: msg.startswith("${cmd}:"). Value: int(msg.split(":")[1])`;
-                        else if (w.type === 'button') logic = `Drag IF Block. Condition: msg == "${cmd}:PUSH". Trigger your action.`;
-                        else if (w.type === 'joystick') logic = `Drag IF Block. Condition: msg.startswith("JOY:"). Parse: msg.split(":")[1].split(",")`;
-                        else if (w.type === 'gauge') logic = connectionMode === 'ble' ? `Use [Bluetooth Send] block with your sensor value.` : `Mobile app reads data from /status. Code already includes this loop.`;
-
-                        return (
-                          <View key={w.id} style={[styles.block, { borderLeftColor: color }]}>
-                            <Text style={[styles.blockTitle, { color: color }]}>{w.id.toUpperCase()} LOGIC BLOCK</Text>
-                            <Text style={styles.blockText}>{logic}</Text>
-                          </View>
-                        );
-                      })}
-                      <View style={[styles.block, { borderLeftColor: '#a855f7' }]}>
-                        <Text style={[styles.blockTitle, { color: '#a855f7' }]}>FINISH: SYNC & RUN</Text>
-                        <Text style={styles.blockText}>Copy the "Code" tab into your IDE Editor. It contains all the blocks above pre-assembled!</Text>
-                      </View>
+                        <View style={styles.qrTargetOverlay} />
+                      </CameraView>
+                      {scanned && (
+                        <TouchableOpacity style={[styles.nativeBtn, { position: 'absolute', bottom: 15, alignSelf: 'center' }]} onPress={() => setScanned(false)}>
+                          <RefreshCw size={14} color={THEME.background} />
+                          <Text style={styles.nativeBtnText}>Tap to Scan Again</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   )}
-                  <TouchableOpacity style={styles.copyBtn} onPress={() => customAlert('Sync', 'Code is copied and ready for Sanwitch IDE!', 'success')}><Copy size={16} color="#fff" /></TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{ marginTop: 20, alignItems: 'center' }}
+                    onPress={() => setShowManualLogin(true)}
+                  >
+                    <Text style={{ color: THEME.textMuted, fontSize: 12, textDecorationLine: 'underline' }}>
+                      Or switch to Manual Password Login
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
-            )}
-
-            {activeView === 'term' && (
-              <View style={styles.termContainer}><FlatList data={logs} keyExtractor={item => item.id} renderItem={({ item }) => (<Text style={[styles.logText, { color: item.type === 'tx' ? THEME.primary : THEME.textMuted }]}>{`> ${item.msg}`}</Text>)} inverted /></View>
-            )}
-
-            <Modal visible={isModalVisible} transparent animationType="fade">
-              <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Choose Widget</Text><View style={styles.optionsGrid}>{['toggle', 'slider', 'button', 'gauge', 'rgb', 'joystick'].map(t => (<TouchableOpacity key={t} style={styles.optBtn} onPress={() => { setPendingType(t); setIsModalVisible(false); setIsNameModalVisible(true); }}><Text style={styles.navBtnText}>{t.toUpperCase()}</Text></TouchableOpacity>))}</View><TouchableOpacity style={styles.modalClose} onPress={() => setIsModalVisible(false)}><X size={24} color={THEME.textMuted} /></TouchableOpacity></View></View>
-            </Modal>
-
-            <Modal visible={isNameModalVisible} transparent animationType="fade">
-              <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Name Widget</Text><TextInput style={styles.input} placeholder="e.g. Pump" placeholderTextColor={THEME.textMuted} value={newName} onChangeText={setNewName} autoFocus /><TouchableOpacity style={styles.nativeBtn} onPress={addWidget}><Text style={styles.nativeBtnText}>Create</Text></TouchableOpacity></View></View>
-            </Modal>
-
-            <Modal visible={isVoiceModalVisible} transparent animationType="fade" onRequestClose={() => setIsVoiceModalVisible(false)}>
-              <View style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
-                  <View style={{ alignItems: 'center', marginBottom: 15 }}>
-                    <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(56, 189, 248, 0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.primary, marginBottom: 8 }}>
-                      <Mic size={24} color={THEME.primary} />
-                    </View>
-                    <Text style={styles.modalTitle}>Voice Assistant 🎙️</Text>
-                    <Text style={[styles.textMuted, { textAlign: 'center' }]}>Speak or choose a live voice command:</Text>
-                  </View>
-
+              ) : (
+                <View style={styles.authCard}>
+                  <Text style={styles.cardTitle}>{authMode === 'login' ? 'Welcome Back Chef' : 'Join the Kitchen'}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="e.g. Pump ON, Speed 80, Action..."
+                    placeholder="Username"
                     placeholderTextColor={THEME.textMuted}
-                    value={voiceInputText}
-                    onChangeText={setVoiceInputText}
-                    onSubmitEditing={() => processVoice(voiceInputText)}
-                    autoFocus
+                    value={authForm.username}
+                    onChangeText={(t) => setAuthForm({ ...authForm, username: t })}
+                    autoCapitalize="none"
                   />
-
-                  <Text style={[styles.cardTitle, { marginTop: 5, marginBottom: 8 }]}>Quick Voice Actions</Text>
-                  <ScrollView style={{ maxHeight: 180 }} showsVerticalScrollIndicator={false}>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-                      {widgets.length === 0 ? (
-                        <Text style={styles.textMuted}>Add widgets on the Panel tab to enable voice control.</Text>
-                      ) : (
-                        widgets.map(w => {
-                          if (w.type === 'toggle') {
-                            return (
-                              <React.Fragment key={w.id}>
-                                <TouchableOpacity style={styles.optBtn} onPress={() => processVoice(`${w.id} ON`)}>
-                                  <Text style={styles.navBtnText}>🗣️ {w.id} ON</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.optBtn} onPress={() => processVoice(`${w.id} OFF`)}>
-                                  <Text style={styles.navBtnText}>🗣️ {w.id} OFF</Text>
-                                </TouchableOpacity>
-                              </React.Fragment>
-                            );
-                          } else if (w.type === 'button') {
-                            return (
-                              <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`Action ${w.id}`)}>
-                                <Text style={styles.navBtnText}>🗣️ ACTION {w.id.toUpperCase()}</Text>
-                              </TouchableOpacity>
-                            );
-                          } else if (w.type === 'slider') {
-                            return (
-                              <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`${w.id} 75`)}>
-                                <Text style={styles.navBtnText}>🗣️ {w.id.toUpperCase()} 75%</Text>
-                              </TouchableOpacity>
-                            );
-                          } else if (w.type === 'rgb') {
-                            return (
-                              <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`${w.id} Red`)}>
-                                <Text style={styles.navBtnText}>🗣️ {w.id.toUpperCase()} RED</Text>
-                              </TouchableOpacity>
-                            );
-                          }
-                          return null;
-                        })
-                      )}
-                    </View>
-                  </ScrollView>
-
-                  <TouchableOpacity style={[styles.nativeBtn, { marginTop: 15 }]} onPress={() => processVoice(voiceInputText || `${widgets[0]?.id || 'Power'} ON`)}>
-                    <Mic size={16} color={THEME.background} />
-                    <Text style={styles.nativeBtnText}>Run Voice Command</Text>
+                  {authMode === 'register' && (
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Email"
+                      placeholderTextColor={THEME.textMuted}
+                      value={authForm.email}
+                      onChangeText={(t) => setAuthForm({ ...authForm, email: t })}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                    />
+                  )}
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor={THEME.textMuted}
+                    value={authForm.password}
+                    onChangeText={(t) => setAuthForm({ ...authForm, password: t })}
+                    secureTextEntry
+                  />
+                  <TouchableOpacity style={styles.nativeBtn} onPress={handleAuth}>
+                    <CheckCircle2 size={16} color={THEME.background} />
+                    <Text style={styles.nativeBtnText}>{authMode === 'login' ? 'Sign In' : 'Create Account'}</Text>
                   </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.modalClose} onPress={() => setIsVoiceModalVisible(false)}>
-                    <X size={24} color={THEME.textMuted} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </Modal>
-
-            {/* 1-CLICK INSTANT PWA APP INSTALL MODAL */}
-            <Modal visible={isExportModalVisible} animationType="slide" transparent={true} onRequestClose={() => setIsExportModalVisible(false)}>
-              <View style={styles.modalOverlay}>
-                <View style={styles.modalContentLarge}>
-                  <View style={styles.modalHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Sparkles size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                      <Text style={styles.modalTitle}>Export as App</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => setIsExportModalVisible(false)}>
-                      <X size={20} color={THEME.textMuted} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
-                    <Text style={{ fontSize: 13, color: THEME.textMuted, marginBottom: 16 }}>
-                      Export your custom widgets, connection settings, and telemetry into a <Text style={{ color: THEME.primary, fontWeight: '700' }}>Standalone Mobile App</Text> that installs directly on your Android home screen!
+                  <TouchableOpacity
+                    style={{ marginTop: 15, alignItems: 'center' }}
+                    onPress={() => setShowManualLogin(false)}
+                  >
+                    <Text style={{ color: THEME.primary, fontSize: 12, fontWeight: '600' }}>
+                      ← Back to QR Code Camera Scanner
                     </Text>
-
-                    {/* APP NAME INPUT */}
-                    <View style={{ marginBottom: 16 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted, marginBottom: 6 }}>APP NAME</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={exportAppName}
-                        onChangeText={setExportAppName}
-                        placeholder="e.g. Smart Pump Controller"
-                        placeholderTextColor="#4b5563"
-                      />
-                    </View>
-
-                    {/* STANDALONE APP EXPORTER CARD */}
-                    <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                        <Zap size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                        <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>Standalone IoT App Bundle</Text>
-                      </View>
-                      <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 14, lineHeight: 18 }}>
-                        Generates a complete standalone web application containing your custom project widgets (<Text style={{ color: THEME.primary }}>PANEL</Text>), target connection controls (<Text style={{ color: THEME.success }}>LINK</Text>), and telemetry console (<Text style={{ color: '#a855f7' }}>TERMINAL</Text>).
-                      </Text>
-
-                      <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleExportAsApp}>
-                        <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                        <Text style={styles.exportBtnPrimaryText}>⚡ EXPORT AS APP (PWA)</Text>
-                      </TouchableOpacity>
-
-                      {isPwaGenerated && (
-                        <View style={{ marginTop: 14, padding: 12, borderRadius: 10, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.4)' }}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}>✅ STANDALONE APP READY!</Text>
-                          <TouchableOpacity style={styles.exportBtnSecondary} onPress={() => {
-                            customAlert('Copied! 📋', 'Standalone App HTML bundle copied to clipboard! Save as index.html to run your project app anywhere.', 'success');
-                          }}>
-                            <Copy size={14} color={THEME.text} style={{ marginRight: 6 }} />
-                            <Text style={styles.exportBtnSecondaryText}>Copy App HTML Bundle</Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    </View>
-                  </ScrollView>
+                  </TouchableOpacity>
                 </View>
+              )
+            )}
+          </KeyboardAvoidingView>
+        )}
+
+        {activeView === 'panel' && (
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.grid}>{widgets.map(renderWidget)}</View>
+            <TouchableOpacity style={styles.addBtn} onPress={() => setIsModalVisible(true)}><Plus size={24} color={THEME.background} /><Text style={styles.addBtnText}>Add Widget</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.clearBtn} onPress={() => setWidgets([])}><Trash2 size={16} color={THEME.textMuted} /><Text style={styles.textMuted}>Clear Layout</Text></TouchableOpacity>
+          </ScrollView>
+        )}
+
+        {activeView === 'connect' && (
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
+            <Text style={styles.cardTitle}>Hardware Connection</Text>
+            <View style={styles.modeRow}>
+              {['ble', 'wifi'].map(c => (
+                <TouchableOpacity key={c} onPress={() => setMode(c)} style={[styles.modePill, connectionMode === c && styles.modePillActive]}><Text style={styles.navBtnText}>{c.toUpperCase()}</Text></TouchableOpacity>
+              ))}
+            </View>
+            {connectionMode === 'ble' ? (
+              <View style={{ marginTop: 20 }}>
+                <Text style={styles.textMuted}>{connectedDevice ? `Linked to ${connectedDevice.name}` : 'Awaiting Connection...'}</Text>
+                <TouchableOpacity style={styles.nativeBtn} onPress={scanAndConnect}><Bluetooth size={16} color={THEME.background} /><Text style={styles.nativeBtnText}>Discover Devices</Text></TouchableOpacity>
               </View>
-            </Modal>
+            ) : (
+              <View style={{ marginTop: 20 }}>
+                <Text style={styles.textMuted}>ESP32 IP Address</Text>
+                <TextInput style={styles.input} value={wifiIP} onChangeText={setWifiIP} keyboardType="numeric" />
+                <Text style={styles.textMuted}>WiFi SSID</Text>
+                <TextInput style={styles.input} value={wifiSSID} onChangeText={setWifiSSID} placeholder="Network Name" />
+                <Text style={styles.textMuted}>WiFi Password</Text>
+                <TextInput style={styles.input} value={wifiPass} onChangeText={setWifiPass} placeholder="Password" secureTextEntry />
 
-            {alertConfig && (
-              <Modal visible={!!alertConfig} transparent animationType="fade" onRequestClose={() => setAlertConfig(null)}>
-                <View style={styles.alertOverlay}>
-                  <View style={styles.alertCard}>
-                    <View style={[styles.alertIconBadge, {
-                      backgroundColor: alertConfig.type === 'success' ? 'rgba(20, 184, 166, 0.15)' :
-                                       alertConfig.type === 'error' ? 'rgba(239, 68, 68, 0.15)' :
-                                       alertConfig.type === 'warning' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(56, 189, 248, 0.15)',
-                      borderColor: alertConfig.type === 'success' ? 'rgba(20, 184, 166, 0.4)' :
-                                   alertConfig.type === 'error' ? 'rgba(239, 68, 68, 0.4)' :
-                                   alertConfig.type === 'warning' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(56, 189, 248, 0.4)'
-                    }]}>
-                      {alertConfig.type === 'success' && <CheckCircle2 size={26} color={THEME.success} />}
-                      {alertConfig.type === 'error' && <XCircle size={26} color={THEME.error} />}
-                      {alertConfig.type === 'warning' && <AlertTriangle size={26} color="#f59e0b" />}
-                      {alertConfig.type === 'info' && <Info size={26} color={THEME.primary} />}
-                    </View>
+                <TouchableOpacity
+                  style={[styles.nativeBtn, { backgroundColor: wifiConnected ? THEME.secondary : THEME.primary, marginTop: 15 }]}
+                  onPress={testWiFi}
+                >
+                  <Wifi size={16} color={THEME.background} />
+                  <Text style={styles.nativeBtnText}>{wifiConnected ? 'WiFi Linked' : 'Connect & Verify'}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </KeyboardAvoidingView>
+        )}
 
-                    <Text style={styles.alertTitle}>{alertConfig.title}</Text>
-                    <Text style={styles.alertMessage}>{alertConfig.message}</Text>
+        {activeView === 'code' && (
+          <View style={styles.content}>
+            <View style={styles.tabBar}>
+              {['code', 'blueprint', 'sync'].map(m => (
+                <TouchableOpacity key={m} onPress={() => m === 'sync' ? syncToIde() : setHelperMode(m)} style={[styles.tab, helperMode === m && m !== 'sync' && styles.tabActive, m === 'sync' && { backgroundColor: THEME.success, borderColor: THEME.success }]}>
+                  <Text style={[styles.navBtnText, m === 'sync' && { color: THEME.background }]}>{m === 'sync' ? 'PUSH TO IDE' : m.toUpperCase()}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.codeTerminal}>
+              {helperMode === 'code' ? (
+                <ScrollView showsVerticalScrollIndicator={false}><Text style={styles.codeText}>{generateCode()}</Text></ScrollView>
+              ) : (
+                <View style={{ gap: 12 }}>
+                  <View style={[styles.block, { borderLeftColor: '#c2185b' }]}>
+                    <Text style={[styles.blockTitle, { color: '#c2185b' }]}>BLOCK 1: HARDWARE INIT</Text>
+                    <Text style={styles.blockText}>
+                      {connectionMode === 'ble'
+                        ? 'Drag [Bluetooth Setup] and [Bluetooth Receive] to Loop. Assign to variable "msg".'
+                        : 'Drag [Connect to WiFi] then [Start Web Server]. Use [Handle Web Request] assigned to "msg".'}
+                    </Text>
+                  </View>
+                  {widgets.map(w => {
+                    let logic = "";
+                    const cmd = w.id.toUpperCase();
+                    const color = w.type === 'gauge' ? '#14b8a6' : THEME.primary;
 
-                    <View style={{ flexDirection: alertConfig.buttons.length > 1 ? 'row' : 'column', gap: 10, width: '100%', marginTop: 8 }}>
-                      {alertConfig.buttons.map((btn, idx) => {
-                        const isCancel = btn.style === 'cancel';
+                    if (w.type === 'toggle') logic = `Drag IF Block. Condition: msg == "${cmd}:1" (ON) or msg == "${cmd}:0" (OFF)`;
+                    else if (w.type === 'slider') logic = `Drag IF Block. Condition: msg.startswith("${cmd}:"). Value: int(msg.split(":")[1])`;
+                    else if (w.type === 'button') logic = `Drag IF Block. Condition: msg == "${cmd}:PUSH". Trigger your action.`;
+                    else if (w.type === 'joystick') logic = `Drag IF Block. Condition: msg.startswith("JOY:"). Parse: msg.split(":")[1].split(",")`;
+                    else if (w.type === 'gauge') logic = connectionMode === 'ble' ? `Use [Bluetooth Send] block with your sensor value.` : `Mobile app reads data from /status. Code already includes this loop.`;
+
+                    return (
+                      <View key={w.id} style={[styles.block, { borderLeftColor: color }]}>
+                        <Text style={[styles.blockTitle, { color: color }]}>{w.id.toUpperCase()} LOGIC BLOCK</Text>
+                        <Text style={styles.blockText}>{logic}</Text>
+                      </View>
+                    );
+                  })}
+                  <View style={[styles.block, { borderLeftColor: '#a855f7' }]}>
+                    <Text style={[styles.blockTitle, { color: '#a855f7' }]}>FINISH: SYNC & RUN</Text>
+                    <Text style={styles.blockText}>Copy the "Code" tab into your IDE Editor. It contains all the blocks above pre-assembled!</Text>
+                  </View>
+                </View>
+              )}
+              <TouchableOpacity style={styles.copyBtn} onPress={() => customAlert('Sync', 'Code is copied and ready for Sanwitch IDE!', 'success')}><Copy size={16} color="#fff" /></TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {activeView === 'term' && (
+          <View style={styles.termContainer}><FlatList data={logs} keyExtractor={item => item.id} renderItem={({ item }) => (<Text style={[styles.logText, { color: item.type === 'tx' ? THEME.primary : THEME.textMuted }]}>{`> ${item.msg}`}</Text>)} inverted /></View>
+        )}
+
+        <Modal visible={isModalVisible} transparent animationType="fade">
+          <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Choose Widget</Text><View style={styles.optionsGrid}>{['toggle', 'slider', 'button', 'gauge', 'rgb', 'joystick'].map(t => (<TouchableOpacity key={t} style={styles.optBtn} onPress={() => { setPendingType(t); setIsModalVisible(false); setIsNameModalVisible(true); }}><Text style={styles.navBtnText}>{t.toUpperCase()}</Text></TouchableOpacity>))}</View><TouchableOpacity style={styles.modalClose} onPress={() => setIsModalVisible(false)}><X size={24} color={THEME.textMuted} /></TouchableOpacity></View></View>
+        </Modal>
+
+        <Modal visible={isNameModalVisible} transparent animationType="fade">
+          <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Name Widget</Text><TextInput style={styles.input} placeholder="e.g. Pump" placeholderTextColor={THEME.textMuted} value={newName} onChangeText={setNewName} autoFocus /><TouchableOpacity style={styles.nativeBtn} onPress={addWidget}><Text style={styles.nativeBtnText}>Create</Text></TouchableOpacity></View></View>
+        </Modal>
+
+        <Modal visible={isVoiceModalVisible} transparent animationType="fade" onRequestClose={() => setIsVoiceModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(56, 189, 248, 0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.primary, marginBottom: 8 }}>
+                  <Mic size={24} color={THEME.primary} />
+                </View>
+                <Text style={styles.modalTitle}>Voice Assistant 🎙️</Text>
+                <Text style={[styles.textMuted, { textAlign: 'center' }]}>Speak or choose a live voice command:</Text>
+              </View>
+
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Pump ON, Speed 80, Action..."
+                placeholderTextColor={THEME.textMuted}
+                value={voiceInputText}
+                onChangeText={setVoiceInputText}
+                onSubmitEditing={() => processVoice(voiceInputText)}
+                autoFocus
+              />
+
+              <Text style={[styles.cardTitle, { marginTop: 5, marginBottom: 8 }]}>Quick Voice Actions</Text>
+              <ScrollView style={{ maxHeight: 180 }} showsVerticalScrollIndicator={false}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                  {widgets.length === 0 ? (
+                    <Text style={styles.textMuted}>Add widgets on the Panel tab to enable voice control.</Text>
+                  ) : (
+                    widgets.map(w => {
+                      if (w.type === 'toggle') {
                         return (
-                          <TouchableOpacity
-                            key={idx}
-                            style={[
-                              styles.nativeBtn,
-                              { flex: alertConfig.buttons.length > 1 ? 1 : undefined, width: alertConfig.buttons.length > 1 ? undefined : '100%', marginTop: 0 },
-                              isCancel && { backgroundColor: 'transparent', borderWidth: 1, borderColor: THEME.surfaceBorder }
-                            ]}
-                            onPress={() => {
-                              const cb = btn.onPress;
-                              setAlertConfig(null);
-                              if (cb) cb();
-                            }}
-                          >
-                            <Text style={[styles.nativeBtnText, isCancel && { color: THEME.textMuted }]}>
-                              {btn.text}
-                            </Text>
+                          <React.Fragment key={w.id}>
+                            <TouchableOpacity style={styles.optBtn} onPress={() => processVoice(`${w.id} ON`)}>
+                              <Text style={styles.navBtnText}>🗣️ {w.id} ON</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.optBtn} onPress={() => processVoice(`${w.id} OFF`)}>
+                              <Text style={styles.navBtnText}>🗣️ {w.id} OFF</Text>
+                            </TouchableOpacity>
+                          </React.Fragment>
+                        );
+                      } else if (w.type === 'button') {
+                        return (
+                          <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`Action ${w.id}`)}>
+                            <Text style={styles.navBtnText}>🗣️ ACTION {w.id.toUpperCase()}</Text>
                           </TouchableOpacity>
                         );
-                      })}
-                    </View>
-                  </View>
+                      } else if (w.type === 'slider') {
+                        return (
+                          <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`${w.id} 75`)}>
+                            <Text style={styles.navBtnText}>🗣️ {w.id.toUpperCase()} 75%</Text>
+                          </TouchableOpacity>
+                        );
+                      } else if (w.type === 'rgb') {
+                        return (
+                          <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`${w.id} Red`)}>
+                            <Text style={styles.navBtnText}>🗣️ {w.id.toUpperCase()} RED</Text>
+                          </TouchableOpacity>
+                        );
+                      }
+                      return null;
+                    })
+                  )}
                 </View>
-              </Modal>
-            )}
+              </ScrollView>
 
-            <View style={styles.bottomStatusWrap} pointerEvents="box-none">
-              <TouchableOpacity
-                style={styles.sideMenuTriggerBtn}
-                onPress={() => setIsExportModalVisible(true)}
-              >
-                <ChevronsUp size={22} color={THEME.primary} />
+              <TouchableOpacity style={[styles.nativeBtn, { marginTop: 15 }]} onPress={() => processVoice(voiceInputText || `${widgets[0]?.id || 'Power'} ON`)}>
+                <Mic size={16} color={THEME.background} />
+                <Text style={styles.nativeBtnText}>Run Voice Command</Text>
               </TouchableOpacity>
 
-              <View style={[styles.statusBadge, (connectedDevice || wifiConnected) && styles.statusBadgeConnected]}>
-                {connectedDevice ? (
-                  <Bluetooth size={13} color={THEME.primary} />
-                ) : wifiConnected ? (
-                  <Wifi size={13} color={THEME.primary} />
-                ) : (
-                  <View style={styles.statusDot} />
-                )}
-                <Text style={styles.statusText}>{connectedDevice || wifiConnected ? 'LINKED' : 'READY'}</Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.voiceFabBtn}
-                onPress={startVoice}
-              >
-                <Mic size={20} color={THEME.primary} />
+              <TouchableOpacity style={styles.modalClose} onPress={() => setIsVoiceModalVisible(false)}>
+                <X size={24} color={THEME.textMuted} />
               </TouchableOpacity>
             </View>
-          </SafeAreaView>
-        </SafeAreaProvider>
-      );
-    }
+          </View>
+        </Modal>
+
+        {/* 1-CLICK INSTANT PWA APP INSTALL MODAL */}
+        <Modal visible={isExportModalVisible} animationType="slide" transparent={true} onRequestClose={() => setIsExportModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContentLarge}>
+              <View style={styles.modalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Sparkles size={20} color={THEME.primary} style={{ marginRight: 8 }} />
+                  <Text style={styles.modalTitle}>Export as App</Text>
+                </View>
+                <TouchableOpacity onPress={() => setIsExportModalVisible(false)}>
+                  <X size={20} color={THEME.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
+                <Text style={{ fontSize: 13, color: THEME.textMuted, marginBottom: 16 }}>
+                  Export your custom widgets, connection settings, and telemetry into a <Text style={{ color: THEME.primary, fontWeight: '700' }}>Standalone Mobile App</Text> that installs directly on your Android home screen!
+                </Text>
+
+                {/* APP NAME INPUT */}
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted, marginBottom: 6 }}>APP NAME</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={exportAppName}
+                    onChangeText={setExportAppName}
+                    placeholder="e.g. Smart Pump Controller"
+                    placeholderTextColor="#4b5563"
+                  />
+                </View>
+
+                {/* STANDALONE APP EXPORTER CARD */}
+                <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <Zap size={20} color={THEME.primary} style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>Standalone IoT App Bundle</Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 14, lineHeight: 18 }}>
+                    Generates a complete standalone web application containing your custom project widgets (<Text style={{ color: THEME.primary }}>PANEL</Text>), target connection controls (<Text style={{ color: THEME.success }}>LINK</Text>), and telemetry console (<Text style={{ color: '#a855f7' }}>TERMINAL</Text>).
+                  </Text>
+
+                  <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleExportAsApp}>
+                    <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
+                    <Text style={styles.exportBtnPrimaryText}>⚡ EXPORT AS APP (PWA)</Text>
+                  </TouchableOpacity>
+
+                  {isPwaGenerated && (
+                    <View style={{ marginTop: 14, padding: 12, borderRadius: 10, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.4)' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}>✅ STANDALONE APP READY!</Text>
+                      <TouchableOpacity style={styles.exportBtnSecondary} onPress={() => {
+                        customAlert('Copied! 📋', 'Standalone App HTML bundle copied to clipboard! Save as index.html to run your project app anywhere.', 'success');
+                      }}>
+                        <Copy size={14} color={THEME.text} style={{ marginRight: 6 }} />
+                        <Text style={styles.exportBtnSecondaryText}>Copy App HTML Bundle</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+
+                {/* GITHUB PAGES LIVE PWA CARD */}
+                <View style={[styles.exportCardOption, { borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.05)' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <ExternalLink size={20} color="#10b981" style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>GitHub Pages Live PWA</Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
+                    Auto-deploying live HTTPS app at: <Text style={{ color: THEME.primary, fontWeight: '700' }}>https://vaigai-valley.github.io/sanwitchConnect_wrap/</Text>
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.exportBtnPrimary, { backgroundColor: '#10b981' }]}
+                    onPress={() => Linking.openURL('https://vaigai-valley.github.io/sanwitchConnect_wrap/')}
+                  >
+                    <ExternalLink size={16} color={THEME.background} style={{ marginRight: 6 }} />
+                    <Text style={styles.exportBtnPrimaryText}>🌐 OPEN GITHUB PAGES PWA</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {alertConfig && (
+          <Modal visible={!!alertConfig} transparent animationType="fade" onRequestClose={() => setAlertConfig(null)}>
+            <View style={styles.alertOverlay}>
+              <View style={styles.alertCard}>
+                <View style={[styles.alertIconBadge, {
+                  backgroundColor: alertConfig.type === 'success' ? 'rgba(20, 184, 166, 0.15)' :
+                    alertConfig.type === 'error' ? 'rgba(239, 68, 68, 0.15)' :
+                      alertConfig.type === 'warning' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+                  borderColor: alertConfig.type === 'success' ? 'rgba(20, 184, 166, 0.4)' :
+                    alertConfig.type === 'error' ? 'rgba(239, 68, 68, 0.4)' :
+                      alertConfig.type === 'warning' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(56, 189, 248, 0.4)'
+                }]}>
+                  {alertConfig.type === 'success' && <CheckCircle2 size={26} color={THEME.success} />}
+                  {alertConfig.type === 'error' && <XCircle size={26} color={THEME.error} />}
+                  {alertConfig.type === 'warning' && <AlertTriangle size={26} color="#f59e0b" />}
+                  {alertConfig.type === 'info' && <Info size={26} color={THEME.primary} />}
+                </View>
+
+                <Text style={styles.alertTitle}>{alertConfig.title}</Text>
+                <Text style={styles.alertMessage}>{alertConfig.message}</Text>
+
+                <View style={{ flexDirection: alertConfig.buttons.length > 1 ? 'row' : 'column', gap: 10, width: '100%', marginTop: 8 }}>
+                  {alertConfig.buttons.map((btn, idx) => {
+                    const isCancel = btn.style === 'cancel';
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[
+                          styles.nativeBtn,
+                          { flex: alertConfig.buttons.length > 1 ? 1 : undefined, width: alertConfig.buttons.length > 1 ? undefined : '100%', marginTop: 0 },
+                          isCancel && { backgroundColor: 'transparent', borderWidth: 1, borderColor: THEME.surfaceBorder }
+                        ]}
+                        onPress={() => {
+                          const cb = btn.onPress;
+                          setAlertConfig(null);
+                          if (cb) cb();
+                        }}
+                      >
+                        <Text style={[styles.nativeBtnText, isCancel && { color: THEME.textMuted }]}>
+                          {btn.text}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
+
+        <View style={styles.bottomStatusWrap} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.sideMenuTriggerBtn}
+            onPress={() => setIsExportModalVisible(true)}
+          >
+            <ChevronsUp size={22} color={THEME.primary} />
+          </TouchableOpacity>
+
+          <View style={[styles.statusBadge, (connectedDevice || wifiConnected) && styles.statusBadgeConnected]}>
+            {connectedDevice ? (
+              <Bluetooth size={13} color={THEME.primary} />
+            ) : wifiConnected ? (
+              <Wifi size={13} color={THEME.primary} />
+            ) : (
+              <View style={styles.statusDot} />
+            )}
+            <Text style={styles.statusText}>{connectedDevice || wifiConnected ? 'LINKED' : 'READY'}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.voiceFabBtn}
+            onPress={startVoice}
+          >
+            <Mic size={20} color={THEME.primary} />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
+}
 
 function Joystick({ onMove }) {
-      const pan = useRef(new Animated.ValueXY()).current;
-      const panResponder = useRef(PanResponder.create({
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderMove: (e, g) => {
-          const r = 50; const d = Math.sqrt(g.dx ** 2 + g.dy ** 2);
-          const lx = d > r ? (g.dx / d) * r : g.dx; const ly = d > r ? (g.dy / d) * r : g.dy;
-          pan.setValue({ x: lx, y: ly });
-          onMove(Math.round((lx / r) * 100), Math.round((ly / r) * -100));
-        },
-        onPanResponderRelease: () => { Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start(); onMove(0, 0); }
-      })).current;
-      return (<View style={styles.joyBox}><Animated.View style={[styles.joyKnob, { transform: pan.getTranslateTransform() }]} {...panResponder.panHandlers} /></View>);
-    }
+  const pan = useRef(new Animated.ValueXY()).current;
+  const panResponder = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderMove: (e, g) => {
+      const r = 50; const d = Math.sqrt(g.dx ** 2 + g.dy ** 2);
+      const lx = d > r ? (g.dx / d) * r : g.dx; const ly = d > r ? (g.dy / d) * r : g.dy;
+      pan.setValue({ x: lx, y: ly });
+      onMove(Math.round((lx / r) * 100), Math.round((ly / r) * -100));
+    },
+    onPanResponderRelease: () => { Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start(); onMove(0, 0); }
+  })).current;
+  return (<View style={styles.joyBox}><Animated.View style={[styles.joyKnob, { transform: pan.getTranslateTransform() }]} {...panResponder.panHandlers} /></View>);
+}
 
-    const styles = StyleSheet.create({
-      container: { flex: 1, backgroundColor: THEME.background },
-      header: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: THEME.surfaceBorder },
-      logoWrap: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-      logoIcon: { width: 36, height: 36, backgroundColor: '#fff', borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-      logoDot: { width: 18, height: 18, backgroundColor: THEME.background, borderRadius: 4 },
-      logoText: { fontSize: 18, fontWeight: '700', color: THEME.text },
-      voiceBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: THEME.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.surfaceBorder },
-      statusBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: THEME.surfaceBorder, gap: 8 },
-      statusBadgeConnected: { borderColor: 'rgba(56, 189, 248, 0.3)', backgroundColor: 'rgba(56, 189, 248, 0.05)' },
-      statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: THEME.textMuted },
-      statusDotConnected: { backgroundColor: THEME.primary },
-      statusText: { color: THEME.text, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
-      bottomStatusWrap: { position: 'absolute', bottom: 18, left: 18, right: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', zIndex: 99 },
-      sideMenuTriggerBtn: { position: 'absolute', left: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(22, 24, 31, 0.9)', borderWidth: 1.5, borderColor: 'rgba(56, 189, 248, 0.4)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8, zIndex: 100 },
-      voiceFabBtn: { position: 'absolute', right: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(22, 24, 31, 0.9)', borderWidth: 1.5, borderColor: 'rgba(56, 189, 248, 0.4)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8, zIndex: 100 },
-      nav: { flexDirection: 'row', backgroundColor: THEME.surface, margin: 15, padding: 4, borderRadius: 12, borderWidth: 1, borderColor: THEME.surfaceBorder },
-      navBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
-      navBtnActive: { backgroundColor: 'rgba(255,255,255,0.05)' },
-      navBtnText: { color: THEME.textMuted, fontWeight: '600', fontSize: 10 },
-      navBtnTextActive: { color: THEME.text },
-      scrollContent: { padding: 20, paddingBottom: 100 },
-      content: { padding: 20 },
-      grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 15, justifyContent: 'space-between' },
-      card: { width: (width - 55) / 2, backgroundColor: THEME.surface, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: THEME.surfaceBorder, marginBottom: 15, position: 'relative' },
-      cardWide: { width: width - 40 },
-      cardTitle: { fontSize: 9, fontWeight: '700', color: THEME.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
-      removeBtn: { position: 'absolute', top: 12, right: 12, zIndex: 10 },
-      widgetControl: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-      textMuted: { color: THEME.textMuted, fontSize: 11 },
-      toggleTrack: { width: 44, height: 24, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 2 },
-      toggleThumb: { width: 20, height: 20, backgroundColor: '#fff', borderRadius: 10 },
-      nativeBtn: { backgroundColor: THEME.primary, padding: 12, borderRadius: 12, alignItems: 'center', marginTop: 5, flexDirection: 'row', justifyContent: 'center', gap: 8 },
-      nativeBtnText: { color: THEME.background, fontWeight: '700', fontSize: 12 },
-      addBtn: { backgroundColor: THEME.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 18, borderRadius: 16, marginTop: 10, gap: 10 },
-      addBtnText: { color: THEME.background, fontWeight: '700', fontSize: 16 },
-      clearBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 25, gap: 8 },
-      modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-      modalContent: { backgroundColor: THEME.surface, width: '100%', borderRadius: 25, padding: 30, borderWidth: 1, borderColor: THEME.surfaceBorder },
-      modalTitle: { fontSize: 18, fontWeight: '700', color: THEME.text, marginBottom: 20, textAlign: 'center' },
-      optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
-      optBtn: { padding: 15, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, minWidth: 90, alignItems: 'center', borderWidth: 1, borderColor: THEME.surfaceBorder },
-      modalClose: { position: 'absolute', top: 20, right: 20 },
-      input: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 15, color: THEME.text, fontSize: 16, marginBottom: 15, borderWidth: 1, borderColor: THEME.surfaceBorder },
-      tabBar: { flexDirection: 'row', gap: 10, marginBottom: 15 },
-      tab: { flex: 1, padding: 12, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: THEME.surfaceBorder },
-      tabActive: { backgroundColor: THEME.surfaceBorder },
-      modeRow: { flexDirection: 'row', gap: 8 },
-      modePill: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: THEME.surfaceBorder },
-      modePillActive: { backgroundColor: THEME.primary, borderColor: THEME.primary },
-      codeTerminal: { backgroundColor: '#000', borderRadius: 20, padding: 20, minHeight: 350, position: 'relative' },
-      codeText: { color: THEME.primary, fontFamily: 'monospace', fontSize: 12, lineHeight: 18 },
-      copyBtn: { position: 'absolute', top: 15, right: 15, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-      termContainer: { flex: 1, backgroundColor: '#000', margin: 20, borderRadius: 20, padding: 20 },
-      logText: { fontFamily: 'monospace', fontSize: 12, marginBottom: 8 },
-      gaugeBox: { alignItems: 'center' },
-      gaugeValue: { fontSize: 32, fontWeight: '700', color: THEME.text, marginBottom: 5 },
-      joyBox: { width: 110, height: 110, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 55, alignSelf: 'center', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.surfaceBorder },
-      joyKnob: { width: 44, height: 44, backgroundColor: THEME.primary, borderRadius: 22 },
-      colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 5 },
-      colorDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
-      colorSelected: { borderWidth: 2, borderColor: THEME.primary, transform: [{ scale: 1.1 }] },
-      block: { backgroundColor: 'rgba(56, 189, 248, 0.05)', padding: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: 'rgba(255,255,255,0.2)' },
-      blockTitle: { color: THEME.primary, fontSize: 11, fontWeight: '700', marginBottom: 2 },
-      blockText: { color: THEME.textMuted, fontSize: 10, fontFamily: 'monospace' },
-      splashContainer: { flex: 1, backgroundColor: THEME.background, justifyContent: 'center', alignItems: 'center' },
-      splashMain: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-      splashFooter: { paddingBottom: 60, alignItems: 'center' },
-      splashFrom: { color: THEME.textMuted, fontSize: 14, fontWeight: '500' },
-      splashBrand: { color: THEME.text, fontSize: 24, fontWeight: '700' },
-      authCard: { backgroundColor: THEME.surface, borderRadius: 25, padding: 30, borderWidth: 1, borderColor: THEME.surfaceBorder },
-      profileCard: { backgroundColor: THEME.surface, borderRadius: 25, padding: 40, borderWidth: 1, borderColor: THEME.surfaceBorder, alignItems: 'center' },
-      profileHeader: { alignItems: 'center', marginBottom: 30 },
-      avatarLarge: { width: 80, height: 80, borderRadius: 40, backgroundColor: THEME.primary, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
-      avatarTextLarge: { fontSize: 32, fontWeight: '700', color: THEME.background },
-      profileName: { fontSize: 24, fontWeight: '700', color: THEME.text },
-      profileEmail: { fontSize: 14, color: THEME.textMuted, marginTop: 5 },
-      avatarSmall: { width: 32, height: 32, borderRadius: 16, backgroundColor: THEME.primary, justifyContent: 'center', alignItems: 'center' },
-      avatarTextSmall: { fontSize: 14, fontWeight: '700', color: THEME.background },
-      qrAuthCard: { backgroundColor: THEME.surface, borderRadius: 25, padding: 20, borderWidth: 1, borderColor: THEME.surfaceBorder, alignItems: 'center' },
-      cameraPlaceholder: { width: '100%', height: 260, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 20, justifyContent: 'center', alignItems: 'center', padding: 20, borderWidth: 1, borderColor: THEME.surfaceBorder },
-      cameraContainer: { width: '100%', height: 260, borderRadius: 20, overflow: 'hidden', position: 'relative', borderWidth: 1, borderColor: THEME.surfaceBorder },
-      cameraPreview: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
-      qrTargetOverlay: { width: 180, height: 180, borderRadius: 16, borderWidth: 2, borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)' },
-      avatarHeaderBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(56, 189, 248, 0.18)', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: THEME.primary },
-      alertOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-      alertCard: { width: '100%', maxWidth: 330, backgroundColor: THEME.surface, borderRadius: 24, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: THEME.surfaceBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 10 },
-      alertIconBadge: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderWidth: 1 },
-      alertTitle: { fontSize: 18, fontWeight: '700', color: THEME.text, textAlign: 'center', marginBottom: 8 },
-      alertMessage: { fontSize: 13, color: THEME.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: 16 },
-      exportHeaderBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(56, 189, 248, 0.12)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, marginRight: 8 },
-      exportHeaderBtnText: { color: '#38bdf8', fontSize: 11, fontWeight: '700' },
-      modalContentLarge: { backgroundColor: THEME.surface, width: '100%', maxWidth: 440, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: THEME.surfaceBorder },
-      modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-      exportCardOption: { backgroundColor: 'rgba(255, 255, 255, 0.03)', borderWidth: 1, borderColor: THEME.surfaceBorder, borderRadius: 16, padding: 16, marginBottom: 14 },
-      exportBtnPrimary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: THEME.primary, paddingVertical: 12, borderRadius: 12, marginTop: 4 },
-      exportBtnPrimaryText: { color: THEME.background, fontSize: 13, fontWeight: '800' },
-      exportBtnSecondary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.06)', borderWidth: 1, borderColor: THEME.surfaceBorder, paddingVertical: 10, borderRadius: 12 },
-      exportBtnSecondaryText: { color: THEME.text, fontSize: 12, fontWeight: '700' },
-    });
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: THEME.background },
+  header: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: THEME.surfaceBorder },
+  logoWrap: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logoIcon: { width: 36, height: 36, backgroundColor: '#fff', borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  logoDot: { width: 18, height: 18, backgroundColor: THEME.background, borderRadius: 4 },
+  logoText: { fontSize: 18, fontWeight: '700', color: THEME.text },
+  voiceBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: THEME.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.surfaceBorder },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: THEME.surfaceBorder, gap: 8 },
+  statusBadgeConnected: { borderColor: 'rgba(56, 189, 248, 0.3)', backgroundColor: 'rgba(56, 189, 248, 0.05)' },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: THEME.textMuted },
+  statusDotConnected: { backgroundColor: THEME.primary },
+  statusText: { color: THEME.text, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+  bottomStatusWrap: { position: 'absolute', bottom: 18, left: 18, right: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', zIndex: 99 },
+  sideMenuTriggerBtn: { position: 'absolute', left: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(22, 24, 31, 0.9)', borderWidth: 1.5, borderColor: 'rgba(56, 189, 248, 0.4)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8, zIndex: 100 },
+  voiceFabBtn: { position: 'absolute', right: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(22, 24, 31, 0.9)', borderWidth: 1.5, borderColor: 'rgba(56, 189, 248, 0.4)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8, zIndex: 100 },
+  nav: { flexDirection: 'row', backgroundColor: THEME.surface, margin: 15, padding: 4, borderRadius: 12, borderWidth: 1, borderColor: THEME.surfaceBorder },
+  navBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
+  navBtnActive: { backgroundColor: 'rgba(255,255,255,0.05)' },
+  navBtnText: { color: THEME.textMuted, fontWeight: '600', fontSize: 10 },
+  navBtnTextActive: { color: THEME.text },
+  scrollContent: { padding: 20, paddingBottom: 100 },
+  content: { padding: 20 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 15, justifyContent: 'space-between' },
+  card: { width: (width - 55) / 2, backgroundColor: THEME.surface, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: THEME.surfaceBorder, marginBottom: 15, position: 'relative' },
+  cardWide: { width: width - 40 },
+  cardTitle: { fontSize: 9, fontWeight: '700', color: THEME.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
+  removeBtn: { position: 'absolute', top: 12, right: 12, zIndex: 10 },
+  widgetControl: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  textMuted: { color: THEME.textMuted, fontSize: 11 },
+  toggleTrack: { width: 44, height: 24, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 2 },
+  toggleThumb: { width: 20, height: 20, backgroundColor: '#fff', borderRadius: 10 },
+  nativeBtn: { backgroundColor: THEME.primary, padding: 12, borderRadius: 12, alignItems: 'center', marginTop: 5, flexDirection: 'row', justifyContent: 'center', gap: 8 },
+  nativeBtnText: { color: THEME.background, fontWeight: '700', fontSize: 12 },
+  addBtn: { backgroundColor: THEME.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 18, borderRadius: 16, marginTop: 10, gap: 10 },
+  addBtnText: { color: THEME.background, fontWeight: '700', fontSize: 16 },
+  clearBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 25, gap: 8 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { backgroundColor: THEME.surface, width: '100%', borderRadius: 25, padding: 30, borderWidth: 1, borderColor: THEME.surfaceBorder },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: THEME.text, marginBottom: 20, textAlign: 'center' },
+  optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
+  optBtn: { padding: 15, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, minWidth: 90, alignItems: 'center', borderWidth: 1, borderColor: THEME.surfaceBorder },
+  modalClose: { position: 'absolute', top: 20, right: 20 },
+  input: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 15, color: THEME.text, fontSize: 16, marginBottom: 15, borderWidth: 1, borderColor: THEME.surfaceBorder },
+  tabBar: { flexDirection: 'row', gap: 10, marginBottom: 15 },
+  tab: { flex: 1, padding: 12, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: THEME.surfaceBorder },
+  tabActive: { backgroundColor: THEME.surfaceBorder },
+  modeRow: { flexDirection: 'row', gap: 8 },
+  modePill: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: THEME.surfaceBorder },
+  modePillActive: { backgroundColor: THEME.primary, borderColor: THEME.primary },
+  codeTerminal: { backgroundColor: '#000', borderRadius: 20, padding: 20, minHeight: 350, position: 'relative' },
+  codeText: { color: THEME.primary, fontFamily: 'monospace', fontSize: 12, lineHeight: 18 },
+  copyBtn: { position: 'absolute', top: 15, right: 15, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+  termContainer: { flex: 1, backgroundColor: '#000', margin: 20, borderRadius: 20, padding: 20 },
+  logText: { fontFamily: 'monospace', fontSize: 12, marginBottom: 8 },
+  gaugeBox: { alignItems: 'center' },
+  gaugeValue: { fontSize: 32, fontWeight: '700', color: THEME.text, marginBottom: 5 },
+  joyBox: { width: 110, height: 110, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 55, alignSelf: 'center', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.surfaceBorder },
+  joyKnob: { width: 44, height: 44, backgroundColor: THEME.primary, borderRadius: 22 },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 5 },
+  colorDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  colorSelected: { borderWidth: 2, borderColor: THEME.primary, transform: [{ scale: 1.1 }] },
+  block: { backgroundColor: 'rgba(56, 189, 248, 0.05)', padding: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: 'rgba(255,255,255,0.2)' },
+  blockTitle: { color: THEME.primary, fontSize: 11, fontWeight: '700', marginBottom: 2 },
+  blockText: { color: THEME.textMuted, fontSize: 10, fontFamily: 'monospace' },
+  splashContainer: { flex: 1, backgroundColor: THEME.background, justifyContent: 'center', alignItems: 'center' },
+  splashMain: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  splashFooter: { paddingBottom: 60, alignItems: 'center' },
+  splashFrom: { color: THEME.textMuted, fontSize: 14, fontWeight: '500' },
+  splashBrand: { color: THEME.text, fontSize: 24, fontWeight: '700' },
+  authCard: { backgroundColor: THEME.surface, borderRadius: 25, padding: 30, borderWidth: 1, borderColor: THEME.surfaceBorder },
+  profileCard: { backgroundColor: THEME.surface, borderRadius: 25, padding: 40, borderWidth: 1, borderColor: THEME.surfaceBorder, alignItems: 'center' },
+  profileHeader: { alignItems: 'center', marginBottom: 30 },
+  avatarLarge: { width: 80, height: 80, borderRadius: 40, backgroundColor: THEME.primary, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
+  avatarTextLarge: { fontSize: 32, fontWeight: '700', color: THEME.background },
+  profileName: { fontSize: 24, fontWeight: '700', color: THEME.text },
+  profileEmail: { fontSize: 14, color: THEME.textMuted, marginTop: 5 },
+  avatarSmall: { width: 32, height: 32, borderRadius: 16, backgroundColor: THEME.primary, justifyContent: 'center', alignItems: 'center' },
+  avatarTextSmall: { fontSize: 14, fontWeight: '700', color: THEME.background },
+  qrAuthCard: { backgroundColor: THEME.surface, borderRadius: 25, padding: 20, borderWidth: 1, borderColor: THEME.surfaceBorder, alignItems: 'center' },
+  cameraPlaceholder: { width: '100%', height: 260, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 20, justifyContent: 'center', alignItems: 'center', padding: 20, borderWidth: 1, borderColor: THEME.surfaceBorder },
+  cameraContainer: { width: '100%', height: 260, borderRadius: 20, overflow: 'hidden', position: 'relative', borderWidth: 1, borderColor: THEME.surfaceBorder },
+  cameraPreview: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
+  qrTargetOverlay: { width: 180, height: 180, borderRadius: 16, borderWidth: 2, borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)' },
+  avatarHeaderBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(56, 189, 248, 0.18)', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: THEME.primary },
+  alertOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  alertCard: { width: '100%', maxWidth: 330, backgroundColor: THEME.surface, borderRadius: 24, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: THEME.surfaceBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 10 },
+  alertIconBadge: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderWidth: 1 },
+  alertTitle: { fontSize: 18, fontWeight: '700', color: THEME.text, textAlign: 'center', marginBottom: 8 },
+  alertMessage: { fontSize: 13, color: THEME.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: 16 },
+  exportHeaderBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(56, 189, 248, 0.12)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, marginRight: 8 },
+  exportHeaderBtnText: { color: '#38bdf8', fontSize: 11, fontWeight: '700' },
+  modalContentLarge: { backgroundColor: THEME.surface, width: '100%', maxWidth: 440, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: THEME.surfaceBorder },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  exportCardOption: { backgroundColor: 'rgba(255, 255, 255, 0.03)', borderWidth: 1, borderColor: THEME.surfaceBorder, borderRadius: 16, padding: 16, marginBottom: 14 },
+  exportBtnPrimary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: THEME.primary, paddingVertical: 12, borderRadius: 12, marginTop: 4 },
+  exportBtnPrimaryText: { color: THEME.background, fontSize: 13, fontWeight: '800' },
+  exportBtnSecondary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.06)', borderWidth: 1, borderColor: THEME.surfaceBorder, paddingVertical: 10, borderRadius: 12 },
+  exportBtnSecondaryText: { color: THEME.text, fontSize: 12, fontWeight: '700' },
+});
