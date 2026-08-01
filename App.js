@@ -1544,100 +1544,11 @@ export default function App() {
               </Modal>
             )}
 
-            {/* BOTTOM-LEFT SIDE MENU DRAWER MODAL */}
-            <Modal visible={isSideMenuVisible} animationType="slide" transparent={true} onRequestClose={() => setIsSideMenuVisible(false)}>
-              <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsSideMenuVisible(false)}>
-                <View style={styles.sideMenuDrawerContent} pointerEvents="auto">
-                  <View style={styles.sideMenuHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <ChevronsUp size={22} color={THEME.primary} />
-                      <Text style={styles.sideMenuTitle}>App Menu & Tools</Text>
-                    </View>
-                    <TouchableOpacity style={styles.sideMenuCloseBtn} onPress={() => setIsSideMenuVisible(false)}>
-                      <X size={18} color={THEME.textMuted} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={{ gap: 10, marginTop: 12 }}>
-                    <TouchableOpacity
-                      style={[styles.sideMenuItemBtn, { backgroundColor: 'rgba(56, 189, 248, 0.12)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}
-                      onPress={() => {
-                        setIsSideMenuVisible(false);
-                        setIsExportModalVisible(true);
-                      }}
-                    >
-                      <Download size={20} color={THEME.primary} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.sideMenuItemText, { color: THEME.primary }]}>EXPORT AS APP</Text>
-                        <Text style={styles.sideMenuItemSubtext}>Generate standalone PWA or Android App</Text>
-                      </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[styles.sideMenuItemBtn, { backgroundColor: 'rgba(16, 185, 129, 0.12)', borderColor: 'rgba(16, 185, 129, 0.3)' }]}
-                      onPress={() => {
-                        setIsSideMenuVisible(false);
-                        setIsNativeAppRunnerVisible(true);
-                      }}
-                    >
-                      <Zap size={20} color={THEME.success} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.sideMenuItemText, { color: THEME.success }]}>RUN NATIVE APP</Text>
-                        <Text style={styles.sideMenuItemSubtext}>Fullscreen in-app execution without browser</Text>
-                      </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.sideMenuItemBtn}
-                      onPress={() => {
-                        setIsSideMenuVisible(false);
-                        setActiveView('auth');
-                      }}
-                    >
-                      <QrCode size={20} color={THEME.text} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.sideMenuItemText}>PAIR WITH DESKTOP IDE</Text>
-                        <Text style={styles.sideMenuItemSubtext}>Scan QR code to push blocks to Desktop</Text>
-                      </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.sideMenuItemBtn}
-                      onPress={() => {
-                        setIsSideMenuVisible(false);
-                        startVoice();
-                      }}
-                    >
-                      <Mic size={20} color={THEME.text} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.sideMenuItemText}>VOICE ASSISTANT</Text>
-                        <Text style={styles.sideMenuItemSubtext}>Control IoT widgets using speech</Text>
-                      </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.sideMenuItemBtn}
-                      onPress={() => {
-                        setIsSideMenuVisible(false);
-                        setActiveView('connect');
-                      }}
-                    >
-                      <Wifi size={20} color={THEME.text} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.sideMenuItemText}>HARDWARE LINK</Text>
-                        <Text style={styles.sideMenuItemSubtext}>Configure WiFi or Bluetooth connection</Text>
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </Modal>
-
             <View style={styles.bottomStatusWrap} pointerEvents="box-none">
               <View style={styles.bottomBarRow} pointerEvents="box-none">
                 <TouchableOpacity
                   style={styles.sideMenuTriggerBtn}
-                  onPress={() => setIsSideMenuVisible(true)}
+                  onPress={() => setIsExportModalVisible(true)}
                 >
                   <ChevronsUp size={22} color={THEME.primary} />
                 </TouchableOpacity>
