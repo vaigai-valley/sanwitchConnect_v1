@@ -221,6 +221,10 @@ export default function App() {
       <div class="term-box" id="termLog">
         <div class="term-line" style="color:#97a0b5;">[SYSTEM] Standalone App Engine Initialized</div>
       </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <input type="text" id="manualCmdInput" class="input-field" style="margin:0;" placeholder="e.g. RELAY1:1 or AT+STATUS">
+        <button class="btn-action" style="width:100px;" onclick="sendManualCmd()">SEND</button>
+      </div>
     </div>
   </main>
   <footer>Built with Sanwitch Connect Standalone Exporter</footer>
@@ -244,6 +248,14 @@ export default function App() {
       fetch('http://' + targetIp + '/control?cmd=' + encodeURIComponent(cmd), { mode: 'no-cors' })
         .then(() => logTerm('OK: ' + cmd, 'RX'))
         .catch(e => logTerm('ERR: ' + e.message, 'ERR'));
+    }
+
+    function sendManualCmd() {
+      const val = document.getElementById('manualCmdInput').value.trim();
+      if (val) {
+        sendCmd(val);
+        document.getElementById('manualCmdInput').value = '';
+      }
     }
 
     function saveLinkConfig() {
