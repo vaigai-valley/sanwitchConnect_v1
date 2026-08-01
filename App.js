@@ -23,7 +23,7 @@ import {
   Share
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Mic, Bluetooth, Wifi, Plus, X, LayoutGrid, Trash2, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, LogOut, KeyRound, Smartphone, ExternalLink, Sparkles, ChevronsUp, Folder, Edit3, FileText } from 'lucide-react-native';
+import { Mic, Bluetooth, Wifi, Plus, X, LayoutGrid, Trash2, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, LogOut, KeyRound, Smartphone, ExternalLink, Sparkles, ChevronsUp, Folder, Edit3, FileText, HelpCircle, ChevronRight } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
@@ -87,6 +87,12 @@ export default function App() {
         const savedToken = await AsyncStorage.getItem('sanwitch_token').catch(() => null);
         const savedUser = await AsyncStorage.getItem('sanwitch_user').catch(() => null);
 
+        const tourDone = await AsyncStorage.getItem('@sanwitch_tour_completed').catch(() => null);
+        if (!tourDone && isMounted) {
+          setTourStep(1);
+          setIsTourModalVisible(true);
+        }
+
         if (savedToken && savedUser && isMounted) {
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
@@ -137,6 +143,8 @@ export default function App() {
   const [savedApps, setSavedApps] = useState([]);
   const [isBottomMenuVisible, setIsBottomMenuVisible] = useState(false);
   const [isMyAppsModalVisible, setIsMyAppsModalVisible] = useState(false);
+  const [isTourModalVisible, setIsTourModalVisible] = useState(false);
+  const [tourStep, setTourStep] = useState(1);
 
   useEffect(() => {
     const loadSavedApps = async () => {
@@ -1230,13 +1238,25 @@ export default function App() {
             <Text style={styles.logoText}>Sanwitch <Text style={{ color: THEME.primary }}>Connect</Text></Text>
           </View>
 
-          <TouchableOpacity style={styles.avatarHeaderBtn} onPress={() => setActiveView('auth')}>
-            {user ? (
-              <Text style={styles.avatarTextSmall}>{(user.username || user.email || 'U')[0].toUpperCase()}</Text>
-            ) : (
-              <KeyRound size={16} color={THEME.primary} />
-            )}
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              style={[styles.avatarHeaderBtn, { marginRight: 8, backgroundColor: 'rgba(56, 189, 248, 0.12)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}
+              onPress={() => {
+                setTourStep(1);
+                setIsTourModalVisible(true);
+              }}
+            >
+              <HelpCircle size={18} color={THEME.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.avatarHeaderBtn} onPress={() => setActiveView('auth')}>
+              {user ? (
+                <Text style={styles.avatarTextSmall}>{(user.username || user.email || 'U')[0].toUpperCase()}</Text>
+              ) : (
+                <KeyRound size={16} color={THEME.primary} />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.nav}>
@@ -1253,6 +1273,17 @@ export default function App() {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
             {user ? (
               <View style={styles.profileCard}>
+                <TouchableOpacity
+                  style={{ position: 'absolute', top: 16, right: 16, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(56, 189, 248, 0.12)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', flexDirection: 'row', alignItems: 'center', gap: 4, zIndex: 10 }}
+                  onPress={() => {
+                    setTourStep(1);
+                    setIsTourModalVisible(true);
+                  }}
+                >
+                  <HelpCircle size={14} color={THEME.primary} />
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.primary }}>App Tour</Text>
+                </TouchableOpacity>
+
                 <View style={styles.profileHeader}>
                   <View style={styles.avatarLarge}>
                     <Text style={styles.avatarTextLarge}>{(user.username || user.email || 'C')[0].toUpperCase()}</Text>
@@ -1835,6 +1866,89 @@ export default function App() {
                   ))
                 )}
               </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* GUIDED APP TOUR MODAL */}
+        <Modal visible={isTourModalVisible} animationType="fade" transparent={true} onRequestClose={() => setIsTourModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContentLarge, { maxWidth: 360, padding: 20, borderWidth: 1.5, borderColor: THEME.primary }]}>
+              {/* TOP STEP COUNTER HEADER */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Sparkles size={18} color={THEME.primary} />
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.text }}>Sanwitch Guided Tour</Text>
+                </View>
+                <View style={{ backgroundColor: 'rgba(56, 189, 248, 0.15)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.4)' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '900', color: THEME.primary }}>STEP {tourStep} OF 2</Text>
+                </View>
+              </View>
+
+              {/* STEP 1: CREATE IOT WIDGETS & CONTROLS */}
+              {tourStep === 1 && (
+                <View>
+                  <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: THEME.secondary, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 14 }}>
+                    <LayoutGrid size={28} color={THEME.secondary} />
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text, textAlign: 'center', marginBottom: 8 }}>
+                    Step 1: Add Widgets & Build Canvas
+                  </Text>
+                  <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
+                    1. Tap the <Text style={{ color: THEME.primary, fontWeight: '700' }}>PANEL</Text> tab at the top.{"\n"}
+                    2. Click <Text style={{ color: THEME.secondary, fontWeight: '700' }}>+ Add Widget</Text> to place custom IoT controls (Toggles, Sliders, Sensor Gauges & Push Buttons).{"\n"}
+                    3. Customize names and hardware pins for your ESP32 or micro-controller.
+                  </Text>
+
+                  <TouchableOpacity
+                    style={[styles.exportBtnPrimary, { backgroundColor: THEME.primary, marginTop: 10 }]}
+                    onPress={() => setTourStep(2)}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.background, marginRight: 6 }}>Next: Push to IDE</Text>
+                    <ChevronRight size={16} color={THEME.background} />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* STEP 2: PUSH TO DESKTOP IDE */}
+              {tourStep === 2 && (
+                <View>
+                  <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(56, 189, 248, 0.15)', borderWidth: 1, borderColor: THEME.primary, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 14 }}>
+                    <Zap size={28} color={THEME.primary} />
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text, textAlign: 'center', marginBottom: 8 }}>
+                    Step 2: Push Blocks & Export PWA
+                  </Text>
+                  <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
+                    1. Navigate to the <Text style={{ color: THEME.primary, fontWeight: '700' }}>CODE</Text> tab.{"\n"}
+                    2. Tap <Text style={{ color: THEME.success, fontWeight: '700' }}>PUSH TO IDE</Text> to instantly stream your layout's code blocks into your desktop Sanwitch IDE!{"\n"}
+                    3. Use <Text style={{ color: THEME.primary, fontWeight: '700' }}>EXPORT APP</Text> (bottom menu) to pin standalone apps to your Android App Drawer!
+                  </Text>
+
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                    <TouchableOpacity
+                      style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: THEME.surfaceBorder, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
+                      onPress={() => setTourStep(1)}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted }}>Back</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={{ flex: 2, backgroundColor: THEME.success, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                      onPress={async () => {
+                        setIsTourModalVisible(false);
+                        try {
+                          await AsyncStorage.setItem('@sanwitch_tour_completed', 'true');
+                        } catch (e) {}
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      }}
+                    >
+                      <CheckCircle2 size={16} color={THEME.background} style={{ marginRight: 6 }} />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.background }}>Got It! Start</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
           </View>
         </Modal>
