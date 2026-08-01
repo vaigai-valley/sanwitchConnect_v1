@@ -1514,7 +1514,7 @@ export default function App() {
                       const userConfig = {
                         appName: exportAppName || 'My Sanwitch App',
                         widgets,
-                        wifiIp
+                        wifiIp: wifiIP || '192.168.4.1'
                       };
                       const jsonStr = JSON.stringify(userConfig);
                       let b64 = jsonStr;
