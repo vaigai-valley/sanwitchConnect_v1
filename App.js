@@ -998,6 +998,14 @@ export default function App() {
                   <Mic size={18} color={THEME.text} />
                 </TouchableOpacity>
               </View>
+
+              <TouchableOpacity style={styles.avatarHeaderBtn} onPress={() => setActiveView('auth')}>
+                {user ? (
+                  <Text style={styles.avatarTextSmall}>{(user.username || user.email || 'U')[0].toUpperCase()}</Text>
+                ) : (
+                  <KeyRound size={16} color={THEME.primary} />
+                )}
+              </TouchableOpacity>
             </View>
 
             <View style={styles.nav}>
