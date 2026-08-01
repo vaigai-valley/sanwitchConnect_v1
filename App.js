@@ -177,6 +177,7 @@ export default function App() {
   const [isTourModalVisible, setIsTourModalVisible] = useState(false);
   const [tourStep, setTourStep] = useState(1);
   const [tourMode, setTourMode] = useState('guided');
+  const [helperMode, setHelperMode] = useState('code');
 
   useEffect(() => {
     const loadSavedApps = async () => {
