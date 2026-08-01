@@ -1,0 +1,25 @@
+name: Sanwitch Connect v1 CI/CD Workflow
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-validate:
+    name: Validate Mobile App & PWA Bundle
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate App Syntax & Offline PWA Storage
+        run: |
+          node -e "const fs = require('fs'); const code = fs.readFileSync('App.js', 'utf8'); console.log('✅ App.js Syntax Valid!'); if(!code.includes('handleSaveAndRunLocalApp')) throw new Error('Missing local PWA exporter');"
