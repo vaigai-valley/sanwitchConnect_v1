@@ -1388,23 +1388,31 @@ export default function App() {
                   />
                 </View>
 
-                {/* STANDALONE APP EXPORTER CARD */}
-                <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <Zap size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>Standalone IoT App Bundle</Text>
+                {/* METHOD 1: ON-DEVICE PWA */}
+                <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)', marginBottom: 14 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Smartphone size={20} color={THEME.primary} style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>1. On-Device PWA (Blob/DataURI)</Text>
                   </View>
-                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 14, lineHeight: 18 }}>
-                    Generates a complete standalone web application containing your custom project widgets (<Text style={{ color: THEME.primary }}>PANEL</Text>), target connection controls (<Text style={{ color: THEME.success }}>LINK</Text>), and telemetry console (<Text style={{ color: '#a855f7' }}>TERMINAL</Text>).
+                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(56, 189, 248, 0.15)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>$0 / Free</Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>1-Tap Home Screen</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
+                    Generates a self-contained, offline app bundle stored directly on your phone with zero server dependencies.
                   </Text>
 
                   <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleExportAsApp}>
                     <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                    <Text style={styles.exportBtnPrimaryText}>⚡ EXPORT AS APP (PWA)</Text>
+                    <Text style={styles.exportBtnPrimaryText}>⚡ INSTANT ON-DEVICE PWA</Text>
                   </TouchableOpacity>
 
                   {isPwaGenerated && (
-                    <View style={{ marginTop: 14, padding: 12, borderRadius: 10, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.4)' }}>
+                    <View style={{ marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.4)' }}>
                       <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}>✅ STANDALONE APP READY!</Text>
                       <TouchableOpacity style={styles.exportBtnSecondary} onPress={() => {
                         customAlert('Copied! 📋', 'Standalone App HTML bundle copied to clipboard! Save as index.html to run your project app anywhere.', 'success');
@@ -1416,14 +1424,22 @@ export default function App() {
                   )}
                 </View>
 
-                {/* GITHUB PAGES LIVE PWA CARD */}
+                {/* METHOD 2: CENTRAL GITHUB PAGES */}
                 <View style={[styles.exportCardOption, { borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.05)' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                     <ExternalLink size={20} color="#10b981" style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>GitHub Pages Live PWA</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>2. Central GitHub Pages (index.html)</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(16, 185, 129, 0.15)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#10b981' }}>$0 / Free SSL</Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(168, 85, 247, 0.15)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#a855f7' }}>Multi-User (localStorage)</Text>
+                    </View>
                   </View>
                   <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Auto-deploying live HTTPS app at: <Text style={{ color: THEME.primary, fontWeight: '700' }}>https://vaigai-valley.github.io/sanwitchConnect_wrap/</Text>
+                    Serves multi-user dynamic layouts via free cloud HTTPS URL: <Text style={{ color: THEME.primary, fontWeight: '700' }}>https://vaigai-valley.github.io/sanwitchConnect_wrap/</Text>
                   </Text>
                   <TouchableOpacity
                     style={[styles.exportBtnPrimary, { backgroundColor: '#10b981' }]}
