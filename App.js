@@ -1061,12 +1061,20 @@ export default function App() {
         const sliderBlock = {
           id: id++, type: 'if_logic', condType: 'text', condition: `msg.startswith("${cmd}:")`,
           nextId: null, childStartId: null,
-          children: [{ id: id++, type: 'pwm_led', pin: '2', duty: `int(msg.split(":")[1]) * 10`, nextId: null }]
+          children: [{ id: id++, type: 'pwm_led', pin: '5', duty: `int(msg.split(":")[1]) * 10`, nextId: null }]
         };
         sliderBlock.childStartId = sliderBlock.children[0].id;
         children.push(sliderBlock);
+      } else if (w.type === 'joystick') {
+        const joyBlock = {
+          id: id++, type: 'if_logic', condType: 'text', condition: `msg.startswith("${cmd}:")`,
+          nextId: null, childStartId: null,
+          children: [{ id: id++, type: 'print', value: `Joystick ${w.id} Moved`, nextId: null }]
+        };
+        joyBlock.childStartId = joyBlock.children[0].id;
+        children.push(joyBlock);
       } else if (w.type === 'gauge' && connectionMode === 'ble') {
-        children.push({ id: id++, type: 'ble_send', data: '42.5', nextId: null });
+        children.push({ id: id++, type: 'ble_send', data: `${cmd}:24.5`, nextId: null });
       }
     });
 
@@ -1167,22 +1175,42 @@ export default function App() {
   };
 
   const generateCode = () => {
-    let py = `# Sanwitch IDE - Full MicroPython Protocol\n`;
+    let py = `# Sanwitch IDE - Unified MicroPython Protocol (ESP32/ESP8266)\n`;
+    py += `from machine import Pin, PWM, ADC\nimport time, json\n\n`;
+
     let indent = connectionMode === 'ble' ? "        " : "            ";
+
     if (connectionMode === 'ble') {
-      py += `from ble_uart import BLEUART\nimport bluetooth\n_ble = bluetooth.BLE()\n_uart = BLEUART(_ble, name="Sanwitch-ESP32")\nwhile True:\n    if _uart.any():\n        msg = _uart.read().decode().strip()\n`;
+      py += `# BLE UART Mode\nfrom ble_uart import BLEUART\nimport bluetooth\n_ble = bluetooth.BLE()\n_uart = BLEUART(_ble, name="Sanwitch-ESP32")\nprint("BLE UART Server Active: Sanwitch-ESP32")\n\nwhile True:\n    if _uart.any():\n        msg = _uart.read().decode().strip()\n`;
     } else {
-      py += `import network, usocket as socket\nwlan = network.WLAN(network.STA_IF)\nwlan.active(True)\nwlan.connect("${wifiSSID}", "${wifiPass}")\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.bind(('', 80))\ns.listen(5)\nwhile True:\n    try:\n        conn, addr = s.accept()\n        req = conn.recv(1024).decode()\n        if "?cmd=" in req:\n            msg = req.split("?cmd=")[1].split(" ")[0]\n`;
+      py += `# WiFi Web Server Mode\nimport network, usocket as socket\nwlan = network.WLAN(network.STA_IF)\nwlan.active(True)\nwlan.connect("${wifiSSID}", "${wifiPass}")\nprint("Connecting WiFi...")\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\ns.bind(('', 80))\ns.listen(5)\nprint("Web Server active on port 80")\n\nwhile True:\n    try:\n        conn, addr = s.accept()\n        req = conn.recv(1024).decode()\n        if "?cmd=" in req:\n            msg = req.split("?cmd=")[1].split(" ")[0]\n`;
     }
+
     widgets.forEach(w => {
       const c = w.id.toUpperCase();
-      if (w.type === 'toggle') py += `${indent}if msg == "${c}:1": print("ON")\n${indent}elif msg == "${c}:0": print("OFF")\n`;
-      else if (w.type === 'slider') py += `${indent}if msg.startswith("${c}:"): val = int(msg.split(":")[1])\n`;
-      else if (w.type === 'button') py += `${indent}if msg == "${c}:PUSH": print("Button")\n`;
+      if (w.type === 'toggle') {
+        py += `${indent}if msg == "${c}:1":\n${indent}    Pin(2, Pin.OUT).value(1)\n${indent}    print("${c} -> ON")\n`;
+        py += `${indent}elif msg == "${c}:0":\n${indent}    Pin(2, Pin.OUT).value(0)\n${indent}    print("${c} -> OFF")\n`;
+      } else if (w.type === 'button') {
+        py += `${indent}if msg == "${c}:PUSH":\n${indent}    Pin(4, Pin.OUT).value(1)\n${indent}    time.sleep_ms(100)\n${indent}    Pin(4, Pin.OUT).value(0)\n${indent}    print("${c} -> Triggered")\n`;
+      } else if (w.type === 'slider') {
+        py += `${indent}if msg.startswith("${c}:"):\n${indent}    val = int(msg.split(":")[1])\n${indent}    PWM(Pin(5), freq=1000).duty(int(val * 10.23))\n${indent}    print("${c} PWM ->", val)\n`;
+      } else if (w.type === 'joystick') {
+        py += `${indent}if msg.startswith("${c}:"):\n${indent}    coords = msg.split(":")[1].split(",")\n${indent}    jx, jy = int(coords[0]), int(coords[1])\n${indent}    print("${c} Joystick -> X:", jx, "Y:", jy)\n`;
+      }
     });
+
     if (connectionMode === 'wifi') {
-      py += `            conn.send('HTTP/1.1 200 OK\\nContent-Type: text/plain\\n\\nOK')\n        elif "GET /status" in req:\n            conn.send('HTTP/1.1 200 OK\\nContent-Type: text/plain\\n\\n' + str(42.5))\n        else:\n            conn.send('HTTP/1.1 404 Not Found\\n\\nNot Found')\n        conn.close()\n    except Exception as e:\n        pass\n`;
+      py += `            conn.send('HTTP/1.1 200 OK\\nContent-Type: text/plain\\nAccess-Control-Allow-Origin: *\\n\\nOK')\n`;
+      py += `        elif "GET /status" in req:\n            status_data = json.dumps({"status": "online", "temp": 24.5, "rssi": wlan.status()})\n            conn.send('HTTP/1.1 200 OK\\nContent-Type: application/json\\nAccess-Control-Allow-Origin: *\\n\\n' + status_data)\n`;
+      py += `        else:\n            conn.send('HTTP/1.1 404 Not Found\\n\\nNot Found')\n`;
+      py += `        conn.close()\n    except Exception as e:\n        pass\n`;
+    } else {
+      widgets.filter(w => w.type === 'gauge').forEach(w => {
+        py += `        _uart.write("${w.id.toUpperCase()}:24.5\\n")\n`;
+      });
     }
+
     return py;
   };
 
