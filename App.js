@@ -1506,7 +1506,7 @@ export default function App() {
                     </View>
                   </View>
                   <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Serves multi-user dynamic layouts via free cloud HTTPS URL: <Text style={{ color: THEME.primary, fontWeight: '700' }}>https://vaigai-valley.github.io/sanwitchConnect_wrap/</Text>
+                    Serves multi-user dynamic layouts via free cloud HTTPS URL: <Text style={{ color: THEME.primary, fontWeight: '700' }}>https://vaigai-valley.github.io/sanwitch-pwa-host/</Text>
                   </Text>
                   <TouchableOpacity
                     style={[styles.exportBtnPrimary, { backgroundColor: '#10b981' }]}
@@ -1521,7 +1521,7 @@ export default function App() {
                       try {
                         b64 = btoa(encodeURIComponent(jsonStr));
                       } catch (e) {}
-                      const dynamicUrl = `https://vaigai-valley.github.io/sanwitchConnect_wrap/#config=${b64}`;
+                      const dynamicUrl = `https://vaigai-valley.github.io/sanwitch-pwa-host/#config=${b64}`;
                       Linking.openURL(dynamicUrl);
                     }}
                   >
