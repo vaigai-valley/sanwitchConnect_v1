@@ -144,6 +144,7 @@ export default function App() {
   const [isMyAppsModalVisible, setIsMyAppsModalVisible] = useState(false);
   const [isTourModalVisible, setIsTourModalVisible] = useState(false);
   const [tourStep, setTourStep] = useState(1);
+  const [tourMode, setTourMode] = useState('guided');
 
   useEffect(() => {
     const loadSavedApps = async () => {
@@ -1256,6 +1257,7 @@ export default function App() {
             <TouchableOpacity
               style={[styles.avatarHeaderBtn, { marginRight: 8, backgroundColor: 'rgba(56, 189, 248, 0.12)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}
               onPress={() => {
+                setTourMode('overall');
                 setTourStep(1);
                 setIsTourModalVisible(true);
               }}
@@ -1290,6 +1292,7 @@ export default function App() {
                 <TouchableOpacity
                   style={{ position: 'absolute', top: 16, right: 16, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(56, 189, 248, 0.12)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', flexDirection: 'row', alignItems: 'center', gap: 4, zIndex: 10 }}
                   onPress={() => {
+                    setTourMode('overall');
                     setTourStep(1);
                     setIsTourModalVisible(true);
                   }}
@@ -1884,83 +1887,206 @@ export default function App() {
           </View>
         </Modal>
 
-        {/* GUIDED APP TOUR MODAL */}
+        {/* APP TOUR MODAL (Supports Overall 4-Step Tour & Guided 2-Step Tour) */}
         <Modal visible={isTourModalVisible} animationType="fade" transparent={true} onRequestClose={() => setIsTourModalVisible(false)}>
           <View style={styles.modalOverlay}>
-            <View style={[styles.modalContentLarge, { maxWidth: 360, padding: 20, borderWidth: 1.5, borderColor: THEME.primary }]}>
+            <View style={[styles.modalContentLarge, { maxWidth: 370, padding: 22, borderWidth: 1.5, borderColor: THEME.primary }]}>
               {/* TOP STEP COUNTER HEADER */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Sparkles size={18} color={THEME.primary} />
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.text }}>Sanwitch Guided Tour</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.text }}>
+                    {tourMode === 'overall' ? 'Overall App Tour' : 'Sanwitch Quickstart'}
+                  </Text>
                 </View>
                 <View style={{ backgroundColor: 'rgba(56, 189, 248, 0.15)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.4)' }}>
-                  <Text style={{ fontSize: 10, fontWeight: '900', color: THEME.primary }}>STEP {tourStep} OF 2</Text>
+                  <Text style={{ fontSize: 10, fontWeight: '900', color: THEME.primary }}>
+                    STEP {tourStep} OF {tourMode === 'overall' ? 4 : 2}
+                  </Text>
                 </View>
               </View>
 
-              {/* STEP 1: CREATE IOT WIDGETS & CONTROLS */}
-              {tourStep === 1 && (
+              {/* TOUR TYPE 1: OVERALL APP TOUR (4 STEPS) */}
+              {tourMode === 'overall' && (
                 <View>
-                  <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: THEME.secondary, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 14 }}>
-                    <LayoutGrid size={28} color={THEME.secondary} />
-                  </View>
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text, textAlign: 'center', marginBottom: 8 }}>
-                    Step 1: Add Widgets & Build Canvas
-                  </Text>
-                  <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
-                    1. Tap the <Text style={{ color: THEME.primary, fontWeight: '700' }}>PANEL</Text> tab at the top.{"\n"}
-                    2. Click <Text style={{ color: THEME.secondary, fontWeight: '700' }}>+ Add Widget</Text> to place custom IoT controls (Toggles, Sliders, Sensor Gauges & Push Buttons).{"\n"}
-                    3. Customize names and hardware pins for your ESP32 or micro-controller.
-                  </Text>
+                  {tourStep === 1 && (
+                    <View>
+                      <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(56, 189, 248, 0.15)', borderWidth: 1, borderColor: THEME.primary, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 14 }}>
+                        <Sparkles size={28} color={THEME.primary} />
+                      </View>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text, textAlign: 'center', marginBottom: 8 }}>
+                        Ecosystem Overview
+                      </Text>
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
+                        Sanwitch Connect is your native Android IoT controller & MicroPython IDE bridge. Build custom hardware dashboards, stream live sensor telemetry, and sync code with desktop Sanwitch IDE!
+                      </Text>
+                      <TouchableOpacity
+                        style={[styles.exportBtnPrimary, { backgroundColor: THEME.primary, marginTop: 10 }]}
+                        onPress={() => setTourStep(2)}
+                      >
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.background, marginRight: 6 }}>Next: Hardware Link</Text>
+                        <ChevronRight size={16} color={THEME.background} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
 
-                  <TouchableOpacity
-                    style={[styles.exportBtnPrimary, { backgroundColor: THEME.primary, marginTop: 10 }]}
-                    onPress={() => setTourStep(2)}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.background, marginRight: 6 }}>Next: Push to IDE</Text>
-                    <ChevronRight size={16} color={THEME.background} />
-                  </TouchableOpacity>
+                  {tourStep === 2 && (
+                    <View>
+                      <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: THEME.secondary, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 14 }}>
+                        <Bluetooth size={28} color={THEME.secondary} />
+                      </View>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text, textAlign: 'center', marginBottom: 8 }}>
+                        Hardware Connectivity
+                      </Text>
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
+                        Navigate to the <Text style={{ color: THEME.primary, fontWeight: '700' }}>LINK</Text> tab to connect your micro-controllers via Bluetooth Low Energy (BLE) or Local IP WiFi. Execute serial commands and receive live sensor updates instantly.
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                        <TouchableOpacity
+                          style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: THEME.surfaceBorder, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
+                          onPress={() => setTourStep(1)}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted }}>Back</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{ flex: 2, backgroundColor: THEME.primary, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                          onPress={() => setTourStep(3)}
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.background, marginRight: 6 }}>Next: IoT Canvas</Text>
+                          <ChevronRight size={16} color={THEME.background} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+
+                  {tourStep === 3 && (
+                    <View>
+                      <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(245, 158, 11, 0.15)', borderWidth: 1, borderColor: '#f59e0b', justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 14 }}>
+                        <LayoutGrid size={28} color="#f59e0b" />
+                      </View>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text, textAlign: 'center', marginBottom: 8 }}>
+                        IoT Canvas & Widgets
+                      </Text>
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
+                        Tap the <Text style={{ color: THEME.primary, fontWeight: '700' }}>PANEL</Text> tab and click <Text style={{ color: THEME.secondary, fontWeight: '700' }}>+ Add Widget</Text> to place custom controls (Toggles, Sliders, Gauges, Joysticks & Color Pickers) for your hardware setup.
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                        <TouchableOpacity
+                          style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: THEME.surfaceBorder, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
+                          onPress={() => setTourStep(2)}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted }}>Back</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{ flex: 2, backgroundColor: THEME.primary, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                          onPress={() => setTourStep(4)}
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.background, marginRight: 6 }}>Next: Sync & Export</Text>
+                          <ChevronRight size={16} color={THEME.background} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+
+                  {tourStep === 4 && (
+                    <View>
+                      <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: THEME.success, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 14 }}>
+                        <Smartphone size={28} color={THEME.success} />
+                      </View>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text, textAlign: 'center', marginBottom: 8 }}>
+                        Sync IDE & Export WebAPKs
+                      </Text>
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
+                        Use <Text style={{ color: THEME.success, fontWeight: '700' }}>PUSH TO IDE</Text> on the CODE tab to stream block logic directly into Desktop IDE, and use <Text style={{ color: THEME.primary, fontWeight: '700' }}>EXPORT APP</Text> (bottom menu) to pin native WebAPKs to your phone!
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                        <TouchableOpacity
+                          style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: THEME.surfaceBorder, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
+                          onPress={() => setTourStep(3)}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted }}>Back</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{ flex: 2, backgroundColor: THEME.success, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                          onPress={() => {
+                            setIsTourModalVisible(false);
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          }}
+                        >
+                          <CheckCircle2 size={16} color={THEME.background} style={{ marginRight: 6 }} />
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.background }}>Close Tour</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
                 </View>
               )}
 
-              {/* STEP 2: PUSH TO DESKTOP IDE */}
-              {tourStep === 2 && (
+              {/* TOUR TYPE 2: 2-STEP AUTOMATIC GUIDED QUICKSTART (POST-LOGIN) */}
+              {tourMode === 'guided' && (
                 <View>
-                  <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(56, 189, 248, 0.15)', borderWidth: 1, borderColor: THEME.primary, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 14 }}>
-                    <Zap size={28} color={THEME.primary} />
-                  </View>
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text, textAlign: 'center', marginBottom: 8 }}>
-                    Step 2: Push Blocks & Export PWA
-                  </Text>
-                  <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
-                    1. Navigate to the <Text style={{ color: THEME.primary, fontWeight: '700' }}>CODE</Text> tab.{"\n"}
-                    2. Tap <Text style={{ color: THEME.success, fontWeight: '700' }}>PUSH TO IDE</Text> to instantly stream your layout's code blocks into your desktop Sanwitch IDE!{"\n"}
-                    3. Use <Text style={{ color: THEME.primary, fontWeight: '700' }}>EXPORT APP</Text> (bottom menu) to pin standalone apps to your Android App Drawer!
-                  </Text>
+                  {tourStep === 1 && (
+                    <View>
+                      <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: THEME.secondary, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 14 }}>
+                        <LayoutGrid size={28} color={THEME.secondary} />
+                      </View>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text, textAlign: 'center', marginBottom: 8 }}>
+                        Step 1: Add Widgets & Build Canvas
+                      </Text>
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
+                        1. Tap the <Text style={{ color: THEME.primary, fontWeight: '700' }}>PANEL</Text> tab at the top.{"\n"}
+                        2. Click <Text style={{ color: THEME.secondary, fontWeight: '700' }}>+ Add Widget</Text> to place custom IoT controls (Toggles, Sliders, Sensor Gauges & Push Buttons).{"\n"}
+                        3. Customize names and hardware pins for your ESP32 or micro-controller.
+                      </Text>
 
-                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-                    <TouchableOpacity
-                      style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: THEME.surfaceBorder, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
-                      onPress={() => setTourStep(1)}
-                    >
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted }}>Back</Text>
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.exportBtnPrimary, { backgroundColor: THEME.primary, marginTop: 10 }]}
+                        onPress={() => setTourStep(2)}
+                      >
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.background, marginRight: 6 }}>Next: Push to IDE</Text>
+                        <ChevronRight size={16} color={THEME.background} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
 
-                    <TouchableOpacity
-                      style={{ flex: 2, backgroundColor: THEME.success, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
-                      onPress={async () => {
-                        setIsTourModalVisible(false);
-                        try {
-                          await AsyncStorage.setItem('@sanwitch_tour_completed', 'true');
-                        } catch (e) {}
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                      }}
-                    >
-                      <CheckCircle2 size={16} color={THEME.background} style={{ marginRight: 6 }} />
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.background }}>Got It! Start</Text>
-                    </TouchableOpacity>
-                  </View>
+                  {tourStep === 2 && (
+                    <View>
+                      <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(56, 189, 248, 0.15)', borderWidth: 1, borderColor: THEME.primary, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 14 }}>
+                        <Zap size={28} color={THEME.primary} />
+                      </View>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text, textAlign: 'center', marginBottom: 8 }}>
+                        Step 2: Push Blocks & Export PWA
+                      </Text>
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
+                        1. Navigate to the <Text style={{ color: THEME.primary, fontWeight: '700' }}>CODE</Text> tab.{"\n"}
+                        2. Tap <Text style={{ color: THEME.success, fontWeight: '700' }}>PUSH TO IDE</Text> to instantly stream your layout's code blocks into your desktop Sanwitch IDE!{"\n"}
+                        3. Use <Text style={{ color: THEME.primary, fontWeight: '700' }}>EXPORT APP</Text> (bottom menu) to pin standalone apps to your Android App Drawer!
+                      </Text>
+
+                      <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                        <TouchableOpacity
+                          style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: THEME.surfaceBorder, paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
+                          onPress={() => setTourStep(1)}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted }}>Back</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={{ flex: 2, backgroundColor: THEME.success, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                          onPress={async () => {
+                            setIsTourModalVisible(false);
+                            try {
+                              await AsyncStorage.setItem('@sanwitch_tour_completed', 'true');
+                            } catch (e) {}
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          }}
+                        >
+                          <CheckCircle2 size={16} color={THEME.background} style={{ marginRight: 6 }} />
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.background }}>Got It! Start</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
                 </View>
               )}
             </View>
