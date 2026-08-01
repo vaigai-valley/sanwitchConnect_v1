@@ -507,8 +507,32 @@ export default function App() {
 
   const handleLaunchSavedApp = async (appItem) => {
     setIsMyAppsModalVisible(false);
-    setActiveRunningPwaApp(appItem);
-    setIsPwaViewerVisible(true);
+
+    // 1. Trigger Native Android ShortcutManager to pin icon directly in App Drawer
+    if (Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut) {
+      try {
+        NativeModules.ShortcutModule.pinShortcut(appItem.name);
+      } catch (e) {
+        console.log('ShortcutModule Pin Error:', e);
+      }
+    }
+
+    // 2. Launch system browser for WebAPK synthesis & standalone app execution
+    const html = appItem.html || generateCompleteStandaloneAppHtml(appItem.name);
+    const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+    try {
+      await Linking.openURL(dataUri);
+    } catch (e) {
+      try {
+        await Share.share({ title: `${appItem.name}.html`, message: html });
+      } catch (err) {}
+    }
+
+    customAlert(
+      'Opening App!',
+      `"${appItem.name}" opened & shortcut pinned to Android App Drawer!`,
+      'success'
+    );
   };
 
   const handleDeleteSavedApp = async (appId) => {
@@ -1662,128 +1686,7 @@ export default function App() {
           </View>
         </Modal>
 
-        {/* SANWITCH INTERNAL STANDALONE PWA ENGINE VIEWER */}
-        <Modal visible={isPwaViewerVisible} animationType="slide" transparent={false} onRequestClose={() => setIsPwaViewerVisible(false)}>
-          <View style={{ flex: 1, backgroundColor: THEME.background }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 45, paddingBottom: 14, backgroundColor: THEME.surface, borderBottomWidth: 1, borderColor: THEME.surfaceBorder }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(56, 189, 248, 0.15)', justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: THEME.primary }}>
-                  <Zap size={16} color={THEME.primary} />
-                </View>
-                <View>
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text }}>{activeRunningPwaApp?.name || 'Standalone PWA'}</Text>
-                  <Text style={{ fontSize: 10, color: THEME.success, fontWeight: '700' }}>● SANWITCH PWA ENGINE ACTIVE</Text>
-                </View>
-              </View>
-              <TouchableOpacity onPress={() => setIsPwaViewerVisible(false)} style={{ padding: 8 }}>
-                <X size={22} color={THEME.textMuted} />
-              </TouchableOpacity>
-            </View>
 
-            {/* ACTION BANNER */}
-            <View style={{ flexDirection: 'row', padding: 12, backgroundColor: 'rgba(56, 189, 248, 0.08)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.2)', margin: 12, borderRadius: 14, justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.primary }}>Running Standalone PWA App</Text>
-                <Text style={{ fontSize: 10, color: THEME.textMuted }}>Installed & executed in Sanwitch Native Engine</Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut && (
-                  <TouchableOpacity
-                    style={{ backgroundColor: THEME.secondary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}
-                    onPress={() => {
-                      if (activeRunningPwaApp?.name) {
-                        try {
-                          NativeModules.ShortcutModule.pinShortcut(activeRunningPwaApp.name);
-                          customAlert('Pinned!', `"${activeRunningPwaApp.name}" pinned to Android App Drawer & Home Screen!`, 'success');
-                        } catch (e) {
-                          console.log('Pin Error:', e);
-                        }
-                      }
-                    }}
-                  >
-                    <Smartphone size={12} color={THEME.background} style={{ marginRight: 4 }} />
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.background }}>PIN TO APP DRAWER</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={{ backgroundColor: THEME.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}
-                  onPress={async () => {
-                    if (activeRunningPwaApp?.html) {
-                      const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(activeRunningPwaApp.html)}`;
-                      try { await Linking.openURL(dataUri); } catch (e) {}
-                    }
-                  }}
-                >
-                  <ExternalLink size={12} color={THEME.background} style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.background }}>CHROME PWA</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* PWA DASHBOARD CONTAINER */}
-            <ScrollView style={{ flex: 1, padding: 16 }}>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, justifyContent: 'center' }}>
-                {(!activeRunningPwaApp?.widgets || activeRunningPwaApp.widgets.length === 0) ? (
-                  <View style={{ padding: 30, alignItems: 'center' }}>
-                    <Text style={styles.textMuted}>No widgets in this PWA bundle.</Text>
-                  </View>
-                ) : (
-                  activeRunningPwaApp.widgets.map((w) => (
-                    <View key={w.id} style={[styles.card, { width: 160 }]}>
-                      <Text style={styles.cardTitle}>{w.id}</Text>
-                      {w.type === 'toggle' && (
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                          <Text style={{ fontSize: 10, color: THEME.textMuted }}>STATUS</Text>
-                          <TouchableOpacity
-                            style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: widgetStates[w.id] ? THEME.primary : THEME.surfaceBorder }}
-                            onPress={() => {
-                              const newVal = !widgetStates[w.id];
-                              setWidgetStates(prev => ({ ...prev, [w.id]: newVal }));
-                              sendData(`${w.id.toUpperCase()}:${newVal ? 1 : 0}\n`);
-                            }}
-                          >
-                            <Text style={{ fontSize: 11, fontWeight: '800', color: widgetStates[w.id] ? THEME.background : THEME.text }}>
-                              {widgetStates[w.id] ? 'ON' : 'OFF'}
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                      {w.type === 'button' && (
-                        <TouchableOpacity style={[styles.nativeBtn, { marginTop: 10 }]} onPress={() => sendData(`${w.id.toUpperCase()}:PUSH\n`)}>
-                          <Text style={styles.nativeBtnText}>TRIGGER</Text>
-                        </TouchableOpacity>
-                      )}
-                      {w.type === 'slider' && (
-                        <View style={{ marginTop: 10 }}>
-                          <Slider
-                            minimumValue={0}
-                            maximumValue={100}
-                            step={1}
-                            value={widgetStates[w.id] || 50}
-                            onSlidingComplete={(val) => {
-                              setWidgetStates(prev => ({ ...prev, [w.id]: val }));
-                              sendData(`${w.id.toUpperCase()}:${val}\n`);
-                            }}
-                            minimumTrackTintColor={THEME.primary}
-                            maximumTrackTintColor={THEME.surfaceBorder}
-                            thumbTintColor={THEME.primary}
-                          />
-                        </View>
-                      )}
-                      {w.type === 'gauge' && (
-                        <View style={{ alignItems: 'center', marginTop: 10 }}>
-                          <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.primary }}>
-                            {sensorData[sensorData.length - 1]?.toFixed(1) || '0.0'}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  ))
-                )}
-              </View>
-            </ScrollView>
-          </View>
-        </Modal>
 
         {alertConfig && (
           <Modal visible={!!alertConfig} transparent animationType="fade" onRequestClose={() => setAlertConfig(null)}>
@@ -1926,8 +1829,8 @@ export default function App() {
                           style={{ flex: 1, backgroundColor: THEME.primary, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
                           onPress={() => handleLaunchSavedApp(app)}
                         >
-                          <Play size={14} color={THEME.background} style={{ marginRight: 6 }} />
-                          <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.background }}>RUN PWA</Text>
+                          <Smartphone size={14} color={THEME.background} style={{ marginRight: 6 }} />
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.background }}>OPEN APP</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
