@@ -411,7 +411,8 @@ export default function App() {
 </html>`;
   };
 
-  const handleSaveAndRunLocalApp = async () => {
+  // OPTION 1: INSTALL APP (Ready to Use)
+  const handleInstallReadyApp = async () => {
     const appTitle = exportAppName.trim() || 'My Sanwitch App';
     const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`;
     const html = generateCompleteStandaloneAppHtml(appTitle);
@@ -441,8 +442,8 @@ export default function App() {
     try {
       await Linking.openURL(dataUri);
       customAlert(
-        ' Local PWA App Saved & Running!',
-        `Saved "${fileName}" into phone storage! Browser opening to trigger PWA install prompt!`,
+        'Opening PWA for Installation!',
+        `Launching "${fileName}" in browser to trigger 1-tap Home Screen PWA Installation!`,
         'success'
       );
     } catch (e) {
@@ -450,6 +451,37 @@ export default function App() {
         await Share.share({ title: fileName, message: html });
       } catch (err) {}
     }
+  };
+
+  // OPTION 2: SAVE PWA BUNDLE (Editable in Sanwitch Connect Project Folder)
+  const handleSavePwaBundleProject = async () => {
+    const appTitle = exportAppName.trim() || 'My Sanwitch App';
+    const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`;
+    const html = generateCompleteStandaloneAppHtml(appTitle);
+
+    const newApp = {
+      id: Date.now().toString(),
+      name: appTitle,
+      fileName,
+      widgets: JSON.parse(JSON.stringify(widgets)),
+      wifiIP,
+      createdAt: new Date().toLocaleDateString(),
+      html
+    };
+
+    const updatedApps = [newApp, ...savedApps.filter(a => a.name !== appTitle)];
+    setSavedApps(updatedApps);
+    try {
+      await AsyncStorage.setItem('@sanwitch_saved_apps', JSON.stringify(updatedApps));
+    } catch (e) {}
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setIsExportModalVisible(false);
+    customAlert(
+      'Bundle Saved to MY APPS!',
+      `Saved "${appTitle}" into your Sanwitch Connect project folder. You can edit and re-export it anytime under MY APPS!`,
+      'success'
+    );
   };
 
   const handleLoadAppForEditing = (appItem) => {
@@ -1571,40 +1603,52 @@ export default function App() {
                   />
                 </View>
 
-                {/* METHOD 1: LOCAL ON-DEVICE PWA */}
+                {/* OPTION 1: INSTALL APP (READY TO USE) */}
                 <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)', marginBottom: 14 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                     <Smartphone size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>100% Offline Phone Storage PWA</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>1. INSTALL APP (Ready to Use)</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
                     <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(56, 189, 248, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>Local File ({exportAppName ? exportAppName.replace(/[^a-zA-Z0-9_-]/g, '_') : 'app'}.html)</Text>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>PWA Launcher</Text>
                     </View>
                     <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>No GitHub Needed</Text>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>1-Tap Install</Text>
                     </View>
                   </View>
                   <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Saves app layout locally to phone storage as <Text style={{ color: THEME.primary, fontWeight: '700' }}>{exportAppName ? exportAppName.replace(/[^a-zA-Z0-9_-]/g, '_') : 'app'}.html</Text> and opens in browser to trigger PWA home screen installation!
+                    Launches app bundle directly into browser to trigger 1-tap PWA Home Screen installation.
                   </Text>
 
-                  <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleSaveAndRunLocalApp}>
+                  <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleInstallReadyApp}>
                     <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                    <Text style={styles.exportBtnPrimaryText}> SAVE & RUN LOCAL PWA</Text>
+                    <Text style={styles.exportBtnPrimaryText}>INSTALL APP (READY TO USE)</Text>
                   </TouchableOpacity>
+                </View>
 
-                  {isPwaGenerated && (
-                    <View style={{ marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.4)' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}> STANDALONE APP SAVED!</Text>
-                      <TouchableOpacity style={styles.exportBtnSecondary} onPress={() => {
-                        customAlert('Copied! ', 'App HTML bundle copied to clipboard!', 'success');
-                      }}>
-                        <Copy size={14} color={THEME.text} style={{ marginRight: 6 }} />
-                        <Text style={styles.exportBtnSecondaryText}>Copy App HTML Code</Text>
-                      </TouchableOpacity>
+                {/* OPTION 2: SAVE PWA BUNDLE (EDITABLE IN SANWITCH CONNECT) */}
+                <View style={[styles.exportCardOption, { borderColor: THEME.secondary, backgroundColor: 'rgba(20, 184, 166, 0.05)', marginBottom: 14 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Folder size={20} color={THEME.secondary} style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>2. SAVE PWA BUNDLE (Editable)</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.secondary }}>MY APPS Project</Text>
                     </View>
-                  )}
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(56, 189, 248, 0.15)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>Re-editable</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
+                    Saves app layout into your <Text style={{ color: THEME.secondary, fontWeight: '700' }}>MY APPS</Text> project folder so you can re-load, edit widgets, and customize anytime in Sanwitch Connect.
+                  </Text>
+
+                  <TouchableOpacity style={[styles.exportBtnPrimary, { backgroundColor: THEME.secondary }]} onPress={handleSavePwaBundleProject}>
+                    <Folder size={18} color={THEME.background} style={{ marginRight: 6 }} />
+                    <Text style={styles.exportBtnPrimaryText}>SAVE PWA BUNDLE (MY APPS)</Text>
+                  </TouchableOpacity>
                 </View>
               </ScrollView>
             </View>
