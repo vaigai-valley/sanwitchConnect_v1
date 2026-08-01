@@ -138,8 +138,6 @@ export default function App() {
   const [exportAppName, setExportAppName] = useState('My Sanwitch App');
   const [exportedHtmlSnippet, setExportedHtmlSnippet] = useState('');
   const [isPwaGenerated, setIsPwaGenerated] = useState(false);
-  const [isNativeAppRunnerVisible, setIsNativeAppRunnerVisible] = useState(false);
-  const [runnerActiveTab, setRunnerActiveTab] = useState('panel');
   const [isSideMenuVisible, setIsSideMenuVisible] = useState(false);
 
   const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App') => {
@@ -1405,14 +1403,6 @@ export default function App() {
                         <Text style={styles.exportBtnPrimaryText}>⚡ EXPORT AS APP (PWA)</Text>
                       </TouchableOpacity>
 
-                      <TouchableOpacity style={[styles.exportBtnPrimary, { backgroundColor: '#10b981', marginTop: 10 }]} onPress={() => {
-                        setIsExportModalVisible(false);
-                        setIsNativeAppRunnerVisible(true);
-                      }}>
-                        <Zap size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                        <Text style={styles.exportBtnPrimaryText}>🚀 RUN AS NATIVE APP (NO BROWSER)</Text>
-                      </TouchableOpacity>
-
                       {isPwaGenerated && (
                         <View style={{ marginTop: 14, padding: 12, borderRadius: 10, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.4)' }}>
                           <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}>✅ STANDALONE APP READY!</Text>
@@ -1428,75 +1418,6 @@ export default function App() {
                   </ScrollView>
                 </View>
               </View>
-            </Modal>
-
-            {/* NO-BROWSER NATIVE FULLSCREEN APP RUNNER MODAL */}
-            <Modal visible={isNativeAppRunnerVisible} animationType="slide" transparent={false} onRequestClose={() => setIsNativeAppRunnerVisible(false)}>
-              <SafeAreaView style={{ flex: 1, backgroundColor: THEME.background }}>
-                <View style={{ paddingHorizontal: 20, paddingVertical: 14, backgroundColor: THEME.surface, borderBottomWidth: 1, borderBottomColor: THEME.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Zap size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.text }}>⚡ {exportAppName || 'My Sanwitch App'}</Text>
-                  </View>
-                  <TouchableOpacity style={{ padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.15)', borderRadius: 8 }} onPress={() => setIsNativeAppRunnerVisible(false)}>
-                    <X size={20} color={THEME.error} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* RUNNER NAVIGATION */}
-                <View style={{ flexDirection: 'row', backgroundColor: THEME.surface, borderBottomWidth: 1, borderBottomColor: THEME.border }}>
-                  <TouchableOpacity style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: runnerActiveTab === 'panel' ? THEME.primary : 'transparent' }} onPress={() => setRunnerActiveTab('panel')}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: runnerActiveTab === 'panel' ? THEME.primary : THEME.textMuted }}>PANEL</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: runnerActiveTab === 'link' ? THEME.primary : 'transparent' }} onPress={() => setRunnerActiveTab('link')}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: runnerActiveTab === 'link' ? THEME.primary : THEME.textMuted }}>LINK</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: runnerActiveTab === 'term' ? THEME.primary : 'transparent' }} onPress={() => setRunnerActiveTab('term')}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: runnerActiveTab === 'term' ? THEME.primary : THEME.textMuted }}>TERMINAL</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* RUNNER CONTENT */}
-                <ScrollView style={{ flex: 1, padding: 16 }}>
-                  {runnerActiveTab === 'panel' && (
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                      {widgets.length === 0 ? (
-                        <Text style={{ color: THEME.textMuted, textAlign: 'center', width: '100%', marginTop: 40 }}>No widgets created yet in project.</Text>
-                      ) : (
-                        widgets.map(w => (
-                          <View key={w.id} style={{ width: '47%', backgroundColor: THEME.surface, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: THEME.border, justifyContent: 'space-between', minHeight: 110 }}>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.textMuted, textTransform: 'uppercase' }}>{w.id}</Text>
-                            <TouchableOpacity style={{ backgroundColor: THEME.primary, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }} onPress={() => sendCommand(w.id, 'TRIGGER')}>
-                              <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.background }}>EXECUTE</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ))
-                      )}
-                    </View>
-                  )}
-
-                  {runnerActiveTab === 'link' && (
-                    <View style={{ backgroundColor: THEME.surface, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: THEME.border }}>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.primary, marginBottom: 12 }}>NATIVE HARDWARE LINK</Text>
-                      <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 6 }}>TARGET IP ADDRESS</Text>
-                      <TextInput style={styles.input} value={wifiIP} onChangeText={setWifiIP} placeholder="192.168.4.1" placeholderTextColor="#4b5563" />
-                      <TouchableOpacity style={[styles.exportBtnPrimary, { marginTop: 10 }]} onPress={() => customAlert('Target Connected!', `Hardware IP target updated to ${wifiIP}`, 'success')}>
-                        <Text style={styles.exportBtnPrimaryText}>CONNECT TARGET</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  {runnerActiveTab === 'term' && (
-                    <View style={{ backgroundColor: '#000', borderRadius: 16, padding: 14, height: 400, borderWidth: 1, borderColor: THEME.border }}>
-                      {terminalLogs.map((log, idx) => (
-                        <Text key={idx} style={{ color: log.includes('TX') ? THEME.primary : THEME.success, fontFamily: 'monospace', fontSize: 11, marginBottom: 4 }}>
-                          {log}
-                        </Text>
-                      ))}
-                    </View>
-                  )}
-                </ScrollView>
-              </SafeAreaView>
             </Modal>
 
             {alertConfig && (
