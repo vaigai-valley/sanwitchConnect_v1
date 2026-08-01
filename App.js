@@ -74,7 +74,7 @@ export default function App() {
 
         const saved = await AsyncStorage.getItem('sanwitch_layout').catch(() => null);
         if (saved && isMounted) setWidgets(JSON.parse(saved));
-        else if (isMounted) setWidgets([{ id: 'Power', type: 'toggle' }, { id: 'Sensor', type: 'gauge' }]);
+        else if (isMounted) setWidgets([]);
 
         const savedIP = await AsyncStorage.getItem('sanwitch_wifi_ip').catch(() => null);
         if (savedIP && isMounted) setWifiIP(savedIP);
