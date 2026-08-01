@@ -23,7 +23,7 @@ import {
   Share
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, LogOut, KeyRound, Download, Smartphone, Share2, PackageCheck, ExternalLink, Sparkles, ChevronsUp } from 'lucide-react-native';
+import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, LogOut, KeyRound, Download, Smartphone, Share2, PackageCheck, ExternalLink, Sparkles, ChevronsUp, Folder, Play, Edit3, FileText, Save } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
@@ -139,6 +139,22 @@ export default function App() {
   const [exportedHtmlSnippet, setExportedHtmlSnippet] = useState('');
   const [isPwaGenerated, setIsPwaGenerated] = useState(false);
   const [isSideMenuVisible, setIsSideMenuVisible] = useState(false);
+
+  const [savedApps, setSavedApps] = useState([]);
+  const [isBottomMenuVisible, setIsBottomMenuVisible] = useState(false);
+  const [isMyAppsModalVisible, setIsMyAppsModalVisible] = useState(false);
+
+  useEffect(() => {
+    const loadSavedApps = async () => {
+      try {
+        const jsonStr = await AsyncStorage.getItem('@sanwitch_saved_apps');
+        if (jsonStr) {
+          setSavedApps(JSON.parse(jsonStr));
+        }
+      } catch (e) {}
+    };
+    loadSavedApps();
+  }, []);
 
   const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App') => {
     const cleanAppName = appName.replace(/"/g, '&quot;');
@@ -395,30 +411,74 @@ export default function App() {
 </html>`;
   };
 
-  const handleExportAsApp = async () => {
-    const appTitle = exportAppName || 'My Sanwitch App';
+  const handleSaveAndRunLocalApp = async () => {
+    const appTitle = exportAppName.trim() || 'My Sanwitch App';
+    const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`;
     const html = generateCompleteStandaloneAppHtml(appTitle);
     setExportedHtmlSnippet(html);
     setIsPwaGenerated(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    const pwaBridgeUrl = `https://sanwitch.vaigaivalley.workers.dev/pwa?name=${encodeURIComponent(appTitle)}&widgets=${encodeURIComponent(JSON.stringify(widgets))}`;
+    const newApp = {
+      id: Date.now().toString(),
+      name: appTitle,
+      fileName,
+      widgets: JSON.parse(JSON.stringify(widgets)),
+      wifiIP,
+      createdAt: new Date().toLocaleDateString(),
+      html
+    };
 
+    const updatedApps = [newApp, ...savedApps.filter(a => a.name !== appTitle)];
+    setSavedApps(updatedApps);
     try {
-      await Linking.openURL(pwaBridgeUrl);
+      await AsyncStorage.setItem('@sanwitch_saved_apps', JSON.stringify(updatedApps));
+    } catch (e) {}
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setIsExportModalVisible(false);
+
+    const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+    try {
+      await Linking.openURL(dataUri);
       customAlert(
-        '⚡ 1-Tap PWA Launching!',
-        `Opening "${appTitle}" in Chrome! Tap "INSTALL APP" on the top banner or system prompt to add your app icon to your Android home screen immediately!`,
+        '⚡ Local PWA App Saved & Running!',
+        `Saved "${fileName}" into phone storage! Browser opening to trigger PWA install prompt!`,
         'success'
       );
     } catch (e) {
       try {
-        await Share.share({
-          title: `${appTitle}.html`,
-          message: html
-        });
-      } catch (err) { }
+        await Share.share({ title: fileName, message: html });
+      } catch (err) {}
     }
+  };
+
+  const handleLoadAppForEditing = (appItem) => {
+    if (appItem.widgets) setWidgets(appItem.widgets);
+    if (appItem.wifiIP) setWifiIP(appItem.wifiIP);
+    setExportAppName(appItem.name);
+    setIsMyAppsModalVisible(false);
+    customAlert('App Loaded! 📁', `Loaded "${appItem.name}" widget layout back into Sanwitch Connect for editing!`, 'success');
+  };
+
+  const handleLaunchSavedApp = async (appItem) => {
+    const html = appItem.html || generateCompleteStandaloneAppHtml(appItem.name);
+    const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+    try {
+      await Linking.openURL(dataUri);
+    } catch (e) {
+      try {
+        await Share.share({ title: `${appItem.name}.html`, message: html });
+      } catch (err) {}
+    }
+  };
+
+  const handleDeleteSavedApp = async (appId) => {
+    const filtered = savedApps.filter(a => a.id !== appId);
+    setSavedApps(filtered);
+    try {
+      await AsyncStorage.setItem('@sanwitch_saved_apps', JSON.stringify(filtered));
+    } catch (e) {}
+    customAlert('Deleted 🗑️', 'App layout removed from local phone storage.', 'info');
   };
 
   const customAlert = (title, message, buttonsOrType = null) => {
@@ -1440,12 +1500,12 @@ export default function App() {
 
               <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
                 <Text style={{ fontSize: 13, color: THEME.textMuted, marginBottom: 16 }}>
-                  Export your custom widgets, connection settings, and telemetry into a <Text style={{ color: THEME.primary, fontWeight: '700' }}>Standalone Mobile App</Text> that installs directly on your Android home screen!
+                  Export your custom widgets into a <Text style={{ color: THEME.primary, fontWeight: '700' }}>100% Offline Local App ({exportAppName ? exportAppName.replace(/[^a-zA-Z0-9_-]/g, '_') : 'app'}.html)</Text> saved directly into phone storage!
                 </Text>
 
                 {/* APP NAME INPUT */}
                 <View style={{ marginBottom: 16 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted, marginBottom: 6 }}>APP NAME</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted, marginBottom: 6 }}>APP NAME (SAVED AS {exportAppName ? exportAppName.replace(/[^a-zA-Z0-9_-]/g, '_') : 'app'}.html)</Text>
                   <TextInput
                     style={styles.input}
                     value={exportAppName}
@@ -1455,79 +1515,40 @@ export default function App() {
                   />
                 </View>
 
-                {/* METHOD 1: ON-DEVICE PWA */}
+                {/* METHOD 1: LOCAL ON-DEVICE PWA */}
                 <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)', marginBottom: 14 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                     <Smartphone size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>1. On-Device PWA (Blob/DataURI)</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>100% Offline Phone Storage PWA</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
                     <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(56, 189, 248, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>$0 / Free</Text>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>Local File ({exportAppName ? exportAppName.replace(/[^a-zA-Z0-9_-]/g, '_') : 'app'}.html)</Text>
                     </View>
                     <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>1-Tap Home Screen</Text>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>No GitHub Needed</Text>
                     </View>
                   </View>
                   <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Generates a self-contained, offline app bundle stored directly on your phone with zero server dependencies.
+                    Saves app layout locally to phone storage as <Text style={{ color: THEME.primary, fontWeight: '700' }}>{exportAppName ? exportAppName.replace(/[^a-zA-Z0-9_-]/g, '_') : 'app'}.html</Text> and opens in browser to trigger PWA home screen installation!
                   </Text>
 
-                  <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleExportAsApp}>
+                  <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleSaveAndRunLocalApp}>
                     <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                    <Text style={styles.exportBtnPrimaryText}>⚡ INSTANT ON-DEVICE PWA</Text>
+                    <Text style={styles.exportBtnPrimaryText}>⚡ SAVE & RUN LOCAL PWA</Text>
                   </TouchableOpacity>
 
                   {isPwaGenerated && (
                     <View style={{ marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.4)' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}>✅ STANDALONE APP READY!</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.success, marginBottom: 8 }}>✅ STANDALONE APP SAVED!</Text>
                       <TouchableOpacity style={styles.exportBtnSecondary} onPress={() => {
-                        customAlert('Copied! 📋', 'Standalone App HTML bundle copied to clipboard! Save as index.html to run your project app anywhere.', 'success');
+                        customAlert('Copied! 📋', 'App HTML bundle copied to clipboard!', 'success');
                       }}>
                         <Copy size={14} color={THEME.text} style={{ marginRight: 6 }} />
-                        <Text style={styles.exportBtnSecondaryText}>Copy App HTML Bundle</Text>
+                        <Text style={styles.exportBtnSecondaryText}>Copy App HTML Code</Text>
                       </TouchableOpacity>
                     </View>
                   )}
-                </View>
-
-                {/* METHOD 2: CENTRAL GITHUB PAGES */}
-                <View style={[styles.exportCardOption, { borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.05)' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <ExternalLink size={20} color="#10b981" style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>2. Central GitHub Pages (index.html)</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(16, 185, 129, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#10b981' }}>$0 / Free SSL</Text>
-                    </View>
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(168, 85, 247, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#a855f7' }}>Multi-User (localStorage)</Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Serves multi-user dynamic layouts via free cloud HTTPS URL: <Text style={{ color: THEME.primary, fontWeight: '700' }}>https://vaigai-valley.github.io/sanwitch-pwa-host/</Text>
-                  </Text>
-                  <TouchableOpacity
-                    style={[styles.exportBtnPrimary, { backgroundColor: '#10b981' }]}
-                    onPress={() => {
-                      const userConfig = {
-                        appName: exportAppName || 'My Sanwitch App',
-                        widgets,
-                        wifiIp: wifiIP || '192.168.4.1'
-                      };
-                      const jsonStr = JSON.stringify(userConfig);
-                      let b64 = jsonStr;
-                      try {
-                        b64 = btoa(encodeURIComponent(jsonStr));
-                      } catch (e) {}
-                      const dynamicUrl = `https://vaigai-valley.github.io/sanwitch-pwa-host/#config=${b64}`;
-                      Linking.openURL(dynamicUrl);
-                    }}
-                  >
-                    <ExternalLink size={16} color={THEME.background} style={{ marginRight: 6 }} />
-                    <Text style={styles.exportBtnPrimaryText}>🌐 OPEN GITHUB PAGES PWA</Text>
-                  </TouchableOpacity>
                 </View>
               </ScrollView>
             </View>
@@ -1584,10 +1605,117 @@ export default function App() {
           </Modal>
         )}
 
+        {/* BOTTOM-LEFT ^^^ POPUP MENU (MY APPS & EXPORT APP) */}
+        <Modal visible={isBottomMenuVisible} animationType="fade" transparent={true} onRequestClose={() => setIsBottomMenuVisible(false)}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsBottomMenuVisible(false)}>
+            <View style={[styles.modalContent, { position: 'absolute', bottom: 75, left: 16, width: 280, borderRadius: 20, padding: 16, backgroundColor: '#16181f', borderWidth: 1, borderColor: '#2b3240' }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: THEME.primary, letterSpacing: 0.5 }}>⚡ SANWITCH CONNECT</Text>
+                <TouchableOpacity onPress={() => setIsBottomMenuVisible(false)}>
+                  <X size={16} color={THEME.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(56, 189, 248, 0.08)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', padding: 12, borderRadius: 12, marginBottom: 10 }}
+                onPress={() => {
+                  setIsBottomMenuVisible(false);
+                  setIsMyAppsModalVisible(true);
+                }}
+              >
+                <Folder size={20} color={THEME.primary} style={{ marginRight: 10 }} />
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}>📁 MY APPS</Text>
+                    <View style={{ backgroundColor: THEME.primary, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '900', color: THEME.background }}>{savedApps.length}</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Saved local .html app layouts</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(20, 184, 166, 0.08)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.3)', padding: 12, borderRadius: 12 }}
+                onPress={() => {
+                  setIsBottomMenuVisible(false);
+                  setIsExportModalVisible(true);
+                }}
+              >
+                <Sparkles size={20} color={THEME.success} style={{ marginRight: 10 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.text }}>⚡ EXPORT APP</Text>
+                  <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Save layout & run PWA app</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* MY SAVED APPS MODAL */}
+        <Modal visible={isMyAppsModalVisible} animationType="slide" transparent={true} onRequestClose={() => setIsMyAppsModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContentLarge}>
+              <View style={styles.modalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Folder size={20} color={THEME.primary} style={{ marginRight: 8 }} />
+                  <Text style={styles.modalTitle}>📁 My Saved Apps ({savedApps.length})</Text>
+                </View>
+                <TouchableOpacity onPress={() => setIsMyAppsModalVisible(false)}>
+                  <X size={20} color={THEME.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 450 }} showsVerticalScrollIndicator={false}>
+                {savedApps.length === 0 ? (
+                  <View style={{ padding: 30, alignItems: 'center' }}>
+                    <FileText size={40} color={THEME.textMuted} style={{ marginBottom: 10, opacity: 0.5 }} />
+                    <Text style={{ fontSize: 14, color: THEME.textMuted, textAlign: 'center' }}>No saved apps in local phone storage.</Text>
+                    <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', marginTop: 6 }}>Tap "⚡ EXPORT APP" to save your current layout as a local app!</Text>
+                  </View>
+                ) : (
+                  savedApps.map((app) => (
+                    <View key={app.id} style={{ backgroundColor: THEME.card, borderWidth: 1, borderColor: THEME.border, borderRadius: 14, padding: 14, marginBottom: 12 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>⚡ {app.name}</Text>
+                          <Text style={{ fontSize: 11, color: THEME.primary, fontWeight: '700', marginTop: 2 }}>{app.fileName}</Text>
+                          <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Created: {app.createdAt} • Widgets: {app.widgets?.length || 0}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => handleDeleteSavedApp(app.id)} style={{ padding: 6 }}>
+                          <Trash2 size={16} color={THEME.danger} />
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                        <TouchableOpacity
+                          style={{ flex: 1, backgroundColor: THEME.primary, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                          onPress={() => handleLaunchSavedApp(app)}
+                        >
+                          <Play size={14} color={THEME.background} style={{ marginRight: 6 }} />
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.background }}>RUN PWA</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={{ flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderWidth: 1, borderColor: THEME.border, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                          onPress={() => handleLoadAppForEditing(app)}
+                        >
+                          <Edit3 size={14} color={THEME.text} style={{ marginRight: 6 }} />
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.text }}>EDIT LAYOUT</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
         <View style={styles.bottomStatusWrap} pointerEvents="box-none">
           <TouchableOpacity
             style={styles.sideMenuTriggerBtn}
-            onPress={() => setIsExportModalVisible(true)}
+            onPress={() => setIsBottomMenuVisible(true)}
           >
             <ChevronsUp size={22} color={THEME.primary} />
           </TouchableOpacity>
