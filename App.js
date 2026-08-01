@@ -1167,12 +1167,12 @@ export default function App() {
   };
 
   const generateCode = () => {
-    let py = `# Sanwitch IDE - Full Protocol\n`;
-    let indent = connectionMode === 'ble' ? "        " : "    ";
+    let py = `# Sanwitch IDE - Full MicroPython Protocol\n`;
+    let indent = connectionMode === 'ble' ? "        " : "            ";
     if (connectionMode === 'ble') {
       py += `from ble_uart import BLEUART\nimport bluetooth\n_ble = bluetooth.BLE()\n_uart = BLEUART(_ble, name="Sanwitch-ESP32")\nwhile True:\n    if _uart.any():\n        msg = _uart.read().decode().strip()\n`;
     } else {
-      py += `import network, usocket as socket\nwlan = network.WLAN(network.STA_IF)\nwlan.active(True)\nwlan.connect("${wifiSSID}", "${wifiPass}")\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.bind(('', 80))\ns.listen(5)\nwhile True:\n    try:\n        conn, addr = s.accept()\n        req = conn.recv(1024).decode()\n        if \"?cmd=\" in req:\n            msg = req.split(\"?cmd=\")[1].split(\" \")[0]\n            conn.send('HTTP/1.1 200 OK\\nContent-Type: text/plain\\n\\nOK')\n        elif \"GET /status\" in req:\n            conn.send('HTTP/1.1 200 OK\\nContent-Type: text/plain\\n\\n' + str(42.5))\n        else:\n            conn.send('HTTP/1.1 404 Not Found\\n\\nNot Found')\n        conn.close()\n    except Exception as e:\n        pass\n`;
+      py += `import network, usocket as socket\nwlan = network.WLAN(network.STA_IF)\nwlan.active(True)\nwlan.connect("${wifiSSID}", "${wifiPass}")\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.bind(('', 80))\ns.listen(5)\nwhile True:\n    try:\n        conn, addr = s.accept()\n        req = conn.recv(1024).decode()\n        if "?cmd=" in req:\n            msg = req.split("?cmd=")[1].split(" ")[0]\n`;
     }
     widgets.forEach(w => {
       const c = w.id.toUpperCase();
@@ -1180,6 +1180,9 @@ export default function App() {
       else if (w.type === 'slider') py += `${indent}if msg.startswith("${c}:"): val = int(msg.split(":")[1])\n`;
       else if (w.type === 'button') py += `${indent}if msg == "${c}:PUSH": print("Button")\n`;
     });
+    if (connectionMode === 'wifi') {
+      py += `            conn.send('HTTP/1.1 200 OK\\nContent-Type: text/plain\\n\\nOK')\n        elif "GET /status" in req:\n            conn.send('HTTP/1.1 200 OK\\nContent-Type: text/plain\\n\\n' + str(42.5))\n        else:\n            conn.send('HTTP/1.1 404 Not Found\\n\\nNot Found')\n        conn.close()\n    except Exception as e:\n        pass\n`;
+    }
     return py;
   };
 
