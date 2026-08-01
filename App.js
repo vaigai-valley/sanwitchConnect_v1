@@ -146,28 +146,9 @@ export default function App() {
     return () => clearInterval(heartbeat);
   }, [pairedSessionId]);
 
-  const handleLogout = async () => {
-    try {
-      const sid = pairedSessionId || (await AsyncStorage.getItem('sanwitch_paired_session_id'));
-      if (sid) {
-        await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/unpair', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sid })
-        }).catch(() => {});
-      }
-    } catch (e) {}
 
-    await AsyncStorage.removeItem('sanwitch_token');
-    await AsyncStorage.removeItem('sanwitch_user');
-    await AsyncStorage.removeItem('sanwitch_paired_session_id');
-    setToken(null);
-    setUser(null);
-    setPairedSessionId(null);
-    setActiveView('auth');
-    customAlert('Logged Out', 'Successfully logged out and unpaired from Sanwitch IDE.', 'info');
-  };
   const [widgets, setWidgets] = useState([]);
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
@@ -818,6 +799,17 @@ export default function App() {
   };
 
   const logout = async () => {
+    try {
+      const sid = pairedSessionId || (await AsyncStorage.getItem('sanwitch_paired_session_id'));
+      if (sid) {
+        await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/unpair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sid })
+        }).catch(() => {});
+      }
+    } catch (e) {}
+
     setToken(null);
     setUser(null);
     setPairedSessionId(null);
