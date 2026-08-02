@@ -156,6 +156,7 @@ export default function App() {
   const [isNameModalVisible, setIsNameModalVisible] = useState(false);
   const [pendingType, setPendingType] = useState(null);
   const [newName, setNewName] = useState('');
+  const [customCmd, setCustomCmd] = useState('');
   const [connectionMode, setConnectionMode] = useState('ble');
   const [logs, setLogs] = useState([{ id: '1', msg: 'Sanwitch Native Super Mode', type: 'info' }]);
   const [wifiIP, setWifiIP] = useState('192.168.4.1');
@@ -663,9 +664,11 @@ export default function App() {
 
   const addWidget = () => {
     if (!newName) return;
-    setWidgets([...widgets, { id: newName, type: pendingType }]);
+    const payloadCmd = pendingType === 'custom' ? (customCmd.trim() || `${newName.toUpperCase()}:EXEC`) : undefined;
+    setWidgets([...widgets, { id: newName, type: pendingType, ...(payloadCmd ? { cmd: payloadCmd } : {}) }]);
     setIsNameModalVisible(false);
     setNewName('');
+    setCustomCmd('');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -815,6 +818,9 @@ export default function App() {
           setWidgetStates(prev => ({ ...prev, [w.id]: col }));
           sendData(`RGB:${col.substring(1)}\n`);
           feedbackMsg = `Changed ${w.id} color`;
+        } else if (w.type === 'custom') {
+          sendData(`${w.cmd || `${cmd}:EXEC`}\n`);
+          feedbackMsg = `Custom payload for ${w.id} executed`;
         }
       }
     });
@@ -1110,11 +1116,23 @@ export default function App() {
     const cmd = w.id.toUpperCase();
     const isActive = widgetStates[w.id];
     return (
-      <View key={w.id} style={[styles.card, (w.type === 'gauge' || w.type === 'joystick') && styles.cardWide]}>
+      <View key={w.id} style={[styles.card, (w.type === 'gauge' || w.type === 'joystick' || w.type === 'custom') && styles.cardWide]}>
         <TouchableOpacity style={styles.removeBtn} onPress={() => setWidgets(widgets.filter(i => i.id !== w.id))}>
           <X size={14} color={THEME.error} />
         </TouchableOpacity>
         <Text style={styles.cardTitle}>{w.id}</Text>
+
+        {w.type === 'custom' && (
+          <View style={{ marginTop: 6 }}>
+            <Text style={{ fontSize: 11, color: THEME.primary, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', marginBottom: 8 }}>
+              Cmd: {w.cmd || `${cmd}:EXEC`}
+            </Text>
+            <TouchableOpacity style={styles.nativeBtn} onPress={() => sendData(`${w.cmd || `${cmd}:EXEC`}\n`)}>
+              <Zap size={14} color={THEME.background} />
+              <Text style={styles.nativeBtnText}>EXECUTE CUSTOM</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {w.type === 'toggle' && (
           <View style={styles.widgetControl}>
@@ -1499,11 +1517,22 @@ export default function App() {
         )}
 
         <Modal visible={isModalVisible} transparent animationType="fade">
-          <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Choose Widget</Text><View style={styles.optionsGrid}>{['toggle', 'slider', 'button', 'gauge', 'rgb', 'joystick'].map(t => (<TouchableOpacity key={t} style={styles.optBtn} onPress={() => { setPendingType(t); setIsModalVisible(false); setIsNameModalVisible(true); }}><Text style={styles.navBtnText}>{t.toUpperCase()}</Text></TouchableOpacity>))}</View><TouchableOpacity style={styles.modalClose} onPress={() => setIsModalVisible(false)}><X size={24} color={THEME.textMuted} /></TouchableOpacity></View></View>
+          <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Choose Widget</Text><View style={styles.optionsGrid}>{['toggle', 'slider', 'button', 'gauge', 'rgb', 'joystick', 'custom'].map(t => (<TouchableOpacity key={t} style={styles.optBtn} onPress={() => { setPendingType(t); setIsModalVisible(false); setIsNameModalVisible(true); }}><Text style={styles.navBtnText}>{t.toUpperCase()}</Text></TouchableOpacity>))}</View><TouchableOpacity style={styles.modalClose} onPress={() => setIsModalVisible(false)}><X size={24} color={THEME.textMuted} /></TouchableOpacity></View></View>
         </Modal>
 
         <Modal visible={isNameModalVisible} transparent animationType="fade">
-          <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Name Widget</Text><TextInput style={styles.input} placeholder="e.g. Pump" placeholderTextColor={THEME.textMuted} value={newName} onChangeText={setNewName} autoFocus /><TouchableOpacity style={styles.nativeBtn} onPress={addWidget}><Text style={styles.nativeBtnText}>Create</Text></TouchableOpacity></View></View>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Name Widget</Text>
+              <TextInput style={styles.input} placeholder="e.g. Pump" placeholderTextColor={THEME.textMuted} value={newName} onChangeText={setNewName} autoFocus />
+              {pendingType === 'custom' && (
+                <TextInput style={[styles.input, { marginTop: 10 }]} placeholder="Custom Payload (e.g. RELAY_1:ON)" placeholderTextColor={THEME.textMuted} value={customCmd} onChangeText={setCustomCmd} />
+              )}
+              <TouchableOpacity style={styles.nativeBtn} onPress={addWidget}>
+                <Text style={styles.nativeBtnText}>Create Widget</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </Modal>
 
         <Modal visible={isVoiceModalVisible} transparent animationType="fade" onRequestClose={() => setIsVoiceModalVisible(false)}>
@@ -1561,6 +1590,12 @@ export default function App() {
                         return (
                           <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`${w.id} Red`)}>
                             <Text style={styles.navBtnText}>️ {w.id.toUpperCase()} RED</Text>
+                          </TouchableOpacity>
+                        );
+                      } else if (w.type === 'custom') {
+                        return (
+                          <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`${w.id}`)}>
+                            <Text style={styles.navBtnText}> EXECUTE {w.id.toUpperCase()}</Text>
                           </TouchableOpacity>
                         );
                       }
