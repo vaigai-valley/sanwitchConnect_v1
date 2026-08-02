@@ -16,6 +16,8 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="${cleanAppName}" />
+    <link rel="icon" type="image/jpeg" href="assets/pwa_icon.jpg" />
+    <link rel="apple-touch-icon" href="assets/pwa_icon.jpg" />
     <link rel="manifest" href="data:application/manifest+json;utf8,${encodeURIComponent(JSON.stringify({
     name: appName,
     short_name: appName,
@@ -23,7 +25,10 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
     display: 'standalone',
     background_color: '#0b0d12',
     theme_color: '#38bdf8',
-    icons: [{ src: 'https://cdn-icons-png.flaticon.com/512/2583/2583271.png', sizes: '512x512', type: 'image/png' }]
+    icons: [
+      { src: 'assets/pwa_icon.jpg', sizes: '512x512', type: 'image/jpeg' },
+      { src: 'https://cdn-icons-png.flaticon.com/512/2583/2583271.png', sizes: '512x512', type: 'image/png' }
+    ]
   }))}" />
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -300,7 +305,7 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
     <div id="app">
       <header>
         <div class="logo-wrap">
-          <div class="logo-icon">⚡</div>
+          <img src="assets/pwa_icon.jpg" class="logo-icon" style="object-fit: cover; padding: 0;" onerror="this.outerHTML='<div class=\'logo-icon\'>⚡</div>'" alt="PWA Icon" />
           <div>
             <h1>${cleanAppName}</h1>
             <div class="app-tag">Sanwitch PWA Runtime</div>
