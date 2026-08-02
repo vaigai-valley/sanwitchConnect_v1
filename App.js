@@ -31,6 +31,7 @@ import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
 import { LineChart } from 'react-native-chart-kit';
 import { Buffer } from 'buffer';
+import { generateCompleteStandaloneAppHtml } from './pwaFrameworkBundle';
 
 let bleManager = null;
 try {
@@ -203,266 +204,11 @@ export default function App() {
     loadSavedApps();
   }, []);
 
-  const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App') => {
-    const cleanAppName = appName.replace(/"/g, '&quot;');
-    const widgetsJson = JSON.stringify(widgets);
-    const wifiIpVal = wifiIP || '192.168.4.1';
-
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0b0d12" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="${cleanAppName}" />
-  <title>${cleanAppName} - Standalone Sanwitch App</title>
-  <link rel="manifest" href="data:application/manifest+json;utf8,${encodeURIComponent(JSON.stringify({
-      name: appName,
-      short_name: appName,
-      start_url: '.',
-      display: 'standalone',
-      background_color: '#0b0d12',
-      theme_color: '#38bdf8',
-      icons: [{ src: 'https://cdn-icons-png.flaticon.com/512/2583/2583271.png', sizes: '512x512', type: 'image/png' }]
-    }))}" />
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    body { background: #0b0d12; color: #eef2ff; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
-    header { background: #16181f; padding: 14px 20px; border-bottom: 1px solid #2b3240; display: flex; justify-content: space-between; align-items: center; }
-    .brand { font-size: 16px; font-weight: 800; color: #38bdf8; letter-spacing: 0.5px; }
-    .status-pill { background: rgba(20,184,166,0.15); border: 1px solid rgba(20,184,166,0.4); color: #14b8a6; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-    nav { display: flex; background: #16181f; border-bottom: 1px solid #2b3240; }
-    .nav-btn { flex: 1; padding: 12px; text-align: center; font-size: 12px; font-weight: 700; color: #97a0b5; cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; }
-    .nav-btn.active { color: #38bdf8; border-bottom-color: #38bdf8; background: rgba(56,189,248,0.05); }
-    main { flex: 1; padding: 16px; max-width: 600px; margin: 0 auto; width: 100%; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
-    .card { background: #16181f; border: 1px solid #2b3240; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; min-height: 120px; position: relative; }
-    .card-title { font-size: 11px; font-weight: 700; color: #97a0b5; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
-    .btn-action { background: linear-gradient(135deg, #38bdf8, #14b8a6); border: none; color: #0b0d12; font-weight: 800; padding: 12px; border-radius: 12px; cursor: pointer; font-size: 13px; text-transform: uppercase; width: 100%; }
-    .btn-action:active { transform: scale(0.97); }
-    .toggle-box { display: flex; justify-content: space-between; align-items: center; }
-    .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider-round { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #2b3240; transition: .3s; border-radius: 34px; }
-    .slider-round:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; }
-    input:checked + .slider-round { background-color: #38bdf8; }
-    input:checked + .slider-round:before { transform: translateX(22px); }
-    .gauge-val { font-size: 28px; font-weight: 800; color: #38bdf8; text-align: center; }
-    .term-box { background: #000; border: 1px solid #2b3240; border-radius: 16px; padding: 14px; height: 380px; font-family: monospace; font-size: 11px; overflow-y: auto; color: #14b8a6; }
-    .term-line { margin-bottom: 6px; word-break: break-all; }
-    .link-card { background: #16181f; border: 1px solid #2b3240; border-radius: 16px; padding: 20px; }
-    .input-field { width: 100%; background: #0b0d12; border: 1px solid #2b3240; border-radius: 10px; padding: 12px; color: #eef2ff; font-size: 14px; margin-top: 6px; margin-bottom: 14px; }
-    footer { text-align: center; padding: 14px; font-size: 11px; color: #97a0b5; border-top: 1px solid #16181f; }
-    .voice-fab { position: fixed; bottom: 20px; right: 20px; width: 44px; height: 44px; border-radius: 22px; background: rgba(22, 24, 31, 0.9); border: 1.5px solid rgba(56, 189, 248, 0.5); color: #38bdf8; font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 999; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-    .voice-fab:active { transform: scale(0.9); }
-  </style>
-</head>
-<body>
-  <header>
-    <div class="brand"> ${cleanAppName}</div>
-    <div class="status-pill" id="connStatus">● READY</div>
-  </header>
-  <nav>
-    <div class="nav-btn active" onclick="switchTab('panel', event)">PANEL</div>
-    <div class="nav-btn" onclick="switchTab('link', event)">LINK</div>
-    <div class="nav-btn" onclick="switchTab('term', event)">TERMINAL</div>
-  </nav>
-  <main>
-    <div id="tab-panel" class="tab-content active">
-      <div class="grid" id="widgetContainer"></div>
-    </div>
-    <div id="tab-link" class="tab-content">
-      <div class="link-card" style="margin-bottom:14px;">
-        <h3 style="font-size:14px; color:#38bdf8; margin-bottom:12px;"> WIFI HARDWARE TARGET</h3>
-        <label style="font-size:11px; color:#97a0b5;">TARGET IP ADDRESS</label>
-        <input type="text" id="targetIp" class="input-field" value="${wifiIpVal}">
-        <button class="btn-action" onclick="saveLinkConfig()">CONNECT WIFI TARGET</button>
-      </div>
-      <div class="link-card">
-        <h3 style="font-size:14px; color:#a855f7; margin-bottom:12px;"> BLUETOOTH (BLE) TARGET</h3>
-        <p style="font-size:11px; color:#97a0b5; margin-bottom:14px;">Scan & connect directly to ESP32 / Arduino / BLE hardware via Web Bluetooth.</p>
-        <button class="btn-action" style="background:linear-gradient(135deg, #a855f7, #38bdf8);" onclick="connectBle()">SCAN BLE HARDWARE</button>
-      </div>
-    </div>
-    <div id="tab-term" class="tab-content">
-      <div class="term-box" id="termLog">
-        <div class="term-line" style="color:#97a0b5;">[SYSTEM] Standalone App Engine Initialized</div>
-      </div>
-      <div style="display:flex; gap:8px; margin-top:12px;">
-        <input type="text" id="manualCmdInput" class="input-field" style="margin:0;" placeholder="e.g. RELAY1:1 or AT+STATUS">
-        <button class="btn-action" style="width:100px;" onclick="sendManualCmd()">SEND</button>
-      </div>
-    </div>
-  </main>
-
-  <button class="voice-fab" onclick="startVoice()" title="Voice Assistant">️</button>
-  <footer>Built with Sanwitch Connect Standalone Exporter</footer>
-
-  <script>
-    const widgets = ${widgetsJson};
-    let targetIp = "${wifiIpVal}";
-    let bleDevice = null;
-    let bleCharacteristic = null;
-    const container = document.getElementById('widgetContainer');
-    const termLog = document.getElementById('termLog');
-    const connStatus = document.getElementById('connStatus');
-
-    function logTerm(msg, type='TX') {
-      const line = document.createElement('div');
-      line.className = 'term-line';
-      line.style.color = type === 'TX' ? '#38bdf8' : (type === 'RX' ? '#14b8a6' : '#ef4444');
-      line.textContent = '[' + new Date().toLocaleTimeString() + '] [' + type + '] ' + msg;
-      termLog.appendChild(line);
-      termLog.scrollTop = termLog.scrollHeight;
-    }
-
-    async function connectBle() {
-      if (!navigator.bluetooth) {
-        alert('Web Bluetooth is supported on Chrome on Android & Desktop!');
-        return;
-      }
-      try {
-        logTerm('Scanning BLE devices...', 'SYS');
-        bleDevice = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
-          optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb', '6e400001-b5a3-f393-e0a9-e50e24dcca9e']
-        });
-        logTerm('Connecting to ' + bleDevice.name, 'SYS');
-        const server = await bleDevice.gatt.connect();
-        const services = await server.getPrimaryServices();
-        if (services.length > 0) {
-          const chars = await services[0].getCharacteristics();
-          bleCharacteristic = chars[0];
-          logTerm('BLE Linked: ' + bleDevice.name, 'SYS');
-          if (connStatus) {
-            connStatus.textContent = ' BLE LINKED';
-            connStatus.style.borderColor = 'rgba(168, 85, 247, 0.6)';
-          }
-        }
-      } catch (e) {
-        logTerm('BLE ERR: ' + e.message, 'ERR');
-      }
-    }
-
-    function sendCmd(cmd) {
-      logTerm(cmd, 'TX');
-      if (bleCharacteristic) {
-        const encoder = new TextEncoder();
-        bleCharacteristic.writeValue(encoder.encode(cmd + '\n'))
-          .then(() => {
-            logTerm('BLE OK: ' + cmd, 'RX');
-            if (connStatus) {
-              connStatus.textContent = ' BLE LINKED';
-              connStatus.style.borderColor = 'rgba(168, 85, 247, 0.6)';
-            }
-          })
-          .catch(e => logTerm('BLE ERR: ' + e.message, 'ERR'));
-      } else {
-        fetch('http://' + targetIp + '/control?cmd=' + encodeURIComponent(cmd), { mode: 'no-cors' })
-          .then(() => {
-            logTerm('WIFI OK: ' + cmd, 'RX');
-            if (connStatus) {
-              connStatus.textContent = ' WIFI LINKED';
-              connStatus.style.borderColor = 'rgba(20, 184, 166, 0.6)';
-            }
-          })
-          .catch(e => logTerm('ERR: ' + e.message, 'ERR'));
-      }
-    }
-
-    function sendManualCmd() {
-      const val = document.getElementById('manualCmdInput').value.trim();
-      if (val) {
-        sendCmd(val);
-        document.getElementById('manualCmdInput').value = '';
-      }
-    }
-
-    function saveLinkConfig() {
-      targetIp = document.getElementById('targetIp').value;
-      logTerm('Target IP updated to ' + targetIp, 'SYS');
-      if (connStatus) {
-        connStatus.textContent = '● LINKED';
-        connStatus.style.borderColor = 'rgba(20, 184, 166, 0.6)';
-      }
-      alert('Target IP Saved: ' + targetIp);
-    }
-
-    function switchTab(tab, evt) {
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      evt.target.classList.add('active');
-      document.getElementById('tab-' + tab).classList.add('active');
-    }
-
-    function startVoice() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        alert('Voice Assistant is supported on Chrome!');
-        return;
-      }
-      const rec = new SpeechRecognition();
-      rec.onstart = () => logTerm('Listening for voice command...', 'SYS');
-      rec.onresult = (e) => {
-        const text = e.results[0][0].transcript.toUpperCase();
-        logTerm('Voice Input: "' + text + '"', 'TX');
-        widgets.forEach(w => {
-          const name = w.id.toUpperCase();
-          if (text.includes(name)) {
-            if (text.includes('ON') || text.includes('START') || text.includes('ENABLE')) sendCmd(name + ':1');
-            else if (text.includes('OFF') || text.includes('STOP') || text.includes('DISABLE')) sendCmd(name + ':0');
-            else sendCmd(name + ':PUSH');
-          }
-        });
-      };
-      rec.start();
-    }
-
-    widgets.forEach(w => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      const cmd = w.id.toUpperCase();
-
-      if (w.type === 'toggle') {
-        card.innerHTML = '<div class="card-title">' + w.id + '</div><div class="toggle-box"><span style="font-size:12px; color:#97a0b5;">STATUS</span><label class="switch"><input type="checkbox" onchange="sendCmd(\\\'' + cmd + ':\\\' + (this.checked?1:0))"><span class="slider-round"></span></label></div>';
-      } else if (w.type === 'button') {
-        card.innerHTML = '<div class="card-title">' + w.id + '</div><button class="btn-action" onclick="sendCmd(\\\'' + cmd + ':PUSH\\\')">TRIGGER</button>';
-      } else if (w.type === 'slider') {
-        card.innerHTML = '<div class="card-title">' + w.id + '</div><input type="range" min="0" max="100" style="width:100%" onchange="sendCmd(\\\'' + cmd + ':\\\' + this.value)">';
-      } else if (w.type === 'gauge') {
-        card.innerHTML = '<div class="card-title">' + w.id + '</div><div class="gauge-val" id="g_' + w.id + '">0.0</div>';
-      } else {
-        card.innerHTML = '<div class="card-title">' + w.id + '</div><button class="btn-action" onclick="sendCmd(\\\'' + cmd + ':ACTIVATE\\\')">EXECUTE</button>';
-      }
-      container.appendChild(card);
-    });
-
-    // 1-TAP PWA INSTALLER PROMPT EVENT LISTENER
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-    });
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('data:text/javascript;utf8,' + encodeURIComponent('self.addEventListener("fetch", function(e) {});')).catch(()=>{});
-      });
-    }
-  </script>
-</body>
-</html>`;
-  };
-
   // OPTION 1: INSTALL APP DIRECTLY INTO ANDROID SYSTEM (NO BROWSER NEEDED)
   const handleInstallReadyApp = async () => {
     const appTitle = exportAppName.trim() || 'My Sanwitch App';
     const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`;
-    const html = generateCompleteStandaloneAppHtml(appTitle);
+    const html = generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
 
     const newApp = {
       id: Date.now().toString(),
@@ -533,7 +279,7 @@ export default function App() {
 
   const handleOpenPwaLinkInBrowser = async (appTitleOrItem) => {
     const title = typeof appTitleOrItem === 'string' ? appTitleOrItem : (appTitleOrItem?.name || exportAppName || 'My Sanwitch App');
-    const html = (typeof appTitleOrItem === 'object' && appTitleOrItem?.html) ? appTitleOrItem.html : generateCompleteStandaloneAppHtml(title);
+    const html = (typeof appTitleOrItem === 'object' && appTitleOrItem?.html) ? appTitleOrItem.html : generateCompleteStandaloneAppHtml(title, widgets, wifiIP);
 
     try {
       const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
@@ -559,7 +305,7 @@ export default function App() {
   const handleSavePwaBundleProject = async () => {
     const appTitle = exportAppName.trim() || 'My Sanwitch App';
     const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`;
-    const html = generateCompleteStandaloneAppHtml(appTitle);
+    const html = generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
 
     const newApp = {
       id: Date.now().toString(),
