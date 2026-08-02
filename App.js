@@ -316,7 +316,11 @@ export default function App() {
         const data = await resp.json();
         if (data.url) {
           await Linking.openURL(data.url);
-          customAlert('Opening PWA Link 🌐', `Opening "${title}" in external system browser.`, 'info');
+          customAlert(
+            'Installing to App Drawer 📲',
+            `When Chrome opens, tap Chrome's 3-dot menu (⋮) at top-right, then tap "Install App" (or "Add to Home screen") to add "${title}" directly to your Android App Drawer!`,
+            'info'
+          );
           return;
         }
       }
