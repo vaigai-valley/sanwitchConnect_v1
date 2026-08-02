@@ -483,7 +483,7 @@ export default function App() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsExportModalVisible(false);
 
-    // 1. Publish PWA to Cloudflare Worker to obtain a valid HTTPS PWA URL for native browser installation
+    // 1. Publish PWA & WebAPK Manifest to Cloudflare Worker for Android WebAPK Synthesis
     try {
       const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
         method: 'POST',
@@ -494,10 +494,16 @@ export default function App() {
       if (resp.ok) {
         const data = await resp.json();
         if (data.url) {
+          if (Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut) {
+            try {
+              NativeModules.ShortcutModule.pinShortcut(appTitle);
+            } catch (e) {}
+          }
+
           await Linking.openURL(data.url);
           customAlert(
-            'Install PWA App 📱',
-            `Opening "${appTitle}" in system browser! Tap "Install" or "Add to Home Screen" to install it as a phone app.`,
+            'Android WebAPK Installer ⚡',
+            `Launching Android WebAPK synthesis for "${appTitle}". Tap "Install WebAPK" or "Install App" to install directly into your Android System App Drawer!`,
             'success'
           );
           return;
