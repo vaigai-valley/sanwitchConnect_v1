@@ -16,8 +16,8 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="${cleanAppName}" />
-    <link rel="icon" type="image/jpeg" href="assets/pwa_icon.jpg" />
-    <link rel="apple-touch-icon" href="assets/pwa_icon.jpg" />
+    <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2338bdf8'/><text x='50%' y='65%' font-size='60' text-anchor='middle'>⚡</text></svg>" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2338bdf8'/><text x='50%' y='65%' font-size='60' text-anchor='middle'>⚡</text></svg>" />
     <link rel="manifest" href="data:application/manifest+json;utf8,${encodeURIComponent(JSON.stringify({
     name: appName,
     short_name: appName,
@@ -26,7 +26,7 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
     background_color: '#0b0d12',
     theme_color: '#38bdf8',
     icons: [
-      { src: 'assets/pwa_icon.jpg', sizes: '512x512', type: 'image/jpeg' },
+      { src: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%230b0d12'/><rect x='5' y='5' width='90' height='90' rx='20' fill='%2316181f' stroke='%2338bdf8' stroke-width='4'/><text x='50%' y='68%' font-size='55' text-anchor='middle'>⚡</text></svg>", sizes: '512x512', type: 'image/svg+xml' },
       { src: 'https://cdn-icons-png.flaticon.com/512/2583/2583271.png', sizes: '512x512', type: 'image/png' }
     ]
   }))}" />
@@ -305,7 +305,7 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
     <div id="app">
       <header>
         <div class="logo-wrap">
-          <img src="assets/pwa_icon.jpg" class="logo-icon" style="object-fit: cover; padding: 0;" onerror="this.outerHTML='<div class=\'logo-icon\'>⚡</div>'" alt="PWA Icon" />
+          <div class="logo-icon">⚡</div>
           <div>
             <h1>${cleanAppName}</h1>
             <div class="app-tag">Sanwitch PWA Runtime</div>
