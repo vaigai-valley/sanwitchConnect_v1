@@ -7,7 +7,10 @@ import com.facebook.react.uimanager.ViewManager
 
 class ShortcutPackage : ReactPackage {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-    return listOf(ShortcutModule(reactContext))
+    return listOf(
+      ShortcutModule(reactContext),
+      WebApkInstallerModule(reactContext)
+    )
   }
 
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {

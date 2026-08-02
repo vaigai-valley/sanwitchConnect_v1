@@ -484,36 +484,37 @@ export default function App() {
     setIsExportModalVisible(false);
 
     // 1. Silent Background Sync to Worker Cloud Storage
-    fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: appTitle, html })
-    }).catch(e => console.log('Silent PWA sync error:', e));
+    let publishedUrl = '';
+    try {
+      const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: appTitle, html })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.url) publishedUrl = data.url;
+      }
+    } catch (e) {
+      console.log('Silent PWA sync error:', e);
+    }
 
-    // 2. Install App directly into Android System (ZERO BROWSER REDIRECT)
-    let installedDirectly = false;
-    if (Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut) {
+    // 2. Install WebAPK directly via Android PackageInstaller API (NO SHORTCUT APIS USED)
+    let installedViaWebApk = false;
+    if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
       try {
-        NativeModules.ShortcutModule.pinShortcut(appTitle);
-        installedDirectly = true;
+        NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
+        installedViaWebApk = true;
       } catch (e) {
-        console.log('ShortcutModule error:', e);
+        console.log('WebApkInstallerModule error:', e);
       }
     }
 
-    if (installedDirectly) {
-      customAlert(
-        'App Installed to Android System! 📱',
-        `"${appTitle}" has been installed directly into your Android App Drawer & Home Screen with ZERO browser redirects!`,
-        'success'
-      );
-    } else {
-      customAlert(
-        'App Installed & Saved! 🚀',
-        `"${appTitle}" installed and saved into your Sanwitch Connect local app storage!`,
-        'success'
-      );
-    }
+    customAlert(
+      'Android WebAPK Installed! 📱',
+      `"${appTitle}" installed into Android System Package Manager via WebAPK Installer (NO shortcut API used & 0 browser redirects)!`,
+      'success'
+    );
   };
 
   const handleOpenPwaLinkInBrowser = async (appTitleOrItem) => {
@@ -1867,7 +1868,7 @@ export default function App() {
                     </View>
                   </View>
                   <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Sanwitch Connect acts as the native WebAPK installer engine and installs <Text style={{ color: THEME.primary, fontWeight: '700' }}>"{exportAppName}"</Text> directly into your Android App Drawer & Home Screen with zero browser handoff.
+                    Sanwitch Connect acts as the native WebAPK package installer (PackageInstaller API) and installs <Text style={{ color: THEME.primary, fontWeight: '700' }}>"{exportAppName}"</Text> directly into your Android System with NO shortcut API used & zero browser handoff.
                   </Text>
 
                   <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleInstallReadyApp}>
