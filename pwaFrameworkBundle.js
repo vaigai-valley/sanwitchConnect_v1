@@ -1,5 +1,5 @@
 // Sanwitch Connect PWA App Framework Bundle Exporter
-// Integrates app_framework architecture into modular standalone PWA generation engine
+// Clean fixed-layout PWA runtime (custom widget editing & code tabs reserved for Sanwitch Connect)
 
 export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widgets = [], wifiIP = '192.168.4.1') => {
   const cleanAppName = (appName || 'Sanwitch App').replace(/"/g, '&quot;');
@@ -77,17 +77,6 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
       #terminal-output { flex: 1; overflow-y: auto; font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; }
       .terminal-input-row { display: flex; gap: 10px; }
       .terminal-input-row input { flex: 1; background: transparent; border: none; border-bottom: 1px solid var(--surface-border); color: white; font-family: inherit; font-size: 0.8rem; outline: none; }
-      .remove-widget { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; background: rgba(239, 68, 68, 0.2); color: var(--error); border: none; border-radius: 50%; cursor: pointer; font-weight: bold; font-size: 14px; }
-      .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(10px); z-index: 1000; padding: 20px; align-items: center; justify-content: center; }
-      .modal.active { display: flex; }
-      .modal-content { background: var(--surface); border: 1px solid var(--surface-border); border-radius: 24px; width: 100%; max-width: 400px; padding: 24px; }
-      .widget-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
-      .opt-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--surface-border); border-radius: 12px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s; }
-      .opt-btn:active { background: var(--primary); }
-      .opt-icon { font-size: 1.3rem; }
-      .opt-btn span { font-size: 0.68rem; font-weight: 600; color: var(--text-muted); }
-      .joystick-container { width: 130px; height: 130px; background: rgba(255, 255, 255, 0.05); border-radius: 50%; position: relative; margin: 0 auto; border: 2px solid var(--surface-border); touch-action: none; }
-      .joystick-knob { width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 50%; position: absolute; top: 38px; left: 38px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
       .color-input { -webkit-appearance: none; border: none; width: 100%; height: 40px; border-radius: 8px; background: transparent; cursor: pointer; }
       @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } .card-wide { grid-column: span 1; } }
     </style>
@@ -111,17 +100,12 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
       <nav>
         <button class="nav-btn active" data-view="dashboard">Panel</button>
         <button class="nav-btn" data-view="connect">Connect</button>
-        <button class="nav-btn" data-view="code">Code</button>
         <button class="nav-btn" data-view="terminal">Term</button>
       </nav>
 
       <main>
         <div id="view-dashboard" class="view active">
           <div id="widget-container" class="grid"></div>
-          <div style="display: flex; justify-content: center; margin-top: 25px; gap: 10px;">
-            <button id="add-widget-btn" class="btn-primary" style="width: auto; padding: 10px 18px; font-size: 0.85rem;">+ Add Widget</button>
-            <button id="clear-layout-btn" class="btn-primary" style="width: auto; padding: 10px 18px; font-size: 0.85rem; background: var(--surface); color: var(--error);">Clear</button>
-          </div>
         </div>
 
         <div id="view-connect" class="view">
@@ -140,25 +124,6 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           </div>
         </div>
 
-        <div id="view-code" class="view">
-          <div class="card card-wide">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <span class="card-title">IDE Integration</span>
-              <div style="display: flex; background: rgba(255,255,255,0.05); border-radius: 20px; padding: 3px;">
-                <button id="mode-code-btn" style="border: none; background: var(--primary); color: white; padding: 4px 10px; border-radius: 14px; font-size: 0.7rem; cursor: pointer;">Code</button>
-                <button id="mode-blue-btn" style="border: none; background: transparent; color: var(--text-muted); padding: 4px 10px; border-radius: 14px; font-size: 0.7rem; cursor: pointer;">Blueprint</button>
-              </div>
-            </div>
-            <div id="code-content">
-              <div id="code-snippet-container" style="background: #000; border-radius: 10px; padding: 12px; font-family: monospace; font-size: 0.75rem; white-space: pre; overflow-x: auto; color: #a5b4fc; max-height: 250px; border: 1px solid var(--surface-border);"></div>
-              <button id="copy-code-btn" class="btn-primary" style="margin-top: 12px; padding: 8px;">Copy Code</button>
-            </div>
-            <div id="blue-content" style="display: none;">
-              <div id="blueprint-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;"></div>
-            </div>
-          </div>
-        </div>
-
         <div id="view-terminal" class="view">
           <div class="card card-wide terminal-card">
             <div id="terminal-output">Ready...</div>
@@ -169,34 +134,6 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           </div>
         </div>
       </main>
-
-      <div id="widget-modal" class="modal">
-        <div class="modal-content">
-          <h3>Add Control Widget</h3>
-          <div class="widget-options">
-            <div class="opt-btn" data-type="toggle"><div class="opt-icon">⚡</div><span>Switch</span></div>
-            <div class="opt-btn" data-type="slider"><div class="opt-icon">🎚️</div><span>Slider</span></div>
-            <div class="opt-btn" data-type="joystick"><div class="opt-icon">🕹️</div><span>Joystick</span></div>
-            <div class="opt-btn" data-type="gauge"><div class="opt-icon">📉</div><span>Gauge</span></div>
-            <div class="opt-btn" data-type="button"><div class="opt-icon">🔘</div><span>Button</span></div>
-            <div class="opt-btn" data-type="rgb"><div class="opt-icon">🎨</div><span>RGB</span></div>
-            <div class="opt-btn" data-type="custom"><div class="opt-icon">🛠️</div><span>Custom</span></div>
-          </div>
-          <button class="btn-primary" id="close-modal-btn" style="margin-top: 15px; background: var(--surface);">Cancel</button>
-        </div>
-      </div>
-
-      <div id="name-modal" class="modal">
-        <div class="modal-content">
-          <h3>Name your Widget</h3>
-          <input type="text" id="widget-name-input" placeholder="Name (e.g., Drive, Heat)" style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--surface-border); border-radius: 8px; color: white; margin-top: 12px; outline: none;">
-          <input type="text" id="widget-cmd-input" placeholder="Custom Payload (e.g. RELAY_1:ON)" style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--surface-border); border-radius: 8px; color: white; margin-top: 10px; outline: none; display: none;">
-          <div style="display: flex; gap: 10px; margin-top: 15px;">
-            <button class="btn-primary" id="confirm-name-btn" style="flex: 1;">Create</button>
-            <button class="btn-primary" id="cancel-name-btn" style="flex: 1; background: var(--surface);">Cancel</button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <script>
@@ -208,41 +145,29 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
       let bleDevice = null;
       let bleCharacteristicRx = null;
       let bleCharacteristicTx = null;
-      let wifiConnected = false;
-      let connectionMode = 'ble';
       let widgets = [];
 
       const widgetContainer = document.getElementById('widget-container');
-      const widgetModal = document.getElementById('widget-modal');
       const termOutput = document.getElementById('terminal-output');
       const connStatus = document.getElementById('conn-status');
 
       function loadLayout() {
         if (window.INITIAL_WIDGETS && Array.isArray(window.INITIAL_WIDGETS) && window.INITIAL_WIDGETS.length > 0) {
-          window.INITIAL_WIDGETS.forEach(w => addWidget(w.type, w.id || w.name, false, w.cmd));
+          window.INITIAL_WIDGETS.forEach(w => addWidget(w.type, w.id || w.name, w.cmd));
         } else {
-          const saved = localStorage.getItem('sanwitch_layout');
-          if (saved) {
-            try { JSON.parse(saved).forEach(c => addWidget(c.type, c.id, false, c.cmd)); } catch(e){}
-          } else {
-            addWidget('toggle', 'Power');
-            addWidget('gauge', 'Sensor');
-          }
+          addWidget('toggle', 'Power');
+          addWidget('gauge', 'Sensor');
         }
       }
 
-      function saveLayout() {
-        localStorage.setItem('sanwitch_layout', JSON.stringify(widgets.map(w => ({ type: w.type, id: w.id, cmd: w.cmd }))));
-      }
-
-      function addWidget(type, name = '', save = true, customCmd = '') {
+      function addWidget(type, name = '', customCmd = '') {
         const id = name || (type + '_' + Date.now());
         const cmd = customCmd || (id.toUpperCase() + ':EXEC');
         const widget = { type, id, cmd };
         const card = document.createElement('div');
         card.className = 'card ' + ((type === 'joystick' || type === 'gauge') ? 'card-wide' : '');
         card.id = 'widget-' + id;
-        card.innerHTML = '<button class="remove-widget" onclick="window.removeWidget(\\'' + id + '\\')">×</button><span class="card-title">' + id + '</span>';
+        card.innerHTML = '<span class="card-title">' + id + '</span>';
 
         if (type === 'toggle') {
           card.innerHTML += '<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;"><span>Switch</span><label class="toggle-switch"><input type="checkbox" onchange="window.sendData(\\'' + id.toUpperCase() + ':\\' + (this.checked ? \'1\' : \'0\') + \'\\\\n\')"><span class="slider"></span></label></div>';
@@ -260,15 +185,7 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
 
         widgetContainer.appendChild(card);
         widgets.push(widget);
-        if (save) saveLayout();
       }
-
-      window.removeWidget = (id) => {
-        const el = document.getElementById('widget-' + id);
-        if (el) el.remove();
-        widgets = widgets.filter(w => w.id !== id);
-        saveLayout();
-      };
 
       window.sendData = async (data) => {
         log('TX: ' + data.trim(), 'tx');
@@ -296,32 +213,6 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           document.getElementById('view-' + btn.dataset.view).classList.add('active');
         });
       });
-
-      document.getElementById('add-widget-btn').addEventListener('click', () => widgetModal.classList.add('active'));
-      document.getElementById('close-modal-btn').addEventListener('click', () => widgetModal.classList.remove('active'));
-      document.getElementById('clear-layout-btn').addEventListener('click', () => { widgetContainer.innerHTML = ''; widgets = []; saveLayout(); });
-
-      let pendingType = null;
-      const nameModal = document.getElementById('name-modal');
-      const nameInput = document.getElementById('widget-name-input');
-      const cmdInput = document.getElementById('widget-cmd-input');
-
-      document.querySelectorAll('.opt-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          pendingType = btn.dataset.type;
-          widgetModal.classList.remove('active');
-          nameInput.value = pendingType;
-          cmdInput.style.display = pendingType === 'custom' ? 'block' : 'none';
-          nameModal.classList.add('active');
-        });
-      });
-
-      document.getElementById('confirm-name-btn').addEventListener('click', () => {
-        const name = nameInput.value.trim();
-        const customPayload = cmdInput.value.trim();
-        if (name && pendingType) { addWidget(pendingType, name, true, customPayload); nameModal.classList.remove('active'); }
-      });
-      document.getElementById('cancel-name-btn').addEventListener('click', () => nameModal.classList.remove('active'));
 
       // Web Speech Recognition
       const voiceBtn = document.getElementById('voice-btn');
