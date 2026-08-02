@@ -1876,35 +1876,11 @@ export default function App() {
                   </TouchableOpacity>
                 </View>
 
-                {/* OPTION 2: RUN APP IN-APP (NO BROWSER NEEDED) */}
-                <View style={[styles.exportCardOption, { borderColor: THEME.success, backgroundColor: 'rgba(20, 184, 166, 0.08)', marginBottom: 14 }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <Play size={20} color={THEME.success} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>2. RUN IN-APP NOW (No Browser Needed)</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.2)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>0 Browser Redirects</Text>
-                    </View>
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(56, 189, 248, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>Instant Execution</Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Launches your standalone app immediately inside Sanwitch Connect's full-screen runner modal with 0 browser redirects.
-                  </Text>
-
-                  <TouchableOpacity style={[styles.exportBtnPrimary, { backgroundColor: THEME.success }]} onPress={() => handleRunAppInApp(exportAppName)}>
-                    <Play size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                    <Text style={styles.exportBtnPrimaryText}>RUN APP IN-APP NOW</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* OPTION 3: OPEN PWA LINK IN BROWSER */}
+                {/* OPTION 2: OPEN PWA LINK IN BROWSER */}
                 <View style={[styles.exportCardOption, { borderColor: THEME.textMuted, backgroundColor: 'rgba(255, 255, 255, 0.03)', marginBottom: 14 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                     <ExternalLink size={20} color={THEME.textMuted} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>3. OPEN PWA LINK IN BROWSER</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>2. OPEN PWA LINK IN BROWSER</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
                     <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
@@ -1921,11 +1897,11 @@ export default function App() {
                   </TouchableOpacity>
                 </View>
 
-                {/* OPTION 4: SAVE PWA BUNDLE (EDITABLE IN SANWITCH CONNECT) */}
+                {/* OPTION 3: SAVE PWA BUNDLE (EDITABLE IN SANWITCH CONNECT) */}
                 <View style={[styles.exportCardOption, { borderColor: THEME.secondary, backgroundColor: 'rgba(20, 184, 166, 0.05)', marginBottom: 14 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                     <Folder size={20} color={THEME.secondary} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>4. SAVE PWA BUNDLE (Editable)</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>3. SAVE PWA BUNDLE (Editable)</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
                     <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)' }}>
