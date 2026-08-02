@@ -446,7 +446,7 @@ export default function App() {
 </html>`;
   };
 
-  // OPTION 1: INSTALL APP (Ready to Use) - Triggers Native Android Shortcut & WebAPK OS Prompt
+  // OPTION 1: INSTALL APP (Ready to Use) - Triggers Native PWA Installation / Hosted WebAPK URL
   const handleInstallReadyApp = async () => {
     const appTitle = exportAppName.trim() || 'My Sanwitch App';
     const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`;
@@ -471,28 +471,40 @@ export default function App() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsExportModalVisible(false);
 
-    // 1. Trigger Native Android ShortcutManager to pin icon directly in App Drawer
+    // 1. Publish PWA to Cloudflare Worker to obtain a valid HTTPS PWA URL for native browser installation
+    try {
+      const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: appTitle, html })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.url) {
+          await Linking.openURL(data.url);
+          customAlert(
+            'Install PWA App 📱',
+            `Opening "${appTitle}" in system browser! Tap "Install" or "Add to Home Screen" to install it as a phone app.`,
+            'success'
+          );
+          return;
+        }
+      }
+    } catch (e) {
+      console.log('PWA publish error:', e);
+    }
+
+    // 2. Trigger Native Android ShortcutManager fallback if available
     if (Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut) {
       try {
         NativeModules.ShortcutModule.pinShortcut(appTitle);
-      } catch (e) {
-        console.log('ShortcutModule Pin Error:', e);
-      }
-    }
-
-    // 2. Launch system browser for WebAPK synthesis & OS install prompt handoff
-    const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-    try {
-      await Linking.openURL(dataUri);
-    } catch (e) {
-      try {
-        await Share.share({ title: fileName, message: html });
-      } catch (err) {}
+      } catch (e) {}
     }
 
     customAlert(
-      'App Installed to App Drawer!',
-      `"${appTitle}" shortcut pinned to your Android App Drawer & Home Screen with OS install prompt!`,
+      'App Saved!',
+      `"${appTitle}" saved locally in MY APPS!`,
       'success'
     );
   };
@@ -538,31 +550,40 @@ export default function App() {
 
   const handleLaunchSavedApp = async (appItem) => {
     setIsMyAppsModalVisible(false);
+    const html = appItem.html || generateCompleteStandaloneAppHtml(appItem.name);
 
-    // 1. Trigger Native Android ShortcutManager to pin icon directly in App Drawer
+    try {
+      const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: appItem.name, html })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.url) {
+          await Linking.openURL(data.url);
+          customAlert(
+            'Opening PWA App 🚀',
+            `Opening "${appItem.name}" in system browser. Tap "Add to Home Screen" to install!`,
+            'success'
+          );
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // Trigger Native Android ShortcutManager fallback if available
     if (Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut) {
       try {
         NativeModules.ShortcutModule.pinShortcut(appItem.name);
-      } catch (e) {
-        console.log('ShortcutModule Pin Error:', e);
-      }
-    }
-
-    // 2. Launch system browser for WebAPK synthesis & standalone app execution
-    const html = appItem.html || generateCompleteStandaloneAppHtml(appItem.name);
-    const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-    try {
-      await Linking.openURL(dataUri);
-    } catch (e) {
-      try {
-        await Share.share({ title: `${appItem.name}.html`, message: html });
-      } catch (err) {}
+      } catch (e) {}
     }
 
     customAlert(
-      'Opening App!',
-      `"${appItem.name}" opened & shortcut pinned to Android App Drawer!`,
-      'success'
+      'Saved App',
+      `App "${appItem.name}" is stored locally in MY APPS.`,
+      'info'
     );
   };
 
