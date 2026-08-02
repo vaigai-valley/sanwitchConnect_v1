@@ -510,6 +510,14 @@ export default function App() {
             'info'
           );
           return;
+        } else if (res === 'POLICY_RESTRICTED') {
+          if (publishedUrl) await Linking.openURL(publishedUrl);
+          customAlert(
+            'Enterprise Policy Detected 🏢',
+            `Direct sideloading is restricted by your Android device policy. Switched smoothly to HTTPS PWA link!`,
+            'info'
+          );
+          return;
         }
       } catch (e) {
         console.log('WebApkInstallerModule error:', e);
