@@ -170,6 +170,18 @@ export default function App() {
 
   const [isExportModalVisible, setIsExportModalVisible] = useState(false);
   const [exportAppName, setExportAppName] = useState('My Sanwitch App');
+  const [activeRunnerApp, setActiveRunnerApp] = useState(null);
+  const [isAppRunnerVisible, setIsAppRunnerVisible] = useState(false);
+
+  const handleRunAppInApp = (appTitleOrItem) => {
+    const title = typeof appTitleOrItem === 'string' ? appTitleOrItem : (appTitleOrItem?.name || exportAppName || 'My Sanwitch App');
+    const html = (typeof appTitleOrItem === 'object' && appTitleOrItem?.html) ? appTitleOrItem.html : generateCompleteStandaloneAppHtml(title);
+
+    setActiveRunnerApp({ name: title, html });
+    setIsExportModalVisible(false);
+    setIsMyAppsModalVisible(false);
+    setIsAppRunnerVisible(true);
+  };
 
   const [savedApps, setSavedApps] = useState([]);
   const [isBottomMenuVisible, setIsBottomMenuVisible] = useState(false);
@@ -1821,11 +1833,35 @@ export default function App() {
                   />
                 </View>
 
-                {/* OPTION 1: INSTALL APP (READY TO USE) */}
+                {/* OPTION 0: RUN APP IN-APP (NO BROWSER NEEDED) */}
+                <View style={[styles.exportCardOption, { borderColor: THEME.success, backgroundColor: 'rgba(20, 184, 166, 0.08)', marginBottom: 14 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Play size={20} color={THEME.success} style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>1. RUN IN-APP (No Browser Needed)</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.2)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>0 Browser Redirects</Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(56, 189, 248, 0.15)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>Instant Execution</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
+                    Runs your standalone PWA app directly inside Sanwitch Connect with full control widgets, offline support, and zero browser redirects.
+                  </Text>
+
+                  <TouchableOpacity style={[styles.exportBtnPrimary, { backgroundColor: THEME.success }]} onPress={() => handleRunAppInApp(exportAppName)}>
+                    <Play size={18} color={THEME.background} style={{ marginRight: 6 }} />
+                    <Text style={styles.exportBtnPrimaryText}>RUN APP IN-APP NOW</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* OPTION 1: INSTALL APP (PWA / HOME SCREEN) */}
                 <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)', marginBottom: 14 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                     <Smartphone size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>1. INSTALL APP (Ready to Use)</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>2. INSTALL APP (Home Screen / PWA)</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
                     <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(56, 189, 248, 0.15)' }}>
@@ -1836,12 +1872,12 @@ export default function App() {
                     </View>
                   </View>
                   <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Launches app bundle directly into browser to trigger 1-tap PWA Home Screen installation.
+                    Generates clean PWA link to trigger native phone home screen app shortcut & WebAPK synthesis.
                   </Text>
 
                   <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleInstallReadyApp}>
                     <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                    <Text style={styles.exportBtnPrimaryText}>INSTALL APP (READY TO USE)</Text>
+                    <Text style={styles.exportBtnPrimaryText}>INSTALL PWA TO PHONE</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1849,7 +1885,7 @@ export default function App() {
                 <View style={[styles.exportCardOption, { borderColor: THEME.secondary, backgroundColor: 'rgba(20, 184, 166, 0.05)', marginBottom: 14 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                     <Folder size={20} color={THEME.secondary} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>2. SAVE PWA BUNDLE (Editable)</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>3. SAVE PWA BUNDLE (Editable)</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
                     <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)' }}>
@@ -1870,6 +1906,68 @@ export default function App() {
                 </View>
               </ScrollView>
             </View>
+          </View>
+        </Modal>
+
+        {/* IN-APP PWA APP RUNNER MODAL (0 BROWSER REDIRECTS) */}
+        <Modal visible={isAppRunnerVisible} animationType="slide" transparent={false} onRequestClose={() => setIsAppRunnerVisible(false)}>
+          <View style={{ flex: 1, backgroundColor: '#0b0d12' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#16181f', borderBottomWidth: 1, borderBottomColor: '#2b3240' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Sparkles size={18} color={THEME.primary} style={{ marginRight: 8 }} />
+                <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>{activeRunnerApp?.name || 'Sanwitch App'}</Text>
+                <View style={{ marginLeft: 10, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.4)' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>RUNNING IN-APP</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setIsAppRunnerVisible(false)} style={{ padding: 6, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.08)' }}>
+                <X size={20} color={THEME.text} />
+              </TouchableOpacity>
+            </View>
+
+            {Platform.OS === 'web' ? (
+              <iframe
+                srcDoc={activeRunnerApp?.html || ''}
+                style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#0b0d12' }}
+                title={activeRunnerApp?.name || 'PWA App'}
+              />
+            ) : (
+              <ScrollView style={{ flex: 1, padding: 16 }}>
+                <View style={{ backgroundColor: '#16181f', borderRadius: 16, borderBottomWidth: 1, borderColor: '#2b3240', padding: 16, marginBottom: 16 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.primary, marginBottom: 6 }}>📱 Native In-App App Runner</Text>
+                  <Text style={{ fontSize: 12, color: THEME.textMuted, lineHeight: 18 }}>
+                    Running "{activeRunnerApp?.name}" directly inside Sanwitch Connect with 0 browser redirects!
+                  </Text>
+                </View>
+
+                {widgets.length === 0 ? (
+                  <View style={{ padding: 30, alignItems: 'center' }}>
+                    <Text style={{ color: THEME.textMuted, fontSize: 13 }}>No active widgets in this app layout.</Text>
+                  </View>
+                ) : (
+                  widgets.map(w => (
+                    <View key={w.id} style={{ backgroundColor: '#16181f', borderWidth: 1, borderColor: '#2b3240', borderRadius: 14, padding: 16, marginBottom: 12 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textMuted, textTransform: 'uppercase', marginBottom: 10 }}>{w.id}</Text>
+                      {w.type === 'switch' && (
+                        <TouchableOpacity style={[styles.nativeBtn, { backgroundColor: widgetStates[w.id] ? THEME.primary : 'rgba(255,255,255,0.1)' }]} onPress={() => toggleWidgetState(w.id)}>
+                          <Text style={styles.nativeBtnText}>{widgetStates[w.id] ? 'POWER ON' : 'POWER OFF'}</Text>
+                        </TouchableOpacity>
+                      )}
+                      {w.type === 'gauge' && (
+                        <Text style={{ fontSize: 26, fontWeight: '800', color: THEME.primary, textAlign: 'center', marginVertical: 8 }}>
+                          {widgetStates[w.id] || sensorData[0] || '24.5'} °C
+                        </Text>
+                      )}
+                      {w.type === 'button' && (
+                        <TouchableOpacity style={styles.nativeBtn} onPress={() => processVoice(`${w.id} trigger`)}>
+                          <Text style={styles.nativeBtnText}>EXECUTE {w.id.toUpperCase()}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            )}
           </View>
         </Modal>
 
@@ -2011,21 +2109,29 @@ export default function App() {
                         </TouchableOpacity>
                       </View>
 
-                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                      <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+                        <TouchableOpacity
+                          style={{ flex: 1, backgroundColor: THEME.success, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                          onPress={() => handleRunAppInApp(app)}
+                        >
+                          <Play size={14} color={THEME.background} style={{ marginRight: 4 }} />
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.background }}>RUN IN-APP</Text>
+                        </TouchableOpacity>
+
                         <TouchableOpacity
                           style={{ flex: 1, backgroundColor: THEME.primary, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
                           onPress={() => handleLaunchSavedApp(app)}
                         >
-                          <Smartphone size={14} color={THEME.background} style={{ marginRight: 6 }} />
-                          <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.background }}>OPEN APP</Text>
+                          <Smartphone size={14} color={THEME.background} style={{ marginRight: 4 }} />
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.background }}>PWA LINK</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                           style={{ flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderWidth: 1, borderColor: THEME.border, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
                           onPress={() => handleLoadAppForEditing(app)}
                         >
-                          <Edit3 size={14} color={THEME.text} style={{ marginRight: 6 }} />
-                          <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.text }}>EDIT LAYOUT</Text>
+                          <Edit3 size={14} color={THEME.text} style={{ marginRight: 4 }} />
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.text }}>EDIT</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
