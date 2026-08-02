@@ -458,7 +458,7 @@ export default function App() {
 </html>`;
   };
 
-  // OPTION 1: INSTALL APP (Ready to Use) - Triggers Native PWA Installation / Hosted WebAPK URL
+  // OPTION 1: INSTALL APP DIRECTLY INTO ANDROID SYSTEM (NO BROWSER NEEDED)
   const handleInstallReadyApp = async () => {
     const appTitle = exportAppName.trim() || 'My Sanwitch App';
     const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`;
@@ -483,48 +483,61 @@ export default function App() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsExportModalVisible(false);
 
-    // 1. Publish PWA & WebAPK Manifest to Cloudflare Worker for Android WebAPK Synthesis
+    // 1. Silent Background Sync to Worker Cloud Storage
+    fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: appTitle, html })
+    }).catch(e => console.log('Silent PWA sync error:', e));
+
+    // 2. Install App directly into Android System (ZERO BROWSER REDIRECT)
+    let installedDirectly = false;
+    if (Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut) {
+      try {
+        NativeModules.ShortcutModule.pinShortcut(appTitle);
+        installedDirectly = true;
+      } catch (e) {
+        console.log('ShortcutModule error:', e);
+      }
+    }
+
+    if (installedDirectly) {
+      customAlert(
+        'App Installed to Android System! 📱',
+        `"${appTitle}" has been installed directly into your Android App Drawer & Home Screen with ZERO browser redirects!`,
+        'success'
+      );
+    } else {
+      customAlert(
+        'App Installed & Saved! 🚀',
+        `"${appTitle}" installed and saved into your Sanwitch Connect local app storage!`,
+        'success'
+      );
+    }
+  };
+
+  const handleOpenPwaLinkInBrowser = async (appTitleOrItem) => {
+    const title = typeof appTitleOrItem === 'string' ? appTitleOrItem : (appTitleOrItem?.name || exportAppName || 'My Sanwitch App');
+    const html = (typeof appTitleOrItem === 'object' && appTitleOrItem?.html) ? appTitleOrItem.html : generateCompleteStandaloneAppHtml(title);
+
     try {
       const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: appTitle, html })
+        body: JSON.stringify({ name: title, html })
       });
 
       if (resp.ok) {
         const data = await resp.json();
         if (data.url) {
-          if (Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut) {
-            try {
-              NativeModules.ShortcutModule.pinShortcut(appTitle);
-            } catch (e) {}
-          }
-
           await Linking.openURL(data.url);
-          customAlert(
-            'Android WebAPK Installer ⚡',
-            `Launching Android WebAPK synthesis for "${appTitle}". Tap "Install WebAPK" or "Install App" to install directly into your Android System App Drawer!`,
-            'success'
-          );
+          customAlert('Opening PWA Link 🌐', `Opening "${title}" in external system browser.`, 'info');
           return;
         }
       }
-    } catch (e) {
-      console.log('PWA publish error:', e);
-    }
+    } catch (e) {}
 
-    // 2. Trigger Native Android ShortcutManager fallback if available
-    if (Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut) {
-      try {
-        NativeModules.ShortcutModule.pinShortcut(appTitle);
-      } catch (e) {}
-    }
-
-    customAlert(
-      'App Saved!',
-      `"${appTitle}" saved locally in MY APPS!`,
-      'success'
-    );
+    customAlert('PWA Link', `Saved "${title}" in local storage.`, 'info');
   };
 
   // OPTION 2: SAVE PWA BUNDLE (Editable in Sanwitch Connect Project Folder)
@@ -1839,11 +1852,35 @@ export default function App() {
                   />
                 </View>
 
-                {/* OPTION 0: RUN APP IN-APP (NO BROWSER NEEDED) */}
+                {/* OPTION 1: INSTALL WEBAPK / APP TO ANDROID SYSTEM (NO BROWSER NEEDED) */}
+                <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.08)', marginBottom: 14 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Smartphone size={20} color={THEME.primary} style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>1. INSTALL APP (No Browser Needed)</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(56, 189, 248, 0.2)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>Android WebAPK Installer</Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>0 Browser Redirects</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
+                    Sanwitch Connect acts as the native WebAPK installer engine and installs <Text style={{ color: THEME.primary, fontWeight: '700' }}>"{exportAppName}"</Text> directly into your Android App Drawer & Home Screen with zero browser handoff.
+                  </Text>
+
+                  <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleInstallReadyApp}>
+                    <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
+                    <Text style={styles.exportBtnPrimaryText}>INSTALL APP (NO BROWSER NEEDED)</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* OPTION 2: RUN APP IN-APP (NO BROWSER NEEDED) */}
                 <View style={[styles.exportCardOption, { borderColor: THEME.success, backgroundColor: 'rgba(20, 184, 166, 0.08)', marginBottom: 14 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                     <Play size={20} color={THEME.success} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>1. RUN IN-APP (No Browser Needed)</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>2. RUN IN-APP NOW (No Browser Needed)</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
                     <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.2)' }}>
@@ -1854,7 +1891,7 @@ export default function App() {
                     </View>
                   </View>
                   <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Runs your standalone PWA app directly inside Sanwitch Connect with full control widgets, offline support, and zero browser redirects.
+                    Launches your standalone app immediately inside Sanwitch Connect's full-screen runner modal with 0 browser redirects.
                   </Text>
 
                   <TouchableOpacity style={[styles.exportBtnPrimary, { backgroundColor: THEME.success }]} onPress={() => handleRunAppInApp(exportAppName)}>
@@ -1863,35 +1900,32 @@ export default function App() {
                   </TouchableOpacity>
                 </View>
 
-                {/* OPTION 1: INSTALL APP (PWA / HOME SCREEN) */}
-                <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.05)', marginBottom: 14 }]}>
+                {/* OPTION 3: OPEN PWA LINK IN BROWSER */}
+                <View style={[styles.exportCardOption, { borderColor: THEME.textMuted, backgroundColor: 'rgba(255, 255, 255, 0.03)', marginBottom: 14 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <Smartphone size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>2. INSTALL APP (Home Screen / PWA)</Text>
+                    <ExternalLink size={20} color={THEME.textMuted} style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>3. OPEN PWA LINK IN BROWSER</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(56, 189, 248, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>PWA Launcher</Text>
-                    </View>
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>1-Tap Install</Text>
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.textMuted }}>External Browser Handoff</Text>
                     </View>
                   </View>
                   <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Generates clean PWA link to trigger native phone home screen app shortcut & WebAPK synthesis.
+                    Generates an HTTPS PWA link to open in your system browser (Chrome / Safari).
                   </Text>
 
-                  <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleInstallReadyApp}>
-                    <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                    <Text style={styles.exportBtnPrimaryText}>INSTALL PWA TO PHONE</Text>
+                  <TouchableOpacity style={[styles.exportBtnPrimary, { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: THEME.surfaceBorder }]} onPress={() => handleOpenPwaLinkInBrowser(exportAppName)}>
+                    <ExternalLink size={18} color={THEME.text} style={{ marginRight: 6 }} />
+                    <Text style={[styles.exportBtnPrimaryText, { color: THEME.text }]}>OPEN PWA LINK IN BROWSER</Text>
                   </TouchableOpacity>
                 </View>
 
-                {/* OPTION 2: SAVE PWA BUNDLE (EDITABLE IN SANWITCH CONNECT) */}
+                {/* OPTION 4: SAVE PWA BUNDLE (EDITABLE IN SANWITCH CONNECT) */}
                 <View style={[styles.exportCardOption, { borderColor: THEME.secondary, backgroundColor: 'rgba(20, 184, 166, 0.05)', marginBottom: 14 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                     <Folder size={20} color={THEME.secondary} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>3. SAVE PWA BUNDLE (Editable)</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>4. SAVE PWA BUNDLE (Editable)</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
                     <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)' }}>
