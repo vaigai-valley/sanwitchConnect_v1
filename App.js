@@ -275,9 +275,22 @@ export default function App() {
     }
 
     customAlert(
-      'Android WebAPK Installed! 📱',
-      `"${appTitle}" installed into Android System Package Manager via WebAPK Installer (NO shortcut API used & 0 browser redirects)!`,
-      'success'
+      'Standalone App Ready! 🚀',
+      `"${appTitle}" has been compiled and saved! Select an action to run your standalone application:`,
+      [
+        {
+          text: '▶️ Launch App Now',
+          onPress: () => handleRunAppInApp(newApp)
+        },
+        {
+          text: '🌐 Open WebAPK Link',
+          onPress: () => handleOpenPwaLinkInBrowser(appTitle)
+        },
+        {
+          text: 'Close',
+          style: 'cancel'
+        }
+      ]
     );
   };
 
@@ -1150,14 +1163,12 @@ export default function App() {
         }
       }
 
-      setTimeout(() => {
+      setTimeout(async () => {
         setIsInstallModalVisible(false);
         setInstallProgress(0);
-        customAlert(
-          'Standalone App Ready! 🚀',
-          'Your layout has been compiled into a standalone Android WebAPK application. Tap "Install" on the system prompt to add it to your App Drawer.',
-          'success'
-        );
+
+        // Execute full install & save pipeline
+        await handleInstallReadyApp();
       }, 900);
     } catch (e) {
       setIsInstallModalVisible(false);
