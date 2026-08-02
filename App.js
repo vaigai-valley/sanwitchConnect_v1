@@ -33,6 +33,13 @@ import { LineChart } from 'react-native-chart-kit';
 import { Buffer } from 'buffer';
 import { generateCompleteStandaloneAppHtml } from './pwaFrameworkBundle';
 
+let WebView = null;
+try {
+  WebView = require('react-native-webview').WebView;
+} catch (e) {
+  console.log('WebView module loading fallback');
+}
+
 let bleManager = null;
 try {
   const { BleManager } = require('react-native-ble-plx');
@@ -1835,6 +1842,16 @@ export default function App() {
                 srcDoc={activeRunnerApp?.html || ''}
                 style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#0b0d12' }}
                 title={activeRunnerApp?.name || 'PWA App'}
+              />
+            ) : WebView ? (
+              <WebView
+                source={{ html: activeRunnerApp?.html || '' }}
+                style={{ flex: 1, backgroundColor: '#0b0d12' }}
+                originWhitelist={['*']}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                allowFileAccess={true}
+                scalesPageToFit={true}
               />
             ) : (
               <ScrollView style={{ flex: 1, padding: 16 }}>
