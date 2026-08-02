@@ -1095,6 +1095,9 @@ export default function App() {
         py += `${indent}if msg.startswith("${c}:"):\n${indent}    val = int(msg.split(":")[1])\n${indent}    PWM(Pin(5), freq=1000).duty(int(val * 10.23))\n${indent}    print("${c} PWM ->", val)\n`;
       } else if (w.type === 'joystick') {
         py += `${indent}if msg.startswith("${c}:"):\n${indent}    coords = msg.split(":")[1].split(",")\n${indent}    jx, jy = int(coords[0]), int(coords[1])\n${indent}    print("${c} Joystick -> X:", jx, "Y:", jy)\n`;
+      } else if (w.type === 'custom') {
+        const customPayload = w.cmd || `${c}:EXEC`;
+        py += `${indent}if msg == "${customPayload}":\n${indent}    print("Custom Payload Executed: ${customPayload}")\n${indent}    # Handle custom hardware logic for ${w.id}\n`;
       }
     });
 
