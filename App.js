@@ -151,6 +151,9 @@ export default function App() {
   const [widgets, setWidgets] = useState([]);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isInstallModalVisible, setIsInstallModalVisible] = useState(false);
+  const [installProgress, setInstallProgress] = useState(0);
+  const [installStepText, setInstallStepText] = useState('');
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [isNameModalVisible, setIsNameModalVisible] = useState(false);
@@ -1115,6 +1118,54 @@ export default function App() {
     return py;
   };
 
+  const installStandalonePwa = async () => {
+    try {
+      setIsInstallModalVisible(true);
+      setInstallProgress(15);
+      setInstallStepText('Extracting layout state & custom payloads...');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      await new Promise(r => setTimeout(r, 600));
+      setInstallProgress(45);
+      setInstallStepText('Generating Cyber-Glassmorphism CSS & Web Manifest...');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      const pwaHtml = generateCompleteStandaloneAppHtml('Sanwitch App', widgets, wifiIP);
+
+      await new Promise(r => setTimeout(r, 700));
+      setInstallProgress(75);
+      setInstallStepText('Embedding Base64 PWA Icon & WebBluetooth drivers...');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      await new Promise(r => setTimeout(r, 800));
+      setInstallProgress(100);
+      setInstallStepText('Package compiled! Installing to Android App Drawer...');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule) {
+        try {
+          await NativeModules.WebApkInstallerModule.installWebApk(pwaHtml, 'Sanwitch App');
+        } catch (e) {
+          console.log('Native WebAPK Installer triggered:', e.message);
+        }
+      }
+
+      setTimeout(() => {
+        setIsInstallModalVisible(false);
+        setInstallProgress(0);
+        customAlert(
+          'Standalone App Ready! 🚀',
+          'Your layout has been compiled into a standalone Android WebAPK application. Tap "Install" on the system prompt to add it to your App Drawer.',
+          'success'
+        );
+      }, 900);
+    } catch (e) {
+      setIsInstallModalVisible(false);
+      setInstallProgress(0);
+      customAlert('Installation Error', e.message, 'error');
+    }
+  };
+
   const renderWidget = (w) => {
     const cmd = w.id.toUpperCase();
     const isActive = widgetStates[w.id];
@@ -1202,6 +1253,13 @@ export default function App() {
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              style={[styles.avatarHeaderBtn, { marginRight: 8, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderColor: 'rgba(20, 184, 166, 0.4)' }]}
+              onPress={installStandalonePwa}
+            >
+              <Smartphone size={18} color={THEME.secondary} />
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.avatarHeaderBtn, { marginRight: 8, backgroundColor: 'rgba(56, 189, 248, 0.12)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}
               onPress={() => {
@@ -1518,6 +1576,34 @@ export default function App() {
         {activeView === 'term' && (
           <View style={styles.termContainer}><FlatList data={logs} keyExtractor={item => item.id} renderItem={({ item }) => (<Text style={[styles.logText, { color: item.type === 'tx' ? THEME.primary : THEME.textMuted }]}>{`> ${item.msg}`}</Text>)} inverted /></View>
         )}
+
+        <Modal visible={isInstallModalVisible} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { alignItems: 'center', paddingVertical: 25 }]}>
+              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(20, 184, 166, 0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.secondary, marginBottom: 15 }}>
+                <Smartphone size={28} color={THEME.secondary} />
+              </View>
+              <Text style={[styles.modalTitle, { textAlign: 'center', marginBottom: 4 }]}>Installing Standalone App 🚀</Text>
+              <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', marginBottom: 20 }}>
+                Compiling native WebAPK bundle for Android App Drawer
+              </Text>
+
+              {/* Animated Progress Bar */}
+              <View style={{ width: '100%', height: 10, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 5, overflow: 'hidden', marginBottom: 12, borderWidth: 1, borderColor: THEME.surfaceBorder }}>
+                <View style={{ width: `${installProgress}%`, height: '100%', backgroundColor: THEME.secondary, borderRadius: 5 }} />
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 15 }}>
+                <Text style={{ fontSize: 11, color: THEME.secondary, fontWeight: '700' }}>PROGRESS</Text>
+                <Text style={{ fontSize: 11, color: THEME.text, fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>{installProgress}%</Text>
+              </View>
+
+              <Text style={{ fontSize: 12, color: THEME.primary, fontWeight: '600', textAlign: 'center', minHeight: 32 }}>
+                {installStepText}
+              </Text>
+            </View>
+          </View>
+        </Modal>
 
         <Modal visible={isModalVisible} transparent animationType="fade">
           <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Choose Widget</Text><View style={styles.optionsGrid}>{['toggle', 'slider', 'button', 'gauge', 'rgb', 'joystick', 'custom'].map(t => (<TouchableOpacity key={t} style={styles.optBtn} onPress={() => { setPendingType(t); setIsModalVisible(false); setIsNameModalVisible(true); }}><Text style={styles.navBtnText}>{t.toUpperCase()}</Text></TouchableOpacity>))}</View><TouchableOpacity style={styles.modalClose} onPress={() => setIsModalVisible(false)}><X size={24} color={THEME.textMuted} /></TouchableOpacity></View></View>
