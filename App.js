@@ -283,15 +283,25 @@ export default function App() {
 
     customAlert(
       'Standalone App Ready! 🚀',
-      `"${appTitle}" has been compiled and saved! Select an action to run your standalone application:`,
+      `"${appTitle}" has been compiled directly by Sanwitch Connect! Select how you want to run your standalone app:`,
       [
         {
-          text: '▶️ Launch App Now',
-          onPress: () => handleRunAppInApp(newApp)
+          text: '📱 Install Direct to Phone',
+          onPress: async () => {
+            if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
+              try {
+                await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
+              } catch (e) {
+                handleRunAppInApp(newApp);
+              }
+            } else {
+              handleRunAppInApp(newApp);
+            }
+          }
         },
         {
-          text: '🌐 Open WebAPK Link',
-          onPress: () => handleOpenPwaLinkInBrowser(appTitle)
+          text: '▶️ Run Fullscreen In-App',
+          onPress: () => handleRunAppInApp(newApp)
         },
         {
           text: 'Close',
