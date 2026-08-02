@@ -1254,13 +1254,6 @@ export default function App() {
 
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity
-              style={[styles.avatarHeaderBtn, { marginRight: 8, backgroundColor: 'rgba(20, 184, 166, 0.15)', borderColor: 'rgba(20, 184, 166, 0.4)' }]}
-              onPress={installStandalonePwa}
-            >
-              <Smartphone size={18} color={THEME.secondary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
               style={[styles.avatarHeaderBtn, { marginRight: 8, backgroundColor: 'rgba(56, 189, 248, 0.12)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}
               onPress={() => {
                 setTourMode('guided');
