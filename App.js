@@ -500,11 +500,17 @@ export default function App() {
     }
 
     // 2. Install WebAPK directly via Android PackageInstaller API (NO SHORTCUT APIS USED)
-    let installedViaWebApk = false;
     if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
       try {
-        NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
-        installedViaWebApk = true;
+        const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
+        if (res === 'PERMISSION_NEEDED') {
+          customAlert(
+            'Permission Required ⚙️',
+            `Opening Android Settings! Please enable "Allow from this source" for Sanwitch Connect, then tap INSTALL APP again.`,
+            'info'
+          );
+          return;
+        }
       } catch (e) {
         console.log('WebApkInstallerModule error:', e);
       }
