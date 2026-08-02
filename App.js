@@ -799,6 +799,23 @@ export default function App() {
     }
   };
 
+  const unpairSession = async () => {
+    try {
+      const sid = pairedSessionId || (await AsyncStorage.getItem('sanwitch_paired_session_id'));
+      if (sid) {
+        await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/unpair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sid, sessionId: sid })
+        }).catch(() => {});
+      }
+    } catch (e) {}
+
+    await AsyncStorage.removeItem('sanwitch_paired_session_id');
+    setPairedSessionId(null);
+    customAlert('Unpaired 🔓', 'Successfully unpaired from Sanwitch Desktop IDE.', 'info');
+  };
+
   const logout = async () => {
     try {
       const sid = pairedSessionId || (await AsyncStorage.getItem('sanwitch_paired_session_id'));
@@ -806,7 +823,7 @@ export default function App() {
         await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/unpair', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sid })
+          body: JSON.stringify({ session_id: sid, sessionId: sid })
         }).catch(() => {});
       }
     } catch (e) {}
@@ -1447,13 +1464,23 @@ export default function App() {
                 )}
 
                 {pairedSessionId && !showQrScannerInProfile && (
-                  <TouchableOpacity
-                    style={[styles.nativeBtn, { backgroundColor: 'rgba(255,255,255,0.08)', width: '100%', marginBottom: 10 }]}
-                    onPress={() => { setShowQrScannerInProfile(true); setScanned(false); }}
-                  >
-                    <QrCode size={16} color={THEME.primary} />
-                    <Text style={[styles.nativeBtnText, { color: THEME.text }]}>Pair with New Desktop IDE QR</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity
+                      style={[styles.nativeBtn, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.4)', width: '100%', marginBottom: 10 }]}
+                      onPress={unpairSession}
+                    >
+                      <LogOut size={16} color="#f87171" />
+                      <Text style={[styles.nativeBtnText, { color: '#f87171' }]}>Unpair Desktop IDE</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.nativeBtn, { backgroundColor: 'rgba(255,255,255,0.08)', width: '100%', marginBottom: 10 }]}
+                      onPress={() => { setShowQrScannerInProfile(true); setScanned(false); }}
+                    >
+                      <QrCode size={16} color={THEME.primary} />
+                      <Text style={[styles.nativeBtnText, { color: THEME.text }]}>Pair with New Desktop IDE QR</Text>
+                    </TouchableOpacity>
+                  </>
                 )}
 
                 <TouchableOpacity style={[styles.nativeBtn, { backgroundColor: THEME.error, width: '100%', marginTop: 5 }]} onPress={logout}>
