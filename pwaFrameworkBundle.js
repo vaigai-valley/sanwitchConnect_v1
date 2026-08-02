@@ -99,8 +99,8 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
 
       <nav>
         <button class="nav-btn active" data-view="dashboard">Panel</button>
-        <button class="nav-btn" data-view="connect">Connect</button>
-        <button class="nav-btn" data-view="terminal">Term</button>
+        <button class="nav-btn" data-view="connect">Link</button>
+        <button class="nav-btn" data-view="terminal">Terminal</button>
       </nav>
 
       <main>
