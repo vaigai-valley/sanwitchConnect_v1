@@ -1939,7 +1939,7 @@ export default function App() {
                 style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(20, 184, 166, 0.08)', borderWidth: 1, borderColor: 'rgba(20, 184, 166, 0.3)', padding: 12, borderRadius: 12, marginBottom: 10 }}
                 onPress={() => {
                   setIsBottomMenuVisible(false);
-                  setIsExportModalVisible(true);
+                  installStandalonePwa();
                 }}
               >
                 <Sparkles size={20} color={THEME.success} style={{ marginRight: 10 }} />
