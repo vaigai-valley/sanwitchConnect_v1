@@ -264,9 +264,32 @@ export default function App() {
         {
           text: 'Install App',
           onPress: async () => {
+            setIsInstallModalVisible(true);
+            setInstallProgress(15);
+            setInstallStepText('Initiating Android PackageInstaller...');
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
             if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
               try {
-                const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
+                setInstallProgress(45);
+                setInstallStepText('Writing APK package to device cache...');
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+                const resPromise = NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
+
+                setInstallProgress(85);
+                setInstallStepText('Launching system prompt: "Do you want to install this app?"...');
+
+                const res = await resPromise;
+
+                setInstallProgress(100);
+                setInstallStepText('Package Installer Ready!');
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+                await new Promise(r => setTimeout(r, 400));
+                setIsInstallModalVisible(false);
+                setInstallProgress(0);
+
                 if (res === 'PERMISSION_NEEDED') {
                   customAlert(
                     'Permission Required',
@@ -291,7 +314,12 @@ export default function App() {
                 }
               } catch (e) {
                 console.log('WebApkInstallerModule error:', e);
+                setIsInstallModalVisible(false);
+                setInstallProgress(0);
               }
+            } else {
+              setIsInstallModalVisible(false);
+              setInstallProgress(0);
             }
 
             // Fallback for Expo Go / standard client: Trigger WebAPK Minting service via Chrome
