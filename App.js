@@ -241,7 +241,7 @@ export default function App() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsExportModalVisible(false);
 
-    // 1. Silent Background Sync to Worker Cloud Storage
+    // Silent Background Sync to Worker Cloud Storage
     let publishedUrl = '';
     try {
       const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
@@ -255,31 +255,6 @@ export default function App() {
       }
     } catch (e) {
       console.log('Silent PWA sync error:', e);
-    }
-
-    // 2. Install WebAPK directly via Android PackageInstaller API (NO SHORTCUT APIS USED)
-    if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
-      try {
-        const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
-        if (res === 'PERMISSION_NEEDED') {
-          customAlert(
-            'Permission Required',
-            `Opening Android Settings! Please enable "Allow from this source" for Sanwitch Connect, then tap INSTALL APP again.`,
-            'info'
-          );
-          return;
-        } else if (res === 'POLICY_RESTRICTED') {
-          if (publishedUrl) await Linking.openURL(publishedUrl);
-          customAlert(
-            'Enterprise Policy Detected',
-            `Direct sideloading is restricted by your Android device policy. Switched smoothly to HTTPS PWA link!`,
-            'info'
-          );
-          return;
-        }
-      } catch (e) {
-        console.log('WebApkInstallerModule error:', e);
-      }
     }
 
     customAlert(
