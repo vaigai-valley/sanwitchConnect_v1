@@ -145,7 +145,7 @@ export default function App() {
             setUser(null);
             setPairedSessionId(null);
             setActiveView('auth');
-            customAlert('Session Unpaired 🔓', 'Your pairing session was logged out from Desktop IDE.', 'warning');
+            customAlert('Session Unpaired', 'Your pairing session was logged out from Desktop IDE.', 'warning');
           }
         }
       } catch (e) {}
@@ -409,7 +409,7 @@ export default function App() {
         if (data.url) {
           await Linking.openURL(data.url);
           customAlert(
-            'Opening PWA App 🚀',
+            'Opening PWA App',
             `Opening "${appItem.name}" in system browser. Tap "Add to Home Screen" to install!`,
             'success'
           );
@@ -466,7 +466,7 @@ export default function App() {
     try {
       await AsyncStorage.setItem('@sanwitch_saved_apps', JSON.stringify(filtered));
     } catch (e) {}
-    customAlert('Deleted ️', 'App layout removed from local phone storage.', 'info');
+    customAlert('Deleted', 'App layout removed from local phone storage.', 'info');
   };
 
   const customAlert = (title, message, buttonsOrType = null) => {
@@ -707,7 +707,7 @@ export default function App() {
 
     await AsyncStorage.removeItem('sanwitch_paired_session_id');
     setPairedSessionId(null);
-    customAlert('Unpaired 🔓', 'Successfully unpaired from Sanwitch Desktop IDE.', 'info');
+    customAlert('Unpaired', 'Successfully unpaired from Sanwitch Desktop IDE.', 'info');
   };
 
   const logout = async () => {
@@ -1651,7 +1651,7 @@ export default function App() {
               <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(20, 184, 166, 0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.secondary, marginBottom: 15 }}>
                 <Smartphone size={28} color={THEME.secondary} />
               </View>
-              <Text style={[styles.modalTitle, { textAlign: 'center', marginBottom: 4 }]}>Installing Standalone App 🚀</Text>
+              <Text style={[styles.modalTitle, { textAlign: 'center', marginBottom: 4 }]}>Installing Standalone App</Text>
               <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', marginBottom: 20 }}>
                 Compiling native WebAPK bundle for Android App Drawer
               </Text>
@@ -1699,7 +1699,7 @@ export default function App() {
                 <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(56, 189, 248, 0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.primary, marginBottom: 8 }}>
                   <Mic size={24} color={THEME.primary} />
                 </View>
-                <Text style={styles.modalTitle}>Voice Assistant ️</Text>
+                <Text style={styles.modalTitle}>Voice Assistant</Text>
                 <Text style={[styles.textMuted, { textAlign: 'center' }]}>Speak or choose a live voice command:</Text>
               </View>
 
@@ -1724,35 +1724,35 @@ export default function App() {
                         return (
                           <React.Fragment key={w.id}>
                             <TouchableOpacity style={styles.optBtn} onPress={() => processVoice(`${w.id} ON`)}>
-                              <Text style={styles.navBtnText}>️ {w.id} ON</Text>
+                              <Text style={styles.navBtnText}>{w.id} ON</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.optBtn} onPress={() => processVoice(`${w.id} OFF`)}>
-                              <Text style={styles.navBtnText}>️ {w.id} OFF</Text>
+                              <Text style={styles.navBtnText}>{w.id} OFF</Text>
                             </TouchableOpacity>
                           </React.Fragment>
                         );
                       } else if (w.type === 'button') {
                         return (
                           <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`Action ${w.id}`)}>
-                            <Text style={styles.navBtnText}>️ ACTION {w.id.toUpperCase()}</Text>
+                            <Text style={styles.navBtnText}>ACTION {w.id.toUpperCase()}</Text>
                           </TouchableOpacity>
                         );
                       } else if (w.type === 'slider') {
                         return (
                           <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`${w.id} 75`)}>
-                            <Text style={styles.navBtnText}>️ {w.id.toUpperCase()} 75%</Text>
+                            <Text style={styles.navBtnText}>{w.id.toUpperCase()} 75%</Text>
                           </TouchableOpacity>
                         );
                       } else if (w.type === 'rgb') {
                         return (
                           <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`${w.id} Red`)}>
-                            <Text style={styles.navBtnText}>️ {w.id.toUpperCase()} RED</Text>
+                            <Text style={styles.navBtnText}>{w.id.toUpperCase()} RED</Text>
                           </TouchableOpacity>
                         );
                       } else if (w.type === 'custom') {
                         return (
                           <TouchableOpacity key={w.id} style={styles.optBtn} onPress={() => processVoice(`${w.id}`)}>
-                            <Text style={styles.navBtnText}> EXECUTE {w.id.toUpperCase()}</Text>
+                            <Text style={styles.navBtnText}>EXECUTE {w.id.toUpperCase()}</Text>
                           </TouchableOpacity>
                         );
                       }
@@ -2263,7 +2263,7 @@ export default function App() {
 
                       <View style={{ backgroundColor: 'rgba(56, 189, 248, 0.1)', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', marginBottom: 12, alignItems: 'center' }}>
                         <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.primary, textAlign: 'center' }}>
-                          ⚡ Next: Take the 2-Step Guided Quickstart Tour to create your 1st widget & push to IDE!
+                          Next: Take the 2-Step Guided Quickstart Tour to create your 1st widget & push to IDE!
                         </Text>
                       </View>
 
@@ -2282,7 +2282,7 @@ export default function App() {
                             setTourStep(1);
                           }}
                         >
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.background, marginRight: 4 }}>2-Step Quickstart ➔</Text>
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.background, marginRight: 4 }}>2-Step Quickstart</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -2295,7 +2295,7 @@ export default function App() {
                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                           }}
                         >
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.background }}>Done 🚀</Text>
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.background }}>Done</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
