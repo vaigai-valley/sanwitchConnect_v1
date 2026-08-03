@@ -86,7 +86,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         return
       }
 
-      // 2. HTTPS Download or Direct APK PackageInstaller vs PWA WebApp
+      // 2. HTTPS Download -> Native Android PackageInstaller (0 Browser Fallbacks)
       if (pwaUrl.startsWith("http")) {
         Thread {
           try {
@@ -108,39 +108,21 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
             val buffer = ByteArray(4096)
             var bytesRead: Int
-            var isFirstBlock = true
-            var isRealApk = false
 
             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-              if (isFirstBlock) {
-                isFirstBlock = false
-                // Check ZIP / APK Magic Header (PK\x03\x04 -> 0x50, 0x4B, 0x03, 0x04)
-                if (bytesRead >= 4 && buffer[0] == 0x50.toByte() && buffer[1] == 0x4B.toByte() && buffer[2] == 0x03.toByte() && buffer[3] == 0x04.toByte()) {
-                  isRealApk = true
-                }
-              }
               outputStream.write(buffer, 0, bytesRead)
             }
             outputStream.close()
             inputStream.close()
 
-            if (isRealApk) {
-              // Launch Native Android PackageInstaller for compiled APK binaries
-              val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
-              val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(apkUri, "application/vnd.android.package-archive")
-                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
-              }
-              context.startActivity(intent)
-              promise.resolve("INSTALL_PROMPT_OPENED")
-            } else {
-              // PWA HTML Application: Launch Chrome WebAPK Minter
-              val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(pwaUrl)).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-              }
-              context.startActivity(browserIntent)
-              promise.resolve("PWA_PROMPT_OPENED")
+            // Launch Native Android PackageInstaller for binary APK packages
+            val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+              setDataAndType(apkUri, "application/vnd.android.package-archive")
+              flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
             }
+            context.startActivity(intent)
+            promise.resolve("INSTALL_PROMPT_OPENED")
           } catch (e: Exception) {
             e.printStackTrace()
             promise.reject("INSTALL_ERROR", e.message)
