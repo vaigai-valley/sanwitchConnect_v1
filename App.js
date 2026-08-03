@@ -292,11 +292,25 @@ export default function App() {
             if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
               try {
                 const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
-                if (res === 'PROMPT_SHOWN') {
+                if (res === 'PERMISSION_NEEDED') {
                   customAlert(
-                    'System Prompt Triggered',
-                    `Android System prompt "Add to Home screen" has popped up! Tap ADD to place "${appTitle}" directly onto your Home Screen and App Drawer!`,
+                    'Permission Required',
+                    'Android Settings opened! Please turn ON "Allow from this source" for Sanwitch Connect, then tap INSTALL APP again.',
+                    'info'
+                  );
+                  return;
+                } else if (res === 'INSTALL_PROMPT_OPENED') {
+                  customAlert(
+                    'Package Installer Ready',
+                    `Android System prompt "Do you want to install this app?" has popped up! Tap INSTALL to add "${appTitle}" directly to your device!`,
                     'success'
+                  );
+                  return;
+                } else if (res === 'CHROME_WEBAPK_OPENED') {
+                  customAlert(
+                    'Installing Standalone App',
+                    `Chrome opened "${appTitle}". Tap Chrome's menu (⋮) -> "Install App" to mint and install it as a standalone app!`,
+                    'info'
                   );
                   return;
                 }
