@@ -270,62 +270,72 @@ export default function App() {
             setInstallStepText('Writing APK package to device cache & launching PackageInstaller...');
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-            if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
-              try {
-                const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
+            if (publishedUrl && (publishedUrl.endsWith('.apk') || publishedUrl.startsWith('file://'))) {
+              // 1. Direct Native APK Sideloading via Android PackageInstaller
+              if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
+                try {
+                  const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
 
-                setInstallProgress(100);
-                setInstallStepText('Package Installer Ready!');
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-                await new Promise(r => setTimeout(r, 400));
-                setIsInstallModalVisible(false);
-                setInstallProgress(0);
-
-                if (res === 'PERMISSION_NEEDED') {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                  customAlert(
-                    'Permission Required',
-                    'Android Settings opened! Please turn ON "Allow from this source" for Sanwitch Connect, then tap INSTALL APP again.',
-                    'info'
-                  );
-                  return;
-                } else if (res === 'INSTALL_PROMPT_OPENED') {
+                  setInstallProgress(100);
+                  setInstallStepText('Package Installer Ready!');
                   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+                  await new Promise(r => setTimeout(r, 400));
+                  setIsInstallModalVisible(false);
+                  setInstallProgress(0);
+
+                  if (res === 'PERMISSION_NEEDED') {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                    customAlert(
+                      'Permission Required',
+                      'Android Settings opened! Please turn ON "Allow from this source" for Sanwitch Connect, then tap INSTALL APP again.',
+                      'info'
+                    );
+                    return;
+                  } else if (res === 'INSTALL_PROMPT_OPENED') {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    customAlert(
+                      'Package Installer Ready',
+                      `Android System prompt "Do you want to install this app?" has popped up! Tap INSTALL to add "${appTitle}" directly to your device!`,
+                      'success'
+                    );
+                    return;
+                  }
+                } catch (e) {
+                  console.log('WebApkInstallerModule error:', e);
+                  setIsInstallModalVisible(false);
+                  setInstallProgress(0);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                   customAlert(
-                    'Package Installer Ready',
-                    `Android System prompt "Do you want to install this app?" has popped up! Tap INSTALL to add "${appTitle}" directly to your device!`,
-                    'success'
-                  );
-                  return;
-                } else if (res === 'PWA_PROMPT_OPENED') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  customAlert(
-                    'Installing Standalone App',
-                    `Chrome opened "${appTitle}". Tap Chrome's menu (⋮) -> "Install App" to add it to your App Drawer!`,
-                    'info'
+                    'Installation Error',
+                    `Failed to launch PackageInstaller: ${e.message || 'Unknown Native Error'}`,
+                    'error'
                   );
                   return;
                 }
-              } catch (e) {
-                console.log('WebApkInstallerModule error:', e);
-                setIsInstallModalVisible(false);
-                setInstallProgress(0);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                customAlert(
-                  'Installation Error',
-                  `Failed to launch PackageInstaller: ${e.message || 'Unknown Native Error'}`,
-                  'error'
-                );
-                return;
               }
             } else {
+              // 2. Standalone HTML PWA WebApp: Trigger Chrome WebAPK Installer (0 Parsing Errors!)
+              setInstallProgress(100);
+              setInstallStepText('Opening WebAPK Installer...');
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+              await new Promise(r => setTimeout(r, 400));
               setIsInstallModalVisible(false);
               setInstallProgress(0);
-            }
 
-            // Fallback for Expo Go / standard client: Trigger WebAPK Minting service via Chrome
-            await handleOpenPwaLinkInBrowser(appTitle);
+              if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk && publishedUrl) {
+                await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
+              } else {
+                await handleOpenPwaLinkInBrowser(appTitle);
+              }
+
+              customAlert(
+                'Installing Standalone App',
+                `Chrome opened "${appTitle}". Tap Chrome's menu (⋮) -> "Install App" to add it as a standalone app to your App Drawer!`,
+                'info'
+              );
+            }
           }
         },
         {
