@@ -1208,12 +1208,49 @@ export default function App() {
 
   const generateCode = () => {
     let py = `# Sanwitch IDE - Unified MicroPython Protocol (ESP32/ESP8266)\n`;
-    py += `from machine import Pin, PWM, ADC\nimport time, json\n\n`;
+    py += `from machine import Pin, PWM, ADC\nimport time, json, bluetooth\n\n`;
 
     let indent = connectionMode === 'ble' ? "        " : "            ";
 
     if (connectionMode === 'ble') {
-      py += `# BLE UART Mode\nfrom ble_uart import BLEUART\nimport bluetooth\n_ble = bluetooth.BLE()\n_uart = BLEUART(_ble, name="Sanwitch-ESP32")\nprint("BLE UART Server Active: Sanwitch-ESP32")\n\nwhile True:\n    if _uart.any():\n        msg = _uart.read().decode().strip()\n`;
+      py += `# Standalone Embedded BLE UART Driver (No external ble_uart.py file needed)\n`;
+      py += `class BLEUART:\n`;
+      py += `    def __init__(self, ble, name="Sanwitch-ESP32"):\n`;
+      py += `        self._ble = ble\n`;
+      py += `        self._ble.active(True)\n`;
+      py += `        self._ble.irq(self._irq)\n`;
+      py += `        ((self._handle_tx, self._handle_rx),) = self._ble.gatts_register_services((\n`;
+      py += `            (bluetooth.UUID("6E400001-B5A3-F393-E0A9-E50E24DCCA9E"), (\n`;
+      py += `                (bluetooth.UUID("6E400003-B5A3-F393-E0A9-E50E24DCCA9E"), bluetooth.FLAG_NOTIFY),\n`;
+      py += `                (bluetooth.UUID("6E400002-B5A3-F393-E0A9-E50E24DCCA9E"), bluetooth.FLAG_WRITE),\n`;
+      py += `            )),\n`;
+      py += `        ))\n`;
+      py += `        self._connections = set()\n`;
+      py += `        self._rx_buffer = bytearray()\n`;
+      py += `        self._name = name\n`;
+      py += `        self._advertise()\n\n`;
+      py += `    def _irq(self, event, data):\n`;
+      py += `        if event == 1:\n`;
+      py += `            self._connections.add(data[0])\n`;
+      py += `        elif event == 2:\n`;
+      py += `            if data[0] in self._connections: self._connections.remove(data[0])\n`;
+      py += `            self._advertise()\n`;
+      py += `        elif event == 3:\n`;
+      py += `            if data[0] in self._connections and data[1] == self._handle_rx:\n`;
+      py += `                self._rx_buffer.extend(self._ble.gatts_read(self._handle_rx))\n\n`;
+      py += `    def any(self):\n`;
+      py += `        return len(self._rx_buffer)\n\n`;
+      py += `    def read(self):\n`;
+      py += `        res = self._rx_buffer.decode('utf-8', 'ignore') if self._rx_buffer else ""\n`;
+      py += `        self._rx_buffer = bytearray()\n`;
+      py += `        return res\n\n`;
+      py += `    def write(self, data):\n`;
+      py += `        for conn_handle in self._connections:\n`;
+      py += `            self._ble.gatts_notify(conn_handle, self._handle_tx, data.encode('utf-8') if isinstance(data, str) else data)\n\n`;
+      py += `    def _advertise(self, interval_us=500000):\n`;
+      py += `        payload = bytearray(b'\\x02\\x01\\x06') + bytearray([len(self._name) + 1, 0x09]) + self._name.encode()\n`;
+      py += `        self._ble.gap_advertise(interval_us, adv_data=payload)\n\n`;
+      py += `_ble = bluetooth.BLE()\n_uart = BLEUART(_ble, name="Sanwitch-ESP32")\nprint("BLE UART Server Active: Sanwitch-ESP32")\n\nwhile True:\n    if _uart.any():\n        msg = _uart.read().strip()\n`;
     } else {
       py += `# WiFi Web Server Mode\nimport network, usocket as socket\nwlan = network.WLAN(network.STA_IF)\nwlan.active(True)\nwlan.connect("${wifiSSID}", "${wifiPass}")\nprint("Connecting WiFi...")\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\ns.bind(('', 80))\ns.listen(5)\nprint("Web Server active on port 80")\n\nwhile True:\n    try:\n        conn, addr = s.accept()\n        req = conn.recv(1024).decode()\n        if "?cmd=" in req:\n            msg = req.split("?cmd=")[1].split(" ")[0]\n`;
     }
