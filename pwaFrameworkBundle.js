@@ -298,6 +298,8 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
       .terminal-input-row { display: flex; gap: 10px; align-items: center; background: rgba(255, 255, 255, 0.04); padding: 8px 14px; border-radius: 12px; border: 1px solid var(--surface-border); }
       .terminal-input-row input { flex: 1; background: transparent; border: none; color: white; font-family: inherit; font-size: 0.85rem; outline: none; }
 
+      button svg, .icon-btn svg, .nav-btn svg { pointer-events: none; }
+      .nav-btn * { pointer-events: none; }
       @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } .card-wide { grid-column: span 1; } }
     </style>
   </head>
@@ -434,8 +436,8 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           });
           cardHtml += '</div>';
         } else if (type === 'custom') {
-          cardHtml += '<div class="payload-box">CMD > ' + cmd + '</div><button class="btn-primary" onclick="window.sendData(\\'' + cmd + \'\\\\n\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.71.79-1.81.2-2.55L4.5 16.5z"/><path d="M12 15l-3-3 7.5-7.5.78.78c.42.42.42 1.1 0 1.52L12 15z"/><path d="M9 18l-1.5-1.5"/><path d="M15 12l-1.5-1.5"/></svg> EXECUTE CUSTOM PAYLOAD</button>';
-        }        } else if (type === 'joystick') {
+          cardHtml += '<div class="payload-box">CMD > ' + cmd + '</div><button class="btn-primary" onclick="window.sendData(\'' + cmd + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; pointer-events: none;"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.71.79-1.81.2-2.55L4.5 16.5z"/><path d="M12 15l-3-3 7.5-7.5.78.78c.42.42.42 1.1 0 1.52L12 15z"/><path d="M9 18l-1.5-1.5"/><path d="M15 12l-1.5-1.5"/></svg> EXECUTE CUSTOM PAYLOAD</button>';
+        } else if (type === 'joystick') {
           cardHtml += '<div class="joystick-pad" id="joy-' + id + '"><div class="joystick-handle" id="joy-handle-' + id + '"></div></div><div style="text-align:center; font-size:0.75rem; color:var(--text-muted);" id="joy-text-' + id + '">JOYSTICK (0,0)</div>';
         }
 
@@ -506,11 +508,15 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
       }
 
       document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+          const targetBtn = e.currentTarget || btn;
+          const viewId = targetBtn.getAttribute('data-view');
           document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
+          targetBtn.classList.add('active');
           document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-          document.getElementById('view-' + btn.dataset.view).classList.add('active');
+          if (viewId && document.getElementById('view-' + viewId)) {
+            document.getElementById('view-' + viewId).classList.add('active');
+          }
         });
       });
 
