@@ -218,7 +218,7 @@ export default function App() {
   // OPTION 1: INSTALL APP DIRECTLY INTO ANDROID SYSTEM (NO BROWSER NEEDED)
   const handleInstallReadyApp = async () => {
     const appTitle = exportAppName.trim() || 'My Sanwitch App';
-    const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`;
+    const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
     const html = generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
 
     const newApp = {
@@ -357,7 +357,7 @@ export default function App() {
   // OPTION 2: SAVE PWA BUNDLE (Editable in Sanwitch Connect Project Folder)
   const handleSavePwaBundleProject = async () => {
     const appTitle = exportAppName.trim() || 'My Sanwitch App';
-    const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`;
+    const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
     const html = generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
 
     const newApp = {
@@ -2073,7 +2073,7 @@ export default function App() {
                       <Text style={{ fontSize: 10, fontWeight: '900', color: THEME.background }}>{savedApps.length}</Text>
                     </View>
                   </View>
-                  <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Saved local .html app layouts</Text>
+                  <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Saved local .json widget layouts</Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -2110,7 +2110,7 @@ export default function App() {
                             <Zap size={14} color={THEME.primary} style={{ marginRight: 6 }} />
                             <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>{app.name}</Text>
                           </View>
-                          <Text style={{ fontSize: 11, color: THEME.primary, fontWeight: '700', marginTop: 2 }}>{app.fileName}</Text>
+                          <Text style={{ fontSize: 11, color: THEME.primary, fontWeight: '700', marginTop: 2 }}>{`${(app.name || 'app').replace(/[^a-zA-Z0-9_-]/g, '_')}.json`}</Text>
                           <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Created: {app.createdAt} • Widgets: {app.widgets?.length || 0}</Text>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
