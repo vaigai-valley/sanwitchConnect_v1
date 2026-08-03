@@ -312,7 +312,9 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           </div>
         </div>
         <div class="header-actions">
-          <button id="voice-btn" class="icon-btn" title="Voice Control">🎙️</button>
+          <button id="voice-btn" class="icon-btn" title="Voice Control">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          </button>
           <div class="connection-badge" id="conn-status">
             <div class="status-dot"></div>
             <span id="conn-text">Offline</span>
@@ -321,9 +323,15 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
       </header>
 
       <nav>
-        <button class="nav-btn active" data-view="dashboard">🎛️ Panel</button>
-        <button class="nav-btn" data-view="connect">🔗 Link</button>
-        <button class="nav-btn" data-view="terminal">💻 Terminal</button>
+        <button class="nav-btn active" data-view="dashboard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Panel
+        </button>
+        <button class="nav-btn" data-view="connect">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Link
+        </button>
+        <button class="nav-btn" data-view="terminal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>Terminal
+        </button>
       </nav>
 
       <main>
@@ -340,7 +348,9 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
               </div>
               <p style="font-size: 0.85rem; color: var(--text-muted);">Scan and pair directly with ESP32 / Arduino BLE UART hardware.</p>
               <button class="btn-primary" id="ble-scan-btn">
-                <span>📡 Scan BLE Devices</span>
+                <span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9c3.9 3.9 3.9 10.3 0 14.2"/></svg>Scan BLE Devices
+                </span>
               </button>
             </div>
 
@@ -363,7 +373,7 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
         <div id="view-terminal" class="view">
           <div class="card card-wide terminal-card">
             <div id="terminal-output">
-              <div style="color: var(--primary); margin-bottom: 6px;">⚡ Sanwitch Control Terminal Ready...</div>
+              <div style="color: var(--primary); margin-bottom: 6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Sanwitch Control Terminal Ready...</div>
             </div>
             <div class="terminal-input-row">
               <span style="color: var(--primary); font-weight: 800;">></span>
@@ -414,7 +424,7 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
         } else if (type === 'slider') {
           cardHtml += '<div class="range-wrap"><div class="range-header"><span>LEVEL</span><span id="val-' + id + '">0%</span></div><input type="range" class="range-input" min="0" max="100" value="0" oninput="document.getElementById(\\'val-' + id + '\\').textContent = this.value + \'%\'" onchange="window.sendData(\\'' + id.toUpperCase() + ':\\' + this.value + \'\\\\n\')"></div>';
         } else if (type === 'button') {
-          cardHtml += '<button class="btn-primary" style="margin-top: 4px;" onclick="window.sendData(\\'' + id.toUpperCase() + ':PUSH\\\\n\')">⚡ TRIGGER ACTION</button>';
+          cardHtml += '<button class="btn-primary" style="margin-top: 4px;" onclick="window.sendData(\\'' + id.toUpperCase() + ':PUSH\\\\n\\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> TRIGGER ACTION</button>';
         } else if (type === 'gauge') {
           cardHtml += '<div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;"><span class="card-value" id="gauge-' + id + '">24.5</span><span style="color: var(--success); font-size: 0.85rem; font-weight: 700;">● Live Feedback</span></div>';
         } else if (type === 'rgb') {
@@ -424,8 +434,8 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           });
           cardHtml += '</div>';
         } else if (type === 'custom') {
-          cardHtml += '<div class="payload-box">CMD > ' + cmd + '</div><button class="btn-primary" onclick="window.sendData(\\'' + cmd + \'\\\\n\')">🚀 EXECUTE CUSTOM PAYLOAD</button>';
-        } else if (type === 'joystick') {
+          cardHtml += '<div class="payload-box">CMD > ' + cmd + '</div><button class="btn-primary" onclick="window.sendData(\\'' + cmd + \'\\\\n\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.71.79-1.81.2-2.55L4.5 16.5z"/><path d="M12 15l-3-3 7.5-7.5.78.78c.42.42.42 1.1 0 1.52L12 15z"/><path d="M9 18l-1.5-1.5"/><path d="M15 12l-1.5-1.5"/></svg> EXECUTE CUSTOM PAYLOAD</button>';
+        }        } else if (type === 'joystick') {
           cardHtml += '<div class="joystick-pad" id="joy-' + id + '"><div class="joystick-handle" id="joy-handle-' + id + '"></div></div><div style="text-align:center; font-size:0.75rem; color:var(--text-muted);" id="joy-text-' + id + '">JOYSTICK (0,0)</div>';
         }
 
