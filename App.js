@@ -990,9 +990,11 @@ export default function App() {
     let initBlocks = [];
     if (connectionMode === 'ble') {
       initBlocks.push({ id: id++, type: 'ble_init', name: 'Sanwitch-ESP32', x: 50, y: 50, nextId: null });
+      initBlocks.push({ id: id++, type: 'print', value: '"BLE UART Server Active: Sanwitch-ESP32"', x: 50, y: 110, nextId: null });
     } else {
       initBlocks.push({ id: id++, type: 'wifi_connect', ssid: wifiSSID, password: wifiPass, x: 50, y: 50, nextId: null });
       initBlocks.push({ id: id++, type: 'web_server_start', port: 80, x: 250, y: 50, nextId: null });
+      initBlocks.push({ id: id++, type: 'print', value: '"Web Server Active on Port 80"', x: 250, y: 110, nextId: null });
     }
     linkBlocks(initBlocks);
     blocks.push(...initBlocks);
@@ -1017,40 +1019,92 @@ export default function App() {
       if (w.type === 'toggle') {
         const onBlock = {
           id: id++, type: 'if_logic', condType: 'text', condition: `msg == "${cmd}:1"`,
-          nextId: null, childStartId: null, children: [{ id: id++, type: 'led', pin: '2', state: '1', nextId: null }]
+          nextId: null, childStartId: null,
+          children: [
+            { id: id++, type: 'led', pin: '2', state: '1', nextId: null },
+            { id: id++, type: 'print', value: `"${cmd} -> ON"`, nextId: null }
+          ]
         };
+        linkBlocks(onBlock.children);
         onBlock.childStartId = onBlock.children[0].id;
         children.push(onBlock);
 
         const offBlock = {
           id: id++, type: 'if_logic', condType: 'text', condition: `msg == "${cmd}:0"`,
-          nextId: null, childStartId: null, children: [{ id: id++, type: 'led', pin: '2', state: '0', nextId: null }]
+          nextId: null, childStartId: null,
+          children: [
+            { id: id++, type: 'led', pin: '2', state: '0', nextId: null },
+            { id: id++, type: 'print', value: `"${cmd} -> OFF"`, nextId: null }
+          ]
         };
+        linkBlocks(offBlock.children);
         offBlock.childStartId = offBlock.children[0].id;
         children.push(offBlock);
       } else if (w.type === 'button') {
         const btnBlock = {
           id: id++, type: 'if_logic', condType: 'text', condition: `msg == "${cmd}:PUSH"`,
-          nextId: null, childStartId: null, children: [{ id: id++, type: 'print', value: `${w.id} Pressed`, nextId: null }]
+          nextId: null, childStartId: null,
+          children: [
+            { id: id++, type: 'led', pin: '4', state: '1', nextId: null },
+            { id: id++, type: 'delay', value: '100', nextId: null },
+            { id: id++, type: 'led', pin: '4', state: '0', nextId: null },
+            { id: id++, type: 'print', value: `"${cmd} -> Triggered"`, nextId: null }
+          ]
         };
+        linkBlocks(btnBlock.children);
         btnBlock.childStartId = btnBlock.children[0].id;
         children.push(btnBlock);
       } else if (w.type === 'slider') {
         const sliderBlock = {
           id: id++, type: 'if_logic', condType: 'text', condition: `msg.startswith("${cmd}:")`,
           nextId: null, childStartId: null,
-          children: [{ id: id++, type: 'pwm_led', pin: '5', duty: `int(msg.split(":")[1]) * 10`, nextId: null }]
+          children: [
+            { id: id++, type: 'set_variable', variable: 'val', value: `int(msg.split(":")[1])`, nextId: null },
+            { id: id++, type: 'pwm_led', pin: '5', duty: `int(val * 10.23)`, nextId: null },
+            { id: id++, type: 'print', value: `"${cmd} PWM ->", val`, nextId: null }
+          ]
         };
+        linkBlocks(sliderBlock.children);
         sliderBlock.childStartId = sliderBlock.children[0].id;
         children.push(sliderBlock);
       } else if (w.type === 'joystick') {
         const joyBlock = {
           id: id++, type: 'if_logic', condType: 'text', condition: `msg.startswith("${cmd}:")`,
           nextId: null, childStartId: null,
-          children: [{ id: id++, type: 'print', value: `Joystick ${w.id} Moved`, nextId: null }]
+          children: [
+            { id: id++, type: 'set_variable', variable: 'coords', value: `msg.split(":")[1].split(",")`, nextId: null },
+            { id: id++, type: 'set_variable', variable: 'jx', value: `int(coords[0])`, nextId: null },
+            { id: id++, type: 'set_variable', variable: 'jy', value: `int(coords[1])`, nextId: null },
+            { id: id++, type: 'print', value: `"${cmd} Joystick -> X:", jx, "Y:", jy`, nextId: null }
+          ]
         };
+        linkBlocks(joyBlock.children);
         joyBlock.childStartId = joyBlock.children[0].id;
         children.push(joyBlock);
+      } else if (w.type === 'rgb') {
+        const rgbBlock = {
+          id: id++, type: 'if_logic', condType: 'text', condition: `msg.startswith("RGB:")`,
+          nextId: null, childStartId: null,
+          children: [
+            { id: id++, type: 'set_variable', variable: 'hex_col', value: `msg.split(":")[1]`, nextId: null },
+            { id: id++, type: 'print', value: `"RGB Color ->", hex_col`, nextId: null }
+          ]
+        };
+        linkBlocks(rgbBlock.children);
+        rgbBlock.childStartId = rgbBlock.children[0].id;
+        children.push(rgbBlock);
+      } else if (w.type === 'custom') {
+        const customPayload = w.cmd || `${cmd}:EXEC`;
+        const customBlock = {
+          id: id++, type: 'if_logic', condType: 'text', condition: `msg == "${customPayload}"`,
+          nextId: null, childStartId: null,
+          children: [
+            { id: id++, type: 'print', value: `"Custom Payload Executed: ${customPayload}"`, nextId: null }
+          ]
+        };
+        linkBlocks(customBlock.children);
+        customBlock.childStartId = customBlock.children[0].id;
+        children.push(customBlock);
       } else if (w.type === 'gauge' && connectionMode === 'ble') {
         children.push({ id: id++, type: 'ble_send', data: `${cmd}:24.5`, nextId: null });
       }
