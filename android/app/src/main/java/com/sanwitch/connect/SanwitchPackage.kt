@@ -5,10 +5,9 @@ import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.ViewManager
 
-class ShortcutPackage : ReactPackage {
+class SanwitchPackage : ReactPackage {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
     return listOf(
-      ShortcutModule(reactContext),
       WebApkInstallerModule(reactContext),
       VoiceModule(reactContext)
     )
