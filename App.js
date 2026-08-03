@@ -296,6 +296,13 @@ export default function App() {
                     'success'
                   );
                   return;
+                } else if (res === 'PWA_PROMPT_OPENED') {
+                  customAlert(
+                    'Installing Standalone App',
+                    `Chrome opened "${appTitle}". Tap Chrome's menu (⋮) -> "Install App" to add it to your App Drawer!`,
+                    'info'
+                  );
+                  return;
                 }
               } catch (e) {
                 console.log('WebApkInstallerModule error:', e);
