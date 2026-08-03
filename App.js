@@ -2033,49 +2033,72 @@ export default function App() {
                 <Text style={styles.alertTitle}>{alertConfig.title}</Text>
                 <Text style={styles.alertMessage}>{alertConfig.message}</Text>
 
-                {/* ACTION BUTTONS WITH SVG ICONS */}
-                <View style={{
-                  flexDirection: alertConfig.buttons.filter(b => b.style !== 'cancel' && b.text !== 'Close').length > 1 ? 'row' : 'column',
-                  gap: 10,
-                  width: '100%',
-                  marginTop: 10
-                }}>
-                  {alertConfig.buttons
-                    .filter(btn => btn.style !== 'cancel' && btn.text !== 'Close')
-                    .map((btn, idx) => {
-                      const isInstall = btn.text.toLowerCase().includes('install');
-                      const isPreview = btn.text.toLowerCase().includes('preview') || btn.text.toLowerCase().includes('run');
+                {/* ACTION BUTTONS WITH FULLY VISIBLE LABELS AND ICONS */}
+                {(() => {
+                  const buttonsToRender = Array.isArray(alertConfig.buttons) && alertConfig.buttons.length > 0
+                    ? alertConfig.buttons
+                    : [{ text: 'OK', onPress: () => {} }];
+                  const hasMultiple = buttonsToRender.length > 1;
 
-                      return (
-                        <TouchableOpacity
-                          key={idx}
-                          style={[
-                            styles.nativeBtn,
-                            {
-                              flex: 1,
-                              marginTop: 0,
-                              flexDirection: 'row',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              backgroundColor: isInstall ? THEME.primary : isPreview ? THEME.secondary : THEME.primary,
-                              paddingVertical: 12
-                            }
-                          ]}
-                          onPress={() => {
-                            const cb = btn.onPress;
-                            setAlertConfig(null);
-                            if (cb) cb();
-                          }}
-                        >
-                          {isInstall && <Download size={16} color={THEME.background} style={{ marginRight: 6 }} />}
-                          {isPreview && <Play size={16} color={THEME.background} style={{ marginRight: 6 }} />}
-                          <Text style={[styles.nativeBtnText, { color: THEME.background, fontWeight: '800' }]}>
-                            {btn.text}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                </View>
+                  return (
+                    <View style={{
+                      flexDirection: hasMultiple ? 'row' : 'column',
+                      gap: 10,
+                      width: '100%',
+                      marginTop: 16
+                    }}>
+                      {buttonsToRender.map((btn, idx) => {
+                        const isCancel = btn.style === 'cancel';
+                        const btnText = btn.text || 'OK';
+                        const isInstall = btnText.toLowerCase().includes('install');
+                        const isPreview = btnText.toLowerCase().includes('preview') || btnText.toLowerCase().includes('run');
+
+                        return (
+                          <TouchableOpacity
+                            key={idx}
+                            style={[
+                              styles.nativeBtn,
+                              {
+                                flex: hasMultiple ? 1 : undefined,
+                                width: hasMultiple ? undefined : '100%',
+                                marginTop: 0,
+                                flexDirection: 'row',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                backgroundColor: isCancel ? 'rgba(255, 255, 255, 0.08)' : (isInstall ? THEME.primary : isPreview ? THEME.secondary : THEME.primary),
+                                borderWidth: isCancel ? 1 : 0,
+                                borderColor: isCancel ? THEME.surfaceBorder : 'transparent',
+                                paddingVertical: 14,
+                                paddingHorizontal: 16,
+                                borderRadius: 14,
+                                minHeight: 46
+                              }
+                            ]}
+                            onPress={() => {
+                              const cb = btn.onPress;
+                              setAlertConfig(null);
+                              if (cb) cb();
+                            }}
+                          >
+                            {isInstall && <Download size={16} color={THEME.background} style={{ marginRight: 6 }} />}
+                            {isPreview && <Play size={16} color={THEME.background} style={{ marginRight: 6 }} />}
+                            {!isCancel && !isInstall && !isPreview && <CheckCircle2 size={16} color={THEME.background} style={{ marginRight: 6 }} />}
+
+                            <Text style={{
+                              fontSize: 14,
+                              fontWeight: '800',
+                              color: isCancel ? THEME.textMuted : THEME.background,
+                              textAlign: 'center',
+                              letterSpacing: 0.5
+                            }}>
+                              {btnText}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  );
+                })()}
               </View>
             </View>
           </Modal>
