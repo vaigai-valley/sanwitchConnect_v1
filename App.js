@@ -326,10 +326,6 @@ export default function App() {
         {
           text: 'Preview App',
           onPress: () => handleRunAppInApp(newApp)
-        },
-        {
-          text: 'Close',
-          style: 'cancel'
         }
       ]
     );
