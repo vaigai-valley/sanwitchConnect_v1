@@ -49,7 +49,8 @@ try {
 }
 
 const UUID_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-const UUID_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+const UUID_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Mobile Write -> ESP32 RX
+const UUID_TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // ESP32 TX Notify -> Mobile Read
 
 const { width } = Dimensions.get('window');
 const API_BASE_URL = 'https://sanwitch.vaigaivalley.workers.dev/api';
@@ -770,7 +771,7 @@ export default function App() {
           setConnectedDevice(discovered);
           log('Connected!', 'success');
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          discovered.monitorCharacteristicForService(UUID_SERVICE, UUID_RX, (err, char) => {
+          discovered.monitorCharacteristicForService(UUID_SERVICE, UUID_TX, (err, char) => {
             if (char?.value) handleIncoming(Buffer.from(char.value, 'base64').toString());
           });
         } catch (e) { log('Connection Failed', 'error'); }
