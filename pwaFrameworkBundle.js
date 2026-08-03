@@ -314,6 +314,9 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           </div>
         </div>
         <div class="header-actions">
+          <button id="pwa-install-btn" class="icon-btn" style="display: none; background: rgba(56, 189, 248, 0.2); border-color: var(--primary); color: var(--primary);" title="Install Standalone WebAPK">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
           <button id="voice-btn" class="icon-btn" title="Voice Control">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
           </button>
@@ -323,6 +326,14 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           </div>
         </div>
       </header>
+
+      <div id="pwa-install-banner" style="display: none; background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(20, 184, 166, 0.15)); border: 1px solid var(--primary-glow); margin: 12px 20px 0; padding: 12px 16px; border-radius: 16px; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span style="font-size: 0.82rem; font-weight: 700; color: var(--text);">Install "${cleanAppName}" to Android App Drawer?</span>
+        </div>
+        <button id="pwa-banner-install-btn" style="background: var(--primary); color: #0b0d12; border: none; padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">INSTALL</button>
+      </div>
 
       <nav>
         <button class="nav-btn active" data-view="dashboard">
@@ -604,6 +615,35 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
         };
         voiceBtn.addEventListener('click', () => rec.start());
       }
+
+      // Automatic Android PWA System Prompt Trigger (beforeinstallprompt)
+      let deferredInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        const banner = document.getElementById('pwa-install-banner');
+        const iconBtn = document.getElementById('pwa-install-btn');
+        if (banner) banner.style.display = 'flex';
+        if (iconBtn) iconBtn.style.display = 'flex';
+      });
+
+      const triggerInstallPrompt = async () => {
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          const choice = await deferredInstallPrompt.userChoice;
+          if (choice.outcome === 'accepted') {
+            log('App successfully installed to Android App Drawer!', 'sys');
+          }
+          deferredInstallPrompt = null;
+          const banner = document.getElementById('pwa-install-banner');
+          const iconBtn = document.getElementById('pwa-install-btn');
+          if (banner) banner.style.display = 'none';
+          if (iconBtn) iconBtn.style.display = 'none';
+        }
+      };
+
+      document.getElementById('pwa-banner-install-btn')?.addEventListener('click', triggerInstallPrompt);
+      document.getElementById('pwa-install-btn')?.addEventListener('click', triggerInstallPrompt);
 
       loadLayout();
     </script>
