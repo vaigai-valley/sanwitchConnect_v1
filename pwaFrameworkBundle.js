@@ -433,21 +433,21 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
         let cardHtml = '<div class="card-header"><span class="card-title">' + id + '</span></div>';
 
         if (type === 'toggle') {
-          cardHtml += '<div class="toggle-wrap"><span style="font-weight: 600; font-size: 0.9rem;">State Control</span><label class="toggle-switch"><input type="checkbox" onchange="window.sendData(\\'' + id.toUpperCase() + ':\\' + (this.checked ? \'1\' : \'0\') + \'\\\\n\')"><span class="slider-switch"></span></label></div>';
+          cardHtml += '<div class="toggle-wrap"><span style="font-weight: 600; font-size: 0.9rem;">State Control</span><label class="toggle-switch"><input type="checkbox" id="toggle-' + id + '"><span class="slider-switch"></span></label></div>';
         } else if (type === 'slider') {
-          cardHtml += '<div class="range-wrap"><div class="range-header"><span>LEVEL</span><span id="val-' + id + '">0%</span></div><input type="range" class="range-input" min="0" max="100" value="0" oninput="document.getElementById(\\'val-' + id + '\\').textContent = this.value + \'%\'" onchange="window.sendData(\\'' + id.toUpperCase() + ':\\' + this.value + \'\\\\n\')"></div>';
+          cardHtml += '<div class="range-wrap"><div class="range-header"><span>LEVEL</span><span id="val-' + id + '">0%</span></div><input type="range" class="range-input" id="slider-' + id + '" min="0" max="100" value="0"></div>';
         } else if (type === 'button') {
-          cardHtml += '<button class="btn-primary" style="margin-top: 4px;" onclick="window.sendData(\\'' + id.toUpperCase() + ':PUSH\\\\n\\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> TRIGGER ACTION</button>';
+          cardHtml += '<button class="btn-primary" id="btn-' + id + '" style="margin-top: 4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> TRIGGER ACTION</button>';
         } else if (type === 'gauge') {
           cardHtml += '<div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;"><span class="card-value" id="gauge-' + id + '">24.5</span><span style="color: var(--success); font-size: 0.85rem; font-weight: 700;">● Live Feedback</span></div>';
         } else if (type === 'rgb') {
-          cardHtml += '<div class="color-grid">';
+          cardHtml += '<div class="color-grid" id="rgb-grid-' + id + '">';
           ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff'].forEach(c => {
-            cardHtml += '<div class="color-dot" style="background:' + c + '" onclick="window.sendData(\\'RGB:' + c.substring(1) + '\\\\n\\')"></div>';
+            cardHtml += '<div class="color-dot" style="background:' + c + '" data-color="' + c.substring(1) + '"></div>';
           });
           cardHtml += '</div>';
         } else if (type === 'custom') {
-          cardHtml += '<div class="payload-box">CMD > ' + cmd + '</div><button class="btn-primary" onclick="window.sendData(\'' + cmd + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; pointer-events: none;"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.71.79-1.81.2-2.55L4.5 16.5z"/><path d="M12 15l-3-3 7.5-7.5.78.78c.42.42.42 1.1 0 1.52L12 15z"/><path d="M9 18l-1.5-1.5"/><path d="M15 12l-1.5-1.5"/></svg> EXECUTE CUSTOM PAYLOAD</button>';
+          cardHtml += '<div class="payload-box">CMD > ' + cmd + '</div><button class="btn-primary" id="custom-' + id + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; pointer-events: none;"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.71.79-1.81.2-2.55L4.5 16.5z"/><path d="M12 15l-3-3 7.5-7.5.78.78c.42.42.42 1.1 0 1.52L12 15z"/><path d="M9 18l-1.5-1.5"/><path d="M15 12l-1.5-1.5"/></svg> EXECUTE CUSTOM PAYLOAD</button>';
         } else if (type === 'joystick') {
           cardHtml += '<div class="joystick-pad" id="joy-' + id + '"><div class="joystick-handle" id="joy-handle-' + id + '"></div></div><div style="text-align:center; font-size:0.75rem; color:var(--text-muted);" id="joy-text-' + id + '">JOYSTICK (0,0)</div>';
         }
@@ -456,10 +456,45 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
         widgetContainer.appendChild(card);
         widgets.push(widget);
 
-        if (type === 'joystick') setupJoystick(id);
+        if (type === 'toggle') {
+          document.getElementById('toggle-' + id)?.addEventListener('change', (e) => {
+            window.sendData(id.toUpperCase() + ':' + (e.target.checked ? '1' : '0') + '\\n');
+          });
+        } else if (type === 'slider') {
+          const s = document.getElementById('slider-' + id);
+          if (s) {
+            s.addEventListener('input', (e) => {
+              const v = document.getElementById('val-' + id);
+              if (v) v.textContent = e.target.value + '%';
+            });
+            s.addEventListener('change', (e) => {
+              window.sendData(id.toUpperCase() + ':' + e.target.value + '\\n');
+            });
+          }
+        } else if (type === 'button') {
+          document.getElementById('btn-' + id)?.addEventListener('click', () => {
+            window.sendData(id.toUpperCase() + ':PUSH\\n');
+          });
+        } else if (type === 'custom') {
+          document.getElementById('custom-' + id)?.addEventListener('click', () => {
+            window.sendData(cmd + '\\n');
+          });
+        } else if (type === 'rgb') {
+          const grid = document.getElementById('rgb-grid-' + id);
+          if (grid) {
+            grid.querySelectorAll('.color-dot').forEach(dot => {
+              dot.addEventListener('click', () => {
+                const hex = dot.getAttribute('data-color');
+                if (hex) window.sendData('RGB:' + hex + '\\n');
+              });
+            });
+          }
+        } else if (type === 'joystick') {
+          setupJoystick(id, customCmd);
+        }
       }
 
-      function setupJoystick(id) {
+      function setupJoystick(id, customCmd = '') {
         const pad = document.getElementById('joy-' + id);
         const handle = document.getElementById('joy-handle-' + id);
         const txt = document.getElementById('joy-text-' + id);
