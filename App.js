@@ -1885,7 +1885,10 @@ export default function App() {
             ) : (
               <ScrollView style={{ flex: 1, padding: 16 }}>
                 <View style={{ backgroundColor: '#16181f', borderRadius: 16, borderBottomWidth: 1, borderColor: '#2b3240', padding: 16, marginBottom: 16 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.primary, marginBottom: 6 }}>📱 Native In-App App Runner</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Smartphone size={16} color={THEME.primary} style={{ marginRight: 6 }} />
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.primary }}>Native In-App App Runner</Text>
+                  </View>
                   <Text style={{ fontSize: 12, color: THEME.textMuted, lineHeight: 18 }}>
                     Running "{activeRunnerApp?.name}" directly inside Sanwitch Connect with 0 browser redirects!
                   </Text>
