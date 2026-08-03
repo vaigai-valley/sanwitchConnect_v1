@@ -1,15 +1,25 @@
 import React from 'react';
 import { View, Text, Modal, StyleSheet, Platform } from 'react-native';
+import { Smartphone } from 'lucide-react-native';
+import assert from 'assert';
 
 /**
  * Extracted Progress Bar Component from login.html
  * Styled with Cyber-Chef Linear Gradient (#00e676 -> #00bfa5) & Glassmorphism Overlay
  */
 export const ProgressBarModal = ({ visible, progress, stepText, title = "Standalone App Ready" }) => {
+  if (typeof progress === 'number') {
+    assert(progress >= 0 && progress <= 100, "Progress must be between 0 and 100");
+  }
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.greetingBox}>
+          <View style={styles.iconContainer}>
+            <Smartphone size={28} color="#00e676" />
+          </View>
+
           <Text style={styles.title}>{title}</Text>
           
           <View style={styles.loaderSmall}>
@@ -56,6 +66,17 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8
   },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0, 230, 118, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#00e676',
+    marginBottom: 14
+  },
   title: {
     fontSize: 16,
     fontWeight: '700',
@@ -64,7 +85,7 @@ const styles = StyleSheet.create({
     marginBottom: 16
   },
   loaderSmall: {
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 12,
     width: '100%',
     alignItems: 'center'
