@@ -1947,9 +1947,37 @@ export default function App() {
                   <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>RUNNING IN-APP</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={() => setIsAppRunnerVisible(false)} style={{ padding: 6, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.08)' }}>
-                <X size={20} color={THEME.text} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity
+                  onPress={async () => {
+                    const appTitle = activeRunnerApp?.name || exportAppName || 'My Sanwitch App';
+                    setIsAppRunnerVisible(false);
+                    if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
+                      try {
+                        const publishedUrl = `https://sanwitch.vaigaivalley.workers.dev/pwa/${encodeURIComponent(appTitle.toLowerCase().replace(/[^a-z0-9]/g, ''))}`;
+                        const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
+                        if (res === 'INSTALL_PROMPT_OPENED') {
+                          customAlert(
+                            'Package Installer Ready',
+                            `Android System prompt "Do you want to install this app?" has popped up! Tap INSTALL to add "${appTitle}" directly to your device!`,
+                            'success'
+                          );
+                          return;
+                        }
+                      } catch (e) {}
+                    }
+                    await handleOpenPwaLinkInBrowser(appTitle);
+                  }}
+                  style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: THEME.primary, marginRight: 8 }}
+                >
+                  <Download size={14} color={THEME.background} style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.background }}>Install App</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => setIsAppRunnerVisible(false)} style={{ padding: 6, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.08)' }}>
+                  <X size={20} color={THEME.text} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {Platform.OS === 'web' ? (
