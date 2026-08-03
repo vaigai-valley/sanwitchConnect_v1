@@ -86,46 +86,46 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
   fun installWebApk(appName: String, pwaUrl: String, promise: Promise) {
     val context = reactApplicationContext
     try {
-      // 1. Check Android 8+ Install Unknown Apps Permission
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
-        val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-          data = Uri.parse("package:${context.packageName}")
+      // 1. Android 8.0+ Native System Pinning Prompt ("Add to Home Screen / Install App")
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val shortcutManager = context.getSystemService(ShortcutManager::class.java)
+        if (shortcutManager != null && shortcutManager.isRequestPinShortcutSupported) {
+          val intent = Intent(Intent.ACTION_VIEW, Uri.parse(if (pwaUrl.startsWith("http")) pwaUrl else "https://sanwitch.vaigaivalley.workers.dev")).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+          }
+
+          val shortcutId = "sanwitch_app_" + appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+          val shortcut = ShortcutInfo.Builder(context, shortcutId)
+            .setShortLabel(appName)
+            .setLongLabel("Sanwitch - $appName")
+            .setIcon(Icon.createWithResource(context, R.mipmap.ic_launcher))
+            .setIntent(intent)
+            .build()
+
+          val pinnedShortcutCallbackIntent = shortcutManager.createShortcutResultIntent(shortcut)
+          val successCallback = PendingIntent.getBroadcast(
+            context, 0,
+            pinnedShortcutCallbackIntent,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+          )
+
+          shortcutManager.requestPinShortcut(shortcut, successCallback.intentSender)
+          promise.resolve("PROMPT_SHOWN")
+          return
+        }
+      }
+
+      // 2. WebAPK Browser Minting Fallback (triggers Chrome "Install App" prompt)
+      if (pwaUrl.startsWith("http")) {
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(pwaUrl)).apply {
           flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
-        context.startActivity(intent)
-        promise.resolve("PERMISSION_NEEDED")
+        context.startActivity(browserIntent)
+        promise.resolve("BROWSER_OPENED")
         return
       }
 
-      // 2. Configure Scoped Storage & Intent Flag Permissions
-      val uri = Uri.parse(pwaUrl)
-      val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri, "application/vnd.android.package-archive")
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-      }
-
-      if (intent.resolveActivity(context.packageManager) != null) {
-        context.startActivity(intent)
-        promise.resolve("SUCCESS")
-      } else {
-        // 3. Configure Android 12+ PackageInstaller Session (Enterprise & User Reason Compliant)
-        val packageInstaller = context.packageManager.packageInstaller
-        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-        val cleanPkg = appName.lowercase().replace(Regex("[^a-z0-9]"), "")
-        params.setAppPackageName("org.sanwitch.pwa.$cleanPkg")
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-          params.setInstallReason(PackageManager.INSTALL_REASON_USER)
-        }
-
-        val sessionId = packageInstaller.createSession(params)
-        val session = packageInstaller.openSession(sessionId)
-        session.close()
-        promise.resolve("SUCCESS")
-      }
-    } catch (e: SecurityException) {
-      // Catch Security Policies (e.g. Knox / Enterprise MDM restriction)
-      promise.resolve("POLICY_RESTRICTED")
+      promise.resolve("NOT_SUPPORTED")
     } catch (e: Exception) {
       e.printStackTrace()
       promise.reject("INSTALL_ERROR", e.message)

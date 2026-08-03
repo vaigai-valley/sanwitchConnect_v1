@@ -292,20 +292,14 @@ export default function App() {
             if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
               try {
                 const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
-                if (res === 'PERMISSION_NEEDED') {
+                if (res === 'PROMPT_SHOWN') {
                   customAlert(
-                    'Permission Required',
-                    'Opening Android Settings! Please enable "Allow from this source" for Sanwitch Connect, then tap INSTALL APP again.',
-                    'info'
+                    'System Prompt Triggered',
+                    `Android System prompt "Add to Home screen" has popped up! Tap ADD to place "${appTitle}" directly onto your Home Screen and App Drawer!`,
+                    'success'
                   );
                   return;
                 }
-                customAlert(
-                  'WebAPK Staged',
-                  `Android PackageInstaller staged standalone package "org.sanwitch.pwa.${appTitle.toLowerCase().replace(/[^a-z0-9]/g, '')}". Tap Install on the system prompt to add it to your App Drawer!`,
-                  'success'
-                );
-                return;
               } catch (e) {
                 console.log('WebApkInstallerModule error:', e);
               }
