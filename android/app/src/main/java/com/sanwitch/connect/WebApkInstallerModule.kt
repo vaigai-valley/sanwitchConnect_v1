@@ -71,20 +71,60 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
   fun installWebApk(appName: String, pwaUrl: String, promise: Promise) {
     val context = reactApplicationContext
     try {
-      // 1. Direct Local APK File Installation
+      // 1. Direct Local APK File Installation (0 Browser Redirects)
       if (pwaUrl.endsWith(".apk") || pwaUrl.startsWith("file://") || pwaUrl.startsWith("/")) {
         val cleanPath = pwaUrl.replace("file://", "")
         installLocalApk(cleanPath, promise)
         return
       }
 
-      // 2. WebAPK Minting Engine (Triggers Chrome "Install App" Standalone Prompt)
+      // 2. HTTPS Download or Direct APK PackageInstaller (0 Browser Redirects)
       if (pwaUrl.startsWith("http")) {
-        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(pwaUrl)).apply {
-          flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        context.startActivity(browserIntent)
-        promise.resolve("CHROME_WEBAPK_OPENED")
+        Thread {
+          try {
+            val url = java.net.URL(pwaUrl)
+            val connection = url.openConnection() as java.net.HttpURLConnection
+            connection.connect()
+
+            val contentType = connection.contentType ?: ""
+            if (contentType.contains("android.package-archive") || pwaUrl.endsWith(".apk")) {
+              val apkFile = File(context.cacheDir, "${appName.lowercase().replace(Regex("[^a-z0-9]"), "_")}.apk")
+              val inputStream = connection.inputStream
+              val outputStream = java.io.FileOutputStream(apkFile)
+
+              val buffer = ByteArray(4096)
+              var bytesRead: Int
+              while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                outputStream.write(buffer, 0, bytesRead)
+              }
+              outputStream.close()
+              inputStream.close()
+
+              // Launch Native Android PackageInstaller (0 Browser Redirects)
+              val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
+              val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+              }
+              context.startActivity(intent)
+              promise.resolve("INSTALL_PROMPT_OPENED")
+              return@Thread
+            }
+
+            // Web App HTTPS link fallback (opens Chrome WebAPK Minter)
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(pwaUrl)).apply {
+              flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(browserIntent)
+            promise.resolve("CHROME_WEBAPK_OPENED")
+          } catch (e: Exception) {
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(pwaUrl)).apply {
+              flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(browserIntent)
+            promise.resolve("CHROME_WEBAPK_OPENED")
+          }
+        }.start()
         return
       }
 
