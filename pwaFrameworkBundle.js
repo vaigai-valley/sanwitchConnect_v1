@@ -470,7 +470,8 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           const jx = Math.round((dx / maxDist) * 100);
           const jy = Math.round((-dy / maxDist) * 100);
           txt.textContent = 'JOYSTICK (' + jx + ', ' + jy + ')';
-          window.sendData('JOY:' + jx + ',' + jy + '\\n');
+          const prefix = (customCmd && !customCmd.endsWith(':EXEC')) ? customCmd.replace(/:.*/, '') : id.toUpperCase();
+          window.sendData(prefix + ':' + jx + ',' + jy + '\\n');
         };
 
         const stop = () => {
@@ -478,7 +479,8 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           active = false;
           handle.style.transform = 'translate(0px, 0px)';
           txt.textContent = 'JOYSTICK (0, 0)';
-          window.sendData('JOY:0,0\\n');
+          const prefix = (customCmd && !customCmd.endsWith(':EXEC')) ? customCmd.replace(/:.*/, '') : id.toUpperCase();
+          window.sendData(prefix + ':0,0\\n');
         };
 
         pad.addEventListener('mousedown', () => active = true);
@@ -492,7 +494,7 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
       window.sendData = async (data) => {
         log('TX: ' + data.trim(), 'tx');
         if (bleCharacteristicRx) {
-          try { await bleCharacteristicRx.writeValue(new TextEncoder().encode(data)); } catch(e) { log('BLE Err', 'err'); }
+          try { await bleCharacteristicRx.writeValue(new TextEncoder().encode(data)); } catch(e) { log('BLE Err: ' + e.message, 'err'); }
         } else {
           const ip = document.getElementById('wifi-ip').value || '${wifiIpVal}';
           fetch('http://' + ip + '/control?cmd=' + encodeURIComponent(data.trim()), { mode: 'no-cors' }).catch(()=>{});
@@ -501,7 +503,7 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
 
       function log(msg, type = '') {
         const div = document.createElement('div');
-        div.style.color = type === 'rx' ? 'var(--secondary)' : (type === 'tx' ? 'var(--primary)' : 'var(--text-muted)');
+        div.style.color = type === 'rx' ? 'var(--secondary)' : (type === 'tx' ? 'var(--primary)' : (type === 'err' ? 'var(--accent)' : 'var(--text-muted)'));
         div.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
         termOutput.appendChild(div);
         termOutput.scrollTop = termOutput.scrollHeight;
@@ -527,7 +529,7 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
         }
       });
 
-      // BLE Scanner Trigger
+      // BLE Scanner Trigger & Telemetry Notifications
       document.getElementById('ble-scan-btn').addEventListener('click', async () => {
         if ('bluetooth' in navigator) {
           try {
@@ -539,6 +541,25 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
             const server = await bleDevice.gatt.connect();
             const service = await server.getPrimaryService(UUID_SERVICE);
             bleCharacteristicRx = await service.getCharacteristic(UUID_RX);
+            
+            try {
+              bleCharacteristicTx = await service.getCharacteristic(UUID_TX);
+              if (bleCharacteristicTx) {
+                bleCharacteristicTx.addEventListener('characteristicvaluechanged', (event) => {
+                  const val = new TextDecoder().decode(event.target.value).trim();
+                  log('RX: ' + val, 'rx');
+                  if (val.includes(':')) {
+                    const parts = val.split(':');
+                    const key = parts[0];
+                    const num = parts[1];
+                    const el = document.getElementById('gauge-' + key) || document.getElementById('gauge-' + key.toUpperCase());
+                    if (el) el.textContent = num;
+                  }
+                });
+                await bleCharacteristicTx.startNotifications();
+              }
+            } catch(e) { log('TX Notifications not available: ' + e.message, 'sys'); }
+
             connStatus.classList.add('connected');
             document.getElementById('conn-text').textContent = 'BLE Connected';
             log('Connected to ' + bleDevice.name, 'sys');
@@ -548,7 +569,7 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
         }
       });
 
-      // Web Speech Recognition
+      // Web Speech Recognition Engine
       const voiceBtn = document.getElementById('voice-btn');
       if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -558,10 +579,23 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           const text = e.results[0][0].transcript.toLowerCase();
           log('Voice: ' + text, 'tx');
           widgets.forEach(w => {
-            if (text.includes(w.id.toLowerCase())) {
+            const wName = w.id.toLowerCase();
+            if (text.includes(wName) || text.includes('all')) {
               if (w.type === 'toggle') {
-                if (text.includes('on') || text.includes('start')) window.sendData(w.id.toUpperCase() + ':1\\n');
-                if (text.includes('off') || text.includes('stop')) window.sendData(w.id.toUpperCase() + ':0\\n');
+                if (text.includes('on') || text.includes('start') || text.includes('enable')) window.sendData(w.id.toUpperCase() + ':1\\n');
+                if (text.includes('off') || text.includes('stop') || text.includes('disable')) window.sendData(w.id.toUpperCase() + ':0\\n');
+              } else if (w.type === 'button') {
+                if (text.includes('press') || text.includes('trigger') || text.includes('push') || text.includes('click')) window.sendData(w.id.toUpperCase() + ':PUSH\\n');
+              } else if (w.type === 'slider') {
+                if (text.includes('max') || text.includes('full') || text.includes('100')) window.sendData(w.id.toUpperCase() + ':100\\n');
+                if (text.includes('min') || text.includes('zero') || text.includes('0')) window.sendData(w.id.toUpperCase() + ':0\\n');
+                if (text.includes('half') || text.includes('50')) window.sendData(w.id.toUpperCase() + ':50\\n');
+              } else if (w.type === 'rgb') {
+                if (text.includes('red')) window.sendData('RGB:ff0000\\n');
+                if (text.includes('green')) window.sendData('RGB:00ff00\\n');
+                if (text.includes('blue')) window.sendData('RGB:0000ff\\n');
+                if (text.includes('yellow')) window.sendData('RGB:ffff00\\n');
+                if (text.includes('white')) window.sendData('RGB:ffffff\\n');
               } else if (w.type === 'custom') {
                 window.sendData(w.cmd + '\\n');
               }
