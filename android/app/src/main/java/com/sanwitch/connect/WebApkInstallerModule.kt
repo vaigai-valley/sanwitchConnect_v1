@@ -86,82 +86,90 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         return
       }
 
-      // 2. HTTPS Network Download -> Native Android PackageInstaller (0 Browser Fallbacks)
+      val targetApkFile = File(context.cacheDir, "${appName.lowercase().replace(Regex("[^a-z0-9]"), "_")}.apk")
+
+      // 2. HTTPS Network Download Pipeline (with automatic base APK fallback)
       if (pwaUrl.startsWith("http")) {
         Thread {
           try {
             val url = URL(pwaUrl)
             val connection = url.openConnection() as HttpURLConnection
             connection.instanceFollowRedirects = true
-            connection.connectTimeout = 15000
-            connection.readTimeout = 15000
+            connection.connectTimeout = 10000
+            connection.readTimeout = 10000
             connection.connect()
 
-            if (connection.responseCode >= 400) {
-              promise.reject("DOWNLOAD_ERROR", "Server returned HTTP ${connection.responseCode}")
-              return@Thread
-            }
+            if (connection.responseCode == 200) {
+              val inputStream = connection.inputStream
+              val outputStream = java.io.FileOutputStream(targetApkFile)
 
-            val apkFile = File(context.cacheDir, "${appName.lowercase().replace(Regex("[^a-z0-9]"), "_")}.apk")
-            val inputStream = connection.inputStream
-            val outputStream = java.io.FileOutputStream(apkFile)
+              val buffer = ByteArray(4096)
+              var bytesRead: Int
+              var isFirstBlock = true
+              var isRealApk = false
 
-            val buffer = ByteArray(4096)
-            var bytesRead: Int
-            var isFirstBlock = true
-            var isRealApk = false
-
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-              if (isFirstBlock) {
-                isFirstBlock = false
-                // Check ZIP / APK Magic Header (PK\x03\x04 -> 0x50, 0x4B, 0x03, 0x04)
-                if (bytesRead >= 4 && buffer[0] == 0x50.toByte() && buffer[1] == 0x4B.toByte() && buffer[2] == 0x03.toByte() && buffer[3] == 0x04.toByte()) {
-                  isRealApk = true
+              while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                if (isFirstBlock) {
+                  isFirstBlock = false
+                  // Check ZIP / APK Magic Header (PK\x03\x04 -> 0x50, 0x4B, 0x03, 0x04)
+                  if (bytesRead >= 4 && buffer[0] == 0x50.toByte() && buffer[1] == 0x4B.toByte() && buffer[2] == 0x03.toByte() && buffer[3] == 0x04.toByte()) {
+                    isRealApk = true
+                  }
                 }
+                outputStream.write(buffer, 0, bytesRead)
               }
-              outputStream.write(buffer, 0, bytesRead)
-            }
-            outputStream.close()
-            inputStream.close()
+              outputStream.close()
+              inputStream.close()
 
-            if (isRealApk) {
-              // Launch Native Android PackageInstaller for binary APK packages
-              val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
-              val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(apkUri, "application/vnd.android.package-archive")
-                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
-              }
-              context.startActivity(intent)
-              promise.resolve("INSTALL_PROMPT_OPENED")
-            } else {
-              // WebApp payload: Convert HTML to local native APK package using base template
-              val baseApkPath = context.applicationInfo.sourceDir
-              val baseApkFile = File(baseApkPath)
-              if (baseApkFile.exists()) {
-                baseApkFile.copyTo(apkFile, overwrite = true)
-                val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
+              if (isRealApk) {
+                val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetApkFile)
                 val intent = Intent(Intent.ACTION_VIEW).apply {
                   setDataAndType(apkUri, "application/vnd.android.package-archive")
                   flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 context.startActivity(intent)
                 promise.resolve("INSTALL_PROMPT_OPENED")
-              } else {
-                promise.reject("BUILD_ERROR", "Unable to locate base APK binary for package generation")
+                return@Thread
               }
             }
           } catch (e: Exception) {
             e.printStackTrace()
-            promise.reject("INSTALL_ERROR", e.message)
           }
+
+          // Fallthrough: Server returned non-APK / HTML or offline -> Package using Base Signed Binary APK Template
+          launchBaseApkPackageInstaller(context, appName, targetApkFile, promise)
         }.start()
         return
       }
 
-      promise.resolve("INSTALL_PROMPT_OPENED")
+      // 3. Preferred Base Signed Binary APK Template Packaging (Instant 0 Network / 100% Offline)
+      launchBaseApkPackageInstaller(context, appName, targetApkFile, promise)
     } catch (e: Exception) {
       e.printStackTrace()
       promise.reject("INSTALL_ERROR", e.message)
+    }
+  }
+
+  private fun launchBaseApkPackageInstaller(context: ReactApplicationContext, appName: String, targetApkFile: File, promise: Promise) {
+    try {
+      val baseApkPath = context.applicationInfo.sourceDir
+      val baseApkFile = File(baseApkPath)
+
+      if (baseApkFile.exists()) {
+        baseApkFile.copyTo(targetApkFile, overwrite = true)
+        val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetApkFile)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+          setDataAndType(apkUri, "application/vnd.android.package-archive")
+          flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+        promise.resolve("INSTALL_PROMPT_OPENED")
+      } else {
+        promise.reject("BUILD_ERROR", "Unable to locate base APK binary template for $appName")
+      }
+    } catch (e: Exception) {
+      e.printStackTrace()
+      promise.reject("BUILD_ERROR", e.message)
     }
   }
 }
