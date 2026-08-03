@@ -1263,7 +1263,8 @@ export default function App() {
       setInstallStepText('Generating Cyber-Glassmorphism CSS & Web Manifest...');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      const pwaHtml = generateCompleteStandaloneAppHtml('Sanwitch App', widgets, wifiIP);
+      const appTitle = exportAppName.trim() || 'Sanwitch App';
+      const pwaHtml = generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
 
       await new Promise(r => setTimeout(r, 700));
       setInstallProgress(75);
@@ -1274,14 +1275,6 @@ export default function App() {
       setInstallProgress(100);
       setInstallStepText('Package compiled! Installing to Android App Drawer...');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule) {
-        try {
-          await NativeModules.WebApkInstallerModule.installWebApk(pwaHtml, 'Sanwitch App');
-        } catch (e) {
-          console.log('Native WebAPK Installer triggered:', e.message);
-        }
-      }
 
       setTimeout(async () => {
         setIsInstallModalVisible(false);
