@@ -1,6 +1,12 @@
 import React from 'react';
 import { View, Text, Modal, StyleSheet, Platform, Image } from 'react-native';
-import assert from 'assert';
+
+// Simple zero-dependency assertion helper for React Native runtime
+const assert = (condition, message) => {
+  if (!condition) {
+    console.warn("Assertion Warning: " + (message || "Invalid progress value"));
+  }
+};
 
 // Image Asset Reference
 const MONOCHROME_ICON = require('./assets/monochrome_icon.png');
