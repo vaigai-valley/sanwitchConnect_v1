@@ -283,6 +283,7 @@ export default function App() {
                 setInstallProgress(0);
 
                 if (res === 'PERMISSION_NEEDED') {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                   customAlert(
                     'Permission Required',
                     'Android Settings opened! Please turn ON "Allow from this source" for Sanwitch Connect, then tap INSTALL APP again.',
@@ -290,6 +291,7 @@ export default function App() {
                   );
                   return;
                 } else if (res === 'INSTALL_PROMPT_OPENED') {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                   customAlert(
                     'Package Installer Ready',
                     `Android System prompt "Do you want to install this app?" has popped up! Tap INSTALL to add "${appTitle}" directly to your device!`,
@@ -297,6 +299,7 @@ export default function App() {
                   );
                   return;
                 } else if (res === 'PWA_PROMPT_OPENED') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   customAlert(
                     'Installing Standalone App',
                     `Chrome opened "${appTitle}". Tap Chrome's menu (⋮) -> "Install App" to add it to your App Drawer!`,
@@ -308,6 +311,13 @@ export default function App() {
                 console.log('WebApkInstallerModule error:', e);
                 setIsInstallModalVisible(false);
                 setInstallProgress(0);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                customAlert(
+                  'Installation Error',
+                  `Failed to launch PackageInstaller: ${e.message || 'Unknown Native Error'}`,
+                  'error'
+                );
+                return;
               }
             } else {
               setIsInstallModalVisible(false);
