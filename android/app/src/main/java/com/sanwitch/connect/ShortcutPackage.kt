@@ -9,7 +9,8 @@ class ShortcutPackage : ReactPackage {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
     return listOf(
       ShortcutModule(reactContext),
-      WebApkInstallerModule(reactContext)
+      WebApkInstallerModule(reactContext),
+      VoiceModule(reactContext)
     )
   }
 

@@ -798,11 +798,30 @@ export default function App() {
     }
     await requestPermissions();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Speech.speak("Sanwitch Voice active. Speak or choose a command.", { rate: 1.0 });
+    Speech.speak("Sanwitch Voice active. Speak now.", { rate: 1.0 });
     setVoiceInputText('');
     setIsVoiceModalVisible(true);
 
-    // Initialize WebSpeech microphone listener if supported
+    // 1. Native Android SpeechRecognizer Engine (Turns on Phone Microphone)
+    if (Platform.OS === 'android' && NativeModules.VoiceModule?.startListening) {
+      try {
+        const voiceEmitter = new NativeEventEmitter(NativeModules.VoiceModule);
+        voiceEmitter.removeAllListeners('onSpeechResults');
+        voiceEmitter.addListener('onSpeechResults', (e) => {
+          if (e && e.value) {
+            setVoiceInputText(e.value);
+            processVoice(e.value);
+          }
+        });
+        await NativeModules.VoiceModule.startListening();
+        log('Native Android Microphone listening for voice commands...', 'info');
+        return;
+      } catch (e) {
+        console.log('VoiceModule error:', e);
+      }
+    }
+
+    // 2. WebSpeech Microphone Listener Fallback
     if (typeof window !== 'undefined') {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
@@ -1796,7 +1815,12 @@ export default function App() {
                 <Text style={styles.nativeBtnText}>Run Voice Command</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.modalClose} onPress={() => setIsVoiceModalVisible(false)}>
+              <TouchableOpacity style={styles.modalClose} onPress={() => {
+                if (Platform.OS === 'android' && NativeModules.VoiceModule?.stopListening) {
+                  NativeModules.VoiceModule.stopListening().catch(() => {});
+                }
+                setIsVoiceModalVisible(false);
+              }}>
                 <X size={24} color={THEME.textMuted} />
               </TouchableOpacity>
             </View>
