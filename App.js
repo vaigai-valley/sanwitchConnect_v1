@@ -286,19 +286,10 @@ export default function App() {
       `"${appTitle}" has been compiled directly by Sanwitch Connect! Select how you want to run your standalone app:`,
       [
         {
-          text: '📱 Install Direct to Phone',
+          text: '📱 Install Standalone WebAPK App',
           onPress: async () => {
-            if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule) {
+            if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
               try {
-                if (NativeModules.WebApkInstallerModule.createHomeShortcut) {
-                  await NativeModules.WebApkInstallerModule.createHomeShortcut(appTitle, publishedUrl || 'https://sanwitch.vaigaivalley.workers.dev');
-                  customAlert(
-                    'App Installed 📲',
-                    `"${appTitle}" icon added directly to your Android Home Screen & App Drawer with 0 browser redirects!`,
-                    'success'
-                  );
-                  return;
-                }
                 const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
                 if (res === 'PERMISSION_NEEDED') {
                   customAlert(
@@ -308,13 +299,19 @@ export default function App() {
                   );
                   return;
                 }
+                customAlert(
+                  'WebAPK Staged 🚀',
+                  `Android PackageInstaller staged standalone package "org.sanwitch.pwa.${appTitle.toLowerCase().replace(/[^a-z0-9]/g, '')}". Tap Install on the system prompt to add it to your App Drawer!`,
+                  'success'
+                );
                 return;
               } catch (e) {
                 console.log('WebApkInstallerModule error:', e);
               }
             }
 
-            handleRunAppInApp(newApp);
+            // Fallback for Expo Go / standard client: Trigger WebAPK Minting service via Chrome
+            await handleOpenPwaLinkInBrowser(appTitle);
           }
         },
         {
