@@ -1930,7 +1930,15 @@ export default function App() {
         {alertConfig && (
           <Modal visible={!!alertConfig} transparent animationType="fade" onRequestClose={() => setAlertConfig(null)}>
             <View style={styles.alertOverlay}>
-              <View style={styles.alertCard}>
+              <View style={[styles.alertCard, { position: 'relative' }]}>
+                {/* TOP-RIGHT CLOSE X SYMBOL */}
+                <TouchableOpacity
+                  onPress={() => setAlertConfig(null)}
+                  style={{ position: 'absolute', top: 14, right: 14, zIndex: 10, padding: 6, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.06)' }}
+                >
+                  <X size={18} color={THEME.textMuted} />
+                </TouchableOpacity>
+
                 <View style={[styles.alertIconBadge, {
                   backgroundColor: alertConfig.type === 'success' ? 'rgba(20, 184, 166, 0.15)' :
                     alertConfig.type === 'error' ? 'rgba(239, 68, 68, 0.15)' :
@@ -1948,29 +1956,48 @@ export default function App() {
                 <Text style={styles.alertTitle}>{alertConfig.title}</Text>
                 <Text style={styles.alertMessage}>{alertConfig.message}</Text>
 
-                <View style={{ flexDirection: alertConfig.buttons.length > 1 ? 'row' : 'column', gap: 10, width: '100%', marginTop: 8 }}>
-                  {alertConfig.buttons.map((btn, idx) => {
-                    const isCancel = btn.style === 'cancel';
-                    return (
-                      <TouchableOpacity
-                        key={idx}
-                        style={[
-                          styles.nativeBtn,
-                          { flex: alertConfig.buttons.length > 1 ? 1 : undefined, width: alertConfig.buttons.length > 1 ? undefined : '100%', marginTop: 0 },
-                          isCancel && { backgroundColor: 'transparent', borderWidth: 1, borderColor: THEME.surfaceBorder }
-                        ]}
-                        onPress={() => {
-                          const cb = btn.onPress;
-                          setAlertConfig(null);
-                          if (cb) cb();
-                        }}
-                      >
-                        <Text style={[styles.nativeBtnText, isCancel && { color: THEME.textMuted }]}>
-                          {btn.text}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                {/* ACTION BUTTONS WITH SVG ICONS */}
+                <View style={{
+                  flexDirection: alertConfig.buttons.filter(b => b.style !== 'cancel' && b.text !== 'Close').length > 1 ? 'row' : 'column',
+                  gap: 10,
+                  width: '100%',
+                  marginTop: 10
+                }}>
+                  {alertConfig.buttons
+                    .filter(btn => btn.style !== 'cancel' && btn.text !== 'Close')
+                    .map((btn, idx) => {
+                      const isInstall = btn.text.toLowerCase().includes('install');
+                      const isPreview = btn.text.toLowerCase().includes('preview') || btn.text.toLowerCase().includes('run');
+
+                      return (
+                        <TouchableOpacity
+                          key={idx}
+                          style={[
+                            styles.nativeBtn,
+                            {
+                              flex: 1,
+                              marginTop: 0,
+                              flexDirection: 'row',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              backgroundColor: isInstall ? THEME.primary : isPreview ? THEME.secondary : THEME.primary,
+                              paddingVertical: 12
+                            }
+                          ]}
+                          onPress={() => {
+                            const cb = btn.onPress;
+                            setAlertConfig(null);
+                            if (cb) cb();
+                          }}
+                        >
+                          {isInstall && <Smartphone size={16} color={THEME.background} style={{ marginRight: 6 }} />}
+                          {isPreview && <Play size={16} color={THEME.background} style={{ marginRight: 6 }} />}
+                          <Text style={[styles.nativeBtnText, { color: THEME.background, fontWeight: '800' }]}>
+                            {btn.text}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                 </View>
               </View>
             </View>
