@@ -10,6 +10,8 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 
 class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
   override fun getName(): String = "WebApkInstallerModule"
@@ -71,6 +73,12 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
   fun installWebApk(appName: String, pwaUrl: String, promise: Promise) {
     val context = reactApplicationContext
     try {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+        requestInstallPermission()
+        promise.resolve("PERMISSION_NEEDED")
+        return
+      }
+
       // 1. Direct Local APK File Installation (0 Browser Redirects)
       if (pwaUrl.endsWith(".apk") || pwaUrl.startsWith("file://") || pwaUrl.startsWith("/")) {
         val cleanPath = pwaUrl.replace("file://", "")
@@ -82,9 +90,17 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       if (pwaUrl.startsWith("http")) {
         Thread {
           try {
-            val url = java.net.URL(pwaUrl)
-            val connection = url.openConnection() as java.net.HttpURLConnection
+            val url = URL(pwaUrl)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = true
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
             connection.connect()
+
+            if (connection.responseCode >= 400) {
+              promise.reject("DOWNLOAD_ERROR", "Server returned HTTP ${connection.responseCode}")
+              return@Thread
+            }
 
             val apkFile = File(context.cacheDir, "${appName.lowercase().replace(Regex("[^a-z0-9]"), "_")}.apk")
             val inputStream = connection.inputStream
