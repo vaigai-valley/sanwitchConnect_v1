@@ -288,8 +288,17 @@ export default function App() {
         {
           text: '📱 Install Direct to Phone',
           onPress: async () => {
-            if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
+            if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule) {
               try {
+                if (NativeModules.WebApkInstallerModule.createHomeShortcut) {
+                  await NativeModules.WebApkInstallerModule.createHomeShortcut(appTitle, publishedUrl || 'https://sanwitch.vaigaivalley.workers.dev');
+                  customAlert(
+                    'App Installed 📲',
+                    `"${appTitle}" icon added directly to your Android Home Screen & App Drawer with 0 browser redirects!`,
+                    'success'
+                  );
+                  return;
+                }
                 const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
                 if (res === 'PERMISSION_NEEDED') {
                   customAlert(
@@ -305,17 +314,7 @@ export default function App() {
               }
             }
 
-            // Fallback for Expo Go / standard client: launch Chrome WebAPK engine
-            if (publishedUrl) {
-              await Linking.openURL(publishedUrl);
-              customAlert(
-                'WebAPK Installation 📲',
-                `Tap Chrome's 3-dot menu (⋮) -> "Install App" to add "${appTitle}" directly to your Android App Drawer!`,
-                'info'
-              );
-            } else {
-              handleRunAppInApp(newApp);
-            }
+            handleRunAppInApp(newApp);
           }
         },
         {

@@ -1,8 +1,12 @@
 package com.sanwitch.connect
 
+import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -14,6 +18,45 @@ import com.facebook.react.bridge.ReactMethod
 
 class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
   override fun getName(): String = "WebApkInstallerModule"
+
+  @ReactMethod
+  fun createHomeShortcut(appName: String, pwaUrl: String, promise: Promise) {
+    val context = reactApplicationContext
+    try {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val shortcutManager = context.getSystemService(ShortcutManager::class.java)
+        if (shortcutManager != null && shortcutManager.isRequestPinShortcutSupported) {
+          val intent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            putExtra("PWA_URL", pwaUrl)
+            putExtra("APP_NAME", appName)
+          }
+
+          val shortcut = ShortcutInfo.Builder(context, "pwa_shortcut_" + System.currentTimeMillis())
+            .setShortLabel(appName)
+            .setLongLabel(appName)
+            .setIcon(Icon.createWithResource(context, R.mipmap.ic_launcher))
+            .setIntent(intent)
+            .build()
+
+          val pinnedShortcutCallbackIntent = shortcutManager.createShortcutResultIntent(shortcut)
+          val successCallback = PendingIntent.getBroadcast(
+            context, 0,
+            pinnedShortcutCallbackIntent,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+          )
+
+          shortcutManager.requestPinShortcut(shortcut, successCallback.intentSender)
+          promise.resolve("PINNED_SUCCESS")
+          return
+        }
+      }
+      promise.resolve("NOT_SUPPORTED")
+    } catch (e: Exception) {
+      e.printStackTrace()
+      promise.reject("SHORTCUT_ERROR", e.message)
+    }
+  }
 
   @ReactMethod
   fun canInstallPackages(promise: Promise) {
