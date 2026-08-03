@@ -23,7 +23,7 @@ import {
   Share
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, RefreshCcw, LogOut, KeyRound, Smartphone, ExternalLink, Sparkles, ChevronsUp, Folder, Edit3, FileText, HelpCircle, ChevronRight, Play } from 'lucide-react-native';
+import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, RefreshCcw, LogOut, KeyRound, Smartphone, ExternalLink, Sparkles, ChevronsUp, Folder, Edit3, FileText, HelpCircle, ChevronRight, Play, Download } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
@@ -1990,7 +1990,7 @@ export default function App() {
                             if (cb) cb();
                           }}
                         >
-                          {isInstall && <Smartphone size={16} color={THEME.background} style={{ marginRight: 6 }} />}
+                          {isInstall && <Download size={16} color={THEME.background} style={{ marginRight: 6 }} />}
                           {isPreview && <Play size={16} color={THEME.background} style={{ marginRight: 6 }} />}
                           <Text style={[styles.nativeBtnText, { color: THEME.background, fontWeight: '800' }]}>
                             {btn.text}
