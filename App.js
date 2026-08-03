@@ -1854,7 +1854,7 @@ export default function App() {
                 </View>
 
                 {/* PRIMARY BUILD BUNDLE BUTTON */}
-                <TouchableOpacity style={[styles.exportBtnPrimary, { marginTop: 8, paddingVertical: 14, borderRadius: 14 }]} onPress={handleInstallReadyApp}>
+                <TouchableOpacity style={[styles.exportBtnPrimary, { marginTop: 8, paddingVertical: 14, borderRadius: 14 }]} onPress={installStandalonePwa}>
                   <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
                   <Text style={styles.exportBtnPrimaryText}>BUILD BUNDLE</Text>
                 </TouchableOpacity>
