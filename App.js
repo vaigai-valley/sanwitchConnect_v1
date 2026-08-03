@@ -265,22 +265,13 @@ export default function App() {
           text: 'Install App',
           onPress: async () => {
             setIsInstallModalVisible(true);
-            setInstallProgress(15);
-            setInstallStepText('Initiating Android PackageInstaller...');
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setInstallProgress(85);
+            setInstallStepText('Writing APK package to device cache & launching PackageInstaller...');
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
             if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
               try {
-                setInstallProgress(45);
-                setInstallStepText('Writing APK package to device cache...');
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-                const resPromise = NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
-
-                setInstallProgress(85);
-                setInstallStepText('Launching system prompt: "Do you want to install this app?"...');
-
-                const res = await resPromise;
+                const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
 
                 setInstallProgress(100);
                 setInstallStepText('Package Installer Ready!');
@@ -321,7 +312,10 @@ export default function App() {
         },
         {
           text: 'Preview App',
-          onPress: () => handleRunAppInApp(newApp)
+          onPress: () => {
+            setInstallProgress(0);
+            handleRunAppInApp(newApp);
+          }
         }
       ]
     );
@@ -1278,7 +1272,7 @@ export default function App() {
       setInstallStepText('Extracting layout state & custom payloads...');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 400));
       setInstallProgress(45);
       setInstallStepText('Generating Cyber-Glassmorphism CSS & Web Manifest...');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1286,27 +1280,20 @@ export default function App() {
       const appTitle = exportAppName.trim() || 'Sanwitch App';
       const pwaHtml = generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
 
-      await new Promise(r => setTimeout(r, 700));
+      await new Promise(r => setTimeout(r, 500));
       setInstallProgress(75);
       setInstallStepText('Embedding Base64 PWA Icon & WebBluetooth drivers...');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      await new Promise(r => setTimeout(r, 800));
-      setInstallProgress(100);
-      setInstallStepText('Package compiled! Installing to Android App Drawer...');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await new Promise(r => setTimeout(r, 500));
+      setIsInstallModalVisible(false);
 
-      setTimeout(async () => {
-        setIsInstallModalVisible(false);
-        setInstallProgress(0);
-
-        // Execute full install & save pipeline (triggers Native WebAPK PackageInstaller)
-        await handleInstallReadyApp();
-      }, 900);
+      // Execute compile & save pipeline (triggers Standalone App Ready prompt)
+      await handleInstallReadyApp();
     } catch (e) {
       setIsInstallModalVisible(false);
       setInstallProgress(0);
-      customAlert('Installation Error', e.message, 'error');
+      customAlert('Compilation Error', e.message, 'error');
     }
   };
 
