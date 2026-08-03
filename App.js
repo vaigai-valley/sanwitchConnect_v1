@@ -1859,10 +1859,10 @@ export default function App() {
                   />
                 </View>
 
-                {/* PRIMARY INSTALL APP BUTTON */}
+                {/* PRIMARY BUILD BUNDLE BUTTON */}
                 <TouchableOpacity style={[styles.exportBtnPrimary, { marginTop: 8, paddingVertical: 14, borderRadius: 14 }]} onPress={handleInstallReadyApp}>
                   <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                  <Text style={styles.exportBtnPrimaryText}>INSTALL APP (NO BROWSER NEEDED)</Text>
+                  <Text style={styles.exportBtnPrimaryText}>BUILD BUNDLE</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
