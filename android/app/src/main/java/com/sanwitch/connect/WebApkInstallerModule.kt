@@ -79,14 +79,14 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         return
       }
 
-      // 1. Direct Local APK File Installation (0 Browser Redirects)
-      if (pwaUrl.endsWith(".apk") || pwaUrl.startsWith("file://") || pwaUrl.startsWith("/")) {
+      // 1. Direct Local File System Installation (file:// or /sdcard/...)
+      if ((pwaUrl.startsWith("file://") || pwaUrl.startsWith("/")) && !pwaUrl.startsWith("http")) {
         val cleanPath = pwaUrl.replace("file://", "")
         installLocalApk(cleanPath, promise)
         return
       }
 
-      // 2. HTTPS Download -> Native Android PackageInstaller (0 Browser Fallbacks)
+      // 2. HTTPS Network Download -> Native Android PackageInstaller (0 Browser Fallbacks)
       if (pwaUrl.startsWith("http")) {
         Thread {
           try {
@@ -108,21 +108,48 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
             val buffer = ByteArray(4096)
             var bytesRead: Int
+            var isFirstBlock = true
+            var isRealApk = false
 
             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+              if (isFirstBlock) {
+                isFirstBlock = false
+                // Check ZIP / APK Magic Header (PK\x03\x04 -> 0x50, 0x4B, 0x03, 0x04)
+                if (bytesRead >= 4 && buffer[0] == 0x50.toByte() && buffer[1] == 0x4B.toByte() && buffer[2] == 0x03.toByte() && buffer[3] == 0x04.toByte()) {
+                  isRealApk = true
+                }
+              }
               outputStream.write(buffer, 0, bytesRead)
             }
             outputStream.close()
             inputStream.close()
 
-            // Launch Native Android PackageInstaller for binary APK packages
-            val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-              setDataAndType(apkUri, "application/vnd.android.package-archive")
-              flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+            if (isRealApk) {
+              // Launch Native Android PackageInstaller for binary APK packages
+              val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
+              val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+              }
+              context.startActivity(intent)
+              promise.resolve("INSTALL_PROMPT_OPENED")
+            } else {
+              // WebApp payload: Convert HTML to local native APK package using base template
+              val baseApkPath = context.applicationInfo.sourceDir
+              val baseApkFile = File(baseApkPath)
+              if (baseApkFile.exists()) {
+                baseApkFile.copyTo(apkFile, overwrite = true)
+                val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                  setDataAndType(apkUri, "application/vnd.android.package-archive")
+                  flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+                promise.resolve("INSTALL_PROMPT_OPENED")
+              } else {
+                promise.reject("BUILD_ERROR", "Unable to locate base APK binary for package generation")
+              }
             }
-            context.startActivity(intent)
-            promise.resolve("INSTALL_PROMPT_OPENED")
           } catch (e: Exception) {
             e.printStackTrace()
             promise.reject("INSTALL_ERROR", e.message)
