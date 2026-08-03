@@ -290,10 +290,29 @@ export default function App() {
           onPress: async () => {
             if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
               try {
-                await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
+                const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
+                if (res === 'PERMISSION_NEEDED') {
+                  customAlert(
+                    'Permission Required ⚙️',
+                    'Opening Android Settings! Please enable "Allow from this source" for Sanwitch Connect, then tap INSTALL APP again.',
+                    'info'
+                  );
+                  return;
+                }
+                return;
               } catch (e) {
-                handleRunAppInApp(newApp);
+                console.log('WebApkInstallerModule error:', e);
               }
+            }
+
+            // Fallback for Expo Go / standard client: launch Chrome WebAPK engine
+            if (publishedUrl) {
+              await Linking.openURL(publishedUrl);
+              customAlert(
+                'WebAPK Installation 📲',
+                `Tap Chrome's 3-dot menu (⋮) -> "Install App" to add "${appTitle}" directly to your Android App Drawer!`,
+                'info'
+              );
             } else {
               handleRunAppInApp(newApp);
             }
