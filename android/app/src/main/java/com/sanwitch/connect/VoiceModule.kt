@@ -2,6 +2,8 @@ package com.sanwitch.connect
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -19,13 +21,7 @@ class VoiceModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
 
   @ReactMethod
   fun startListening(promise: Promise) {
-    val activity = currentActivity
-    if (activity == null) {
-      promise.reject("NO_ACTIVITY", "Activity doesn't exist")
-      return
-    }
-
-    activity.runOnUiThread {
+    Handler(Looper.getMainLooper()).post {
       try {
         if (speechRecognizer != null) {
           try {
@@ -94,7 +90,7 @@ class VoiceModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
 
   @ReactMethod
   fun stopListening(promise: Promise) {
-    currentActivity?.runOnUiThread {
+    Handler(Looper.getMainLooper()).post {
       try {
         speechRecognizer?.stopListening()
         speechRecognizer?.destroy()
