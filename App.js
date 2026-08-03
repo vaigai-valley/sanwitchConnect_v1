@@ -286,7 +286,7 @@ export default function App() {
       `"${appTitle}" has been compiled directly by Sanwitch Connect! Select how you want to run your standalone app:`,
       [
         {
-          text: '📱 Install Standalone WebAPK App',
+          text: 'Install App',
           onPress: async () => {
             if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
               try {
@@ -315,7 +315,7 @@ export default function App() {
           }
         },
         {
-          text: '▶️ Run Fullscreen In-App',
+          text: 'Preview App',
           onPress: () => handleRunAppInApp(newApp)
         },
         {
