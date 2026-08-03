@@ -335,10 +335,6 @@ export default function App() {
     );
   };
 
-  const handleRunAppInApp = async (appItem) => {
-    await handleOpenPwaLinkInBrowser(appItem);
-  };
-
   const handleOpenPwaLinkInBrowser = async (appTitleOrItem) => {
     const title = typeof appTitleOrItem === 'string' ? appTitleOrItem : (appTitleOrItem?.name || exportAppName || 'My Sanwitch App');
     const html = (typeof appTitleOrItem === 'object' && appTitleOrItem?.html) ? appTitleOrItem.html : generateCompleteStandaloneAppHtml(title, widgets, wifiIP);
