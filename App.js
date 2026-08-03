@@ -23,7 +23,7 @@ import {
   Share
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, RefreshCcw, LogOut, KeyRound, Smartphone, ExternalLink, Sparkles, ChevronsUp, Folder, Edit3, FileText, HelpCircle, ChevronRight, Play, Download } from 'lucide-react-native';
+import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, RefreshCcw, LogOut, KeyRound, Smartphone, ExternalLink, Sparkles, ChevronsUp, Folder, Edit3, FileText, HelpCircle, ChevronRight, Play, Download, Share2 } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
@@ -430,6 +430,34 @@ export default function App() {
       `App "${appItem.name}" is stored locally in MY APPS.`,
       'info'
     );
+  };
+
+  const handleSharePwaLink = async (appItem) => {
+    const title = appItem?.name || exportAppName || 'My Sanwitch App';
+    const html = appItem?.html || generateCompleteStandaloneAppHtml(title, widgets, wifiIP);
+    let publishedUrl = `https://sanwitch.vaigaivalley.workers.dev/pwa/${encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]/g, ''))}`;
+
+    try {
+      const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: title, html })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.url) publishedUrl = data.url;
+      }
+    } catch (e) {}
+
+    try {
+      await Share.share({
+        title: title,
+        message: `Install and run "${title}" standalone PWA app on your phone: ${publishedUrl}`,
+        url: publishedUrl
+      });
+    } catch (e) {
+      console.log('Share error:', e);
+    }
   };
 
   const handleDeleteSavedApp = async (appId) => {
@@ -2085,34 +2113,31 @@ export default function App() {
                           <Text style={{ fontSize: 11, color: THEME.primary, fontWeight: '700', marginTop: 2 }}>{app.fileName}</Text>
                           <Text style={{ fontSize: 10, color: THEME.textMuted, marginTop: 2 }}>Created: {app.createdAt} • Widgets: {app.widgets?.length || 0}</Text>
                         </View>
-                        <TouchableOpacity onPress={() => handleDeleteSavedApp(app.id)} style={{ padding: 6 }}>
-                          <Trash2 size={16} color={THEME.danger} />
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <TouchableOpacity onPress={() => handleLoadAppForEditing(app)} style={{ padding: 6 }}>
+                            <Edit3 size={16} color={THEME.primary} />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => handleDeleteSavedApp(app.id)} style={{ padding: 6 }}>
+                            <Trash2 size={16} color={THEME.danger} />
+                          </TouchableOpacity>
+                        </View>
                       </View>
 
-                      <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+                      <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                         <TouchableOpacity
-                          style={{ flex: 1, backgroundColor: THEME.success, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                          style={{ flex: 1, backgroundColor: THEME.success, paddingVertical: 11, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
                           onPress={() => handleRunAppInApp(app)}
                         >
-                          <Play size={14} color={THEME.background} style={{ marginRight: 4 }} />
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.background }}>RUN IN-APP</Text>
+                          <Play size={14} color={THEME.background} style={{ marginRight: 6 }} />
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.background }}>PREVIEW APP</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          style={{ flex: 1, backgroundColor: THEME.primary, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
-                          onPress={() => handleLaunchSavedApp(app)}
+                          style={{ flex: 1, backgroundColor: THEME.primary, paddingVertical: 11, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                          onPress={() => handleSharePwaLink(app)}
                         >
-                          <Smartphone size={14} color={THEME.background} style={{ marginRight: 4 }} />
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.background }}>PWA LINK</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={{ flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderWidth: 1, borderColor: THEME.border, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
-                          onPress={() => handleLoadAppForEditing(app)}
-                        >
-                          <Edit3 size={14} color={THEME.text} style={{ marginRight: 4 }} />
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.text }}>EDIT</Text>
+                          <Share2 size={14} color={THEME.background} style={{ marginRight: 6 }} />
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.background }}>SHARE LINK</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
