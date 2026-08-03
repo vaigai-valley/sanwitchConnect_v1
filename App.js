@@ -1276,19 +1276,11 @@ export default function App() {
       setInstallStepText('Package compiled! Installing to Android App Drawer...');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
-        try {
-          await NativeModules.WebApkInstallerModule.installWebApk(pwaHtml, appTitle);
-        } catch (e) {
-          console.log('Native WebAPK Installer triggered:', e.message);
-        }
-      }
-
       setTimeout(async () => {
         setIsInstallModalVisible(false);
         setInstallProgress(0);
 
-        // Execute full install & save pipeline
+        // Execute full install & save pipeline (triggers Native WebAPK PackageInstaller)
         await handleInstallReadyApp();
       }, 900);
     } catch (e) {
