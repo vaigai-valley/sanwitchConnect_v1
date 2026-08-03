@@ -262,7 +262,7 @@ export default function App() {
         const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
         if (res === 'PERMISSION_NEEDED') {
           customAlert(
-            'Permission Required ⚙️',
+            'Permission Required',
             `Opening Android Settings! Please enable "Allow from this source" for Sanwitch Connect, then tap INSTALL APP again.`,
             'info'
           );
@@ -270,7 +270,7 @@ export default function App() {
         } else if (res === 'POLICY_RESTRICTED') {
           if (publishedUrl) await Linking.openURL(publishedUrl);
           customAlert(
-            'Enterprise Policy Detected 🏢',
+            'Enterprise Policy Detected',
             `Direct sideloading is restricted by your Android device policy. Switched smoothly to HTTPS PWA link!`,
             'info'
           );
@@ -282,7 +282,7 @@ export default function App() {
     }
 
     customAlert(
-      'Standalone App Ready! 🚀',
+      'Standalone App Ready',
       `"${appTitle}" has been compiled directly by Sanwitch Connect! Select how you want to run your standalone app:`,
       [
         {
@@ -293,14 +293,14 @@ export default function App() {
                 const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
                 if (res === 'PERMISSION_NEEDED') {
                   customAlert(
-                    'Permission Required ⚙️',
+                    'Permission Required',
                     'Opening Android Settings! Please enable "Allow from this source" for Sanwitch Connect, then tap INSTALL APP again.',
                     'info'
                   );
                   return;
                 }
                 customAlert(
-                  'WebAPK Staged 🚀',
+                  'WebAPK Staged',
                   `Android PackageInstaller staged standalone package "org.sanwitch.pwa.${appTitle.toLowerCase().replace(/[^a-z0-9]/g, '')}". Tap Install on the system prompt to add it to your App Drawer!`,
                   'success'
                 );
@@ -342,7 +342,7 @@ export default function App() {
         if (data.url) {
           await Linking.openURL(data.url);
           customAlert(
-            'Installing to App Drawer 📲',
+            'Installing to App Drawer',
             `When Chrome opens, tap Chrome's 3-dot menu (⋮) at top-right, then tap "Install App" (or "Add to Home screen") to add "${title}" directly to your Android App Drawer!`,
             'info'
           );
