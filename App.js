@@ -1859,74 +1859,11 @@ export default function App() {
                   />
                 </View>
 
-                {/* OPTION 1: INSTALL WEBAPK / APP TO ANDROID SYSTEM (NO BROWSER NEEDED) */}
-                <View style={[styles.exportCardOption, { borderColor: THEME.primary, backgroundColor: 'rgba(56, 189, 248, 0.08)', marginBottom: 14 }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <Smartphone size={20} color={THEME.primary} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>1. INSTALL APP (No Browser Needed)</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(56, 189, 248, 0.2)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>Android WebAPK Installer</Text>
-                    </View>
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.success }}>0 Browser Redirects</Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Sanwitch Connect acts as the native WebAPK package installer (PackageInstaller API) and installs <Text style={{ color: THEME.primary, fontWeight: '700' }}>"{exportAppName}"</Text> directly into your Android System with NO shortcut API used & zero browser handoff.
-                  </Text>
-
-                  <TouchableOpacity style={styles.exportBtnPrimary} onPress={handleInstallReadyApp}>
-                    <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                    <Text style={styles.exportBtnPrimaryText}>INSTALL APP (NO BROWSER NEEDED)</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* OPTION 2: OPEN PWA LINK IN BROWSER */}
-                <View style={[styles.exportCardOption, { borderColor: THEME.textMuted, backgroundColor: 'rgba(255, 255, 255, 0.03)', marginBottom: 14 }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <ExternalLink size={20} color={THEME.textMuted} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>2. OPEN PWA LINK IN BROWSER</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.textMuted }}>External Browser Handoff</Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Generates an HTTPS PWA link to open in your system browser (Chrome / Safari).
-                  </Text>
-
-                  <TouchableOpacity style={[styles.exportBtnPrimary, { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: THEME.surfaceBorder }]} onPress={() => handleOpenPwaLinkInBrowser(exportAppName)}>
-                    <ExternalLink size={18} color={THEME.text} style={{ marginRight: 6 }} />
-                    <Text style={[styles.exportBtnPrimaryText, { color: THEME.text }]}>OPEN PWA LINK IN BROWSER</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* OPTION 3: SAVE PWA BUNDLE (EDITABLE IN SANWITCH CONNECT) */}
-                <View style={[styles.exportCardOption, { borderColor: THEME.secondary, backgroundColor: 'rgba(20, 184, 166, 0.05)', marginBottom: 14 }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <Folder size={20} color={THEME.secondary} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.text }}>3. SAVE PWA BUNDLE (Editable)</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(20, 184, 166, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.secondary }}>MY APPS Project</Text>
-                    </View>
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(56, 189, 248, 0.15)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.primary }}>Re-editable</Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 18 }}>
-                    Saves app layout into your <Text style={{ color: THEME.secondary, fontWeight: '700' }}>MY APPS</Text> project folder so you can re-load, edit widgets, and customize anytime in Sanwitch Connect.
-                  </Text>
-
-                  <TouchableOpacity style={[styles.exportBtnPrimary, { backgroundColor: THEME.secondary }]} onPress={handleSavePwaBundleProject}>
-                    <Folder size={18} color={THEME.background} style={{ marginRight: 6 }} />
-                    <Text style={styles.exportBtnPrimaryText}>SAVE PWA BUNDLE (MY APPS)</Text>
-                  </TouchableOpacity>
-                </View>
+                {/* PRIMARY INSTALL APP BUTTON */}
+                <TouchableOpacity style={[styles.exportBtnPrimary, { marginTop: 8, paddingVertical: 14, borderRadius: 14 }]} onPress={handleInstallReadyApp}>
+                  <Sparkles size={18} color={THEME.background} style={{ marginRight: 6 }} />
+                  <Text style={styles.exportBtnPrimaryText}>INSTALL APP (NO BROWSER NEEDED)</Text>
+                </TouchableOpacity>
               </ScrollView>
             </View>
           </View>
