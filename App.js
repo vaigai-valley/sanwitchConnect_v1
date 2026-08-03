@@ -29,6 +29,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
 import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
+import { ProgressBarModal } from './progres';
 import { LineChart } from 'react-native-chart-kit';
 import { Buffer } from 'buffer';
 import { generateCompleteStandaloneAppHtml } from './pwaFrameworkBundle';
@@ -1701,33 +1702,12 @@ export default function App() {
           <View style={styles.termContainer}><FlatList data={logs} keyExtractor={item => item.id} renderItem={({ item }) => (<Text style={[styles.logText, { color: item.type === 'tx' ? THEME.primary : THEME.textMuted }]}>{`> ${item.msg}`}</Text>)} inverted /></View>
         )}
 
-        <Modal visible={isInstallModalVisible} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { alignItems: 'center', paddingVertical: 25 }]}>
-              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(20, 184, 166, 0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: THEME.secondary, marginBottom: 15 }}>
-                <Smartphone size={28} color={THEME.secondary} />
-              </View>
-              <Text style={[styles.modalTitle, { textAlign: 'center', marginBottom: 4 }]}>Installing Standalone App</Text>
-              <Text style={{ fontSize: 12, color: THEME.textMuted, textAlign: 'center', marginBottom: 20 }}>
-                Compiling native WebAPK bundle for Android App Drawer
-              </Text>
-
-              {/* Animated Progress Bar */}
-              <View style={{ width: '100%', height: 10, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 5, overflow: 'hidden', marginBottom: 12, borderWidth: 1, borderColor: THEME.surfaceBorder }}>
-                <View style={{ width: `${installProgress}%`, height: '100%', backgroundColor: THEME.secondary, borderRadius: 5 }} />
-              </View>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 15 }}>
-                <Text style={{ fontSize: 11, color: THEME.secondary, fontWeight: '700' }}>PROGRESS</Text>
-                <Text style={{ fontSize: 11, color: THEME.text, fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>{installProgress}%</Text>
-              </View>
-
-              <Text style={{ fontSize: 12, color: THEME.primary, fontWeight: '600', textAlign: 'center', minHeight: 32 }}>
-                {installStepText}
-              </Text>
-            </View>
-          </View>
-        </Modal>
+        <ProgressBarModal
+          visible={isInstallModalVisible}
+          progress={installProgress}
+          stepText={installStepText}
+          title="Standalone App Ready"
+        />
 
         <Modal visible={isModalVisible} transparent animationType="fade">
           <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Choose Widget</Text><View style={styles.optionsGrid}>{['toggle', 'slider', 'button', 'gauge', 'rgb', 'joystick', 'custom'].map(t => (<TouchableOpacity key={t} style={styles.optBtn} onPress={() => { setPendingType(t); setIsModalVisible(false); setIsNameModalVisible(true); }}><Text style={styles.navBtnText}>{t.toUpperCase()}</Text></TouchableOpacity>))}</View><TouchableOpacity style={styles.modalClose} onPress={() => setIsModalVisible(false)}><X size={24} color={THEME.textMuted} /></TouchableOpacity></View></View>

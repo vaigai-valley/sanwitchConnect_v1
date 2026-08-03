@@ -1,37 +1,57 @@
 import React from 'react';
-import { View, Text, Modal, StyleSheet, Platform } from 'react-native';
-import { Smartphone } from 'lucide-react-native';
+import { View, Text, Modal, StyleSheet, Platform, Image } from 'react-native';
 import assert from 'assert';
 
+// Image Asset Reference
+const MONOCHROME_ICON = require('./assets/monochrome_icon.png');
+
 /**
- * Extracted Progress Bar Component from login.html
- * Styled with Cyber-Chef Linear Gradient (#00e676 -> #00bfa5) & Glassmorphism Overlay
+ * Image-Slicing Progress Bar Component extracted from login.html
+ * Features Image Slicing reveal using monochrome_icon.png & Cyber-Chef progress track
  */
 export const ProgressBarModal = ({ visible, progress, stepText, title = "Standalone App Ready" }) => {
   if (typeof progress === 'number') {
     assert(progress >= 0 && progress <= 100, "Progress must be between 0 and 100");
   }
 
+  const safeProgress = Math.min(100, Math.max(0, progress || 0));
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.greetingBox}>
-          <View style={styles.iconContainer}>
-            <Smartphone size={28} color="#00e676" />
+          
+          {/* Image-Slicing Progress Badge (monochrome_icon.png) */}
+          <View style={styles.sliceBadgeWrapper}>
+            {/* Dimmed Background Image Layer */}
+            <Image
+              source={MONOCHROME_ICON}
+              style={[styles.iconImageBase, { opacity: 0.25 }]}
+              resizeMode="contain"
+            />
+
+            {/* Sliced Dynamic Fill Layer */}
+            <View style={[styles.imageSliceContainer, { width: `${safeProgress}%` }]}>
+              <Image
+                source={MONOCHROME_ICON}
+                style={[styles.iconImageFill, { tintColor: '#00e676' }]}
+                resizeMode="contain"
+              />
+            </View>
           </View>
 
           <Text style={styles.title}>{title}</Text>
           
+          {/* Progress Track (Extracted from login.html) */}
           <View style={styles.loaderSmall}>
-            {/* Progress Track (Extracted from login.html) */}
             <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${progress}%` }]} />
+              <View style={[styles.progressFill, { width: `${safeProgress}%` }]} />
             </View>
           </View>
 
           <View style={styles.statsRow}>
             <Text style={styles.progressLabel}>PROGRESS</Text>
-            <Text style={styles.progressPercent}>{progress}%</Text>
+            <Text style={styles.progressPercent}>{safeProgress}%</Text>
           </View>
 
           {stepText ? (
@@ -43,10 +63,12 @@ export const ProgressBarModal = ({ visible, progress, stepText, title = "Standal
   );
 };
 
+const ICON_SIZE = 64;
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 5, 12, 0.85)',
+    backgroundColor: 'rgba(5, 5, 12, 0.88)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20
@@ -59,23 +81,36 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0, 230, 118, 0.25)',
+    borderColor: 'rgba(0, 230, 118, 0.3)',
     shadowColor: '#00e676',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10
   },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(0, 230, 118, 0.12)',
+  sliceBadgeWrapper: {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    marginBottom: 16,
+    position: 'relative',
     justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#00e676',
-    marginBottom: 14
+    alignItems: 'center'
+  },
+  iconImageBase: {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    position: 'absolute'
+  },
+  imageSliceContainer: {
+    height: ICON_SIZE,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    overflow: 'hidden'
+  },
+  iconImageFill: {
+    width: ICON_SIZE,
+    height: ICON_SIZE
   },
   title: {
     fontSize: 16,
