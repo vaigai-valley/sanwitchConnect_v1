@@ -129,7 +129,21 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
   }
 
   private fun getBaseApkInputStream(context: ReactApplicationContext): InputStream {
-    // 100% Reliable On-Device Template: Streams directly from the installed application binary (sourceDir)
+    // Option 3 Dedicated Standalone Template Pipeline (pwa_template.apk)
+    // 1. Priority 1: Check internal files directory (/files/pwa_template.apk)
+    val customTemplateFile = File(context.filesDir, "pwa_template.apk")
+    if (customTemplateFile.exists()) {
+      return java.io.FileInputStream(customTemplateFile)
+    }
+
+    // 2. Priority 2: Check bundled assets (assets/pwa_template.apk)
+    try {
+      return context.assets.open("pwa_template.apk")
+    } catch (e: Exception) {
+      // Asset not found, fallback to sourceDir
+    }
+
+    // 3. Fallback: Installed base package
     val baseApkPath = context.applicationInfo.sourceDir
     return java.io.FileInputStream(File(baseApkPath))
   }
@@ -196,7 +210,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       for ((name, hash) in digestMap) {
         certSfSb.append("Name: ").append(name).append("\r\n")
-        certSfSfSb.append("SHA-256-Digest: ").append(hash).append("\r\n\r\n")
+        certSfSb.append("SHA-256-Digest: ").append(hash).append("\r\n\r\n")
       }
 
       val certSfBytes = certSfSb.toString().toByteArray(Charsets.UTF_8)
