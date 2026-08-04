@@ -13,10 +13,17 @@
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
   <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
   <queries>
+    <!-- Option 1: Chrome TWA - explicit package visibility for Android 11+ (API 30) -->
+    <!-- Without this, resolveActivity() returns null even when Chrome is installed -->
+    <package android:name="com.android.chrome"/>
     <intent>
       <action android:name="android.intent.action.VIEW"/>
       <category android:name="android.intent.category.BROWSABLE"/>
       <data android:scheme="https"/>
+    </intent>
+    <!-- Option 2: PackageInstaller - APK installation intent visibility -->
+    <intent>
+      <action android:name="android.intent.action.INSTALL_PACKAGE"/>
     </intent>
   </queries>
   <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false">

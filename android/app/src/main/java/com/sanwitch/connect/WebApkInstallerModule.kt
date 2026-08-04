@@ -107,10 +107,19 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
   private fun getOrCreatePersistentKeyPair(context: ReactApplicationContext): KeyPair {
     val keyFile = File(context.filesDir, "sanwitch_compiler_key.dat")
+
+    // O2 Fix: Invalidate any stale RSA-1024 key and regenerate at 2048-bit
     if (keyFile.exists()) {
       try {
         java.io.ObjectInputStream(java.io.FileInputStream(keyFile)).use { ois ->
-          return ois.readObject() as KeyPair
+          val kp = ois.readObject() as KeyPair
+          val rsaKey = kp.public as? java.security.interfaces.RSAPublicKey
+          if (rsaKey != null && rsaKey.modulus.bitLength() < 2048) {
+            keyFile.delete() // stale 1024-bit key — regenerate
+            File(context.filesDir, "sanwitch_compiler_cert.dat").delete() // invalidate paired cert
+          } else {
+            return kp
+          }
         }
       } catch (e: Exception) {
         e.printStackTrace()
@@ -118,7 +127,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     }
 
     val keyGen = KeyPairGenerator.getInstance("RSA")
-    keyGen.initialize(1024)
+    keyGen.initialize(2048) // O2 Fix: RSA-1024 deprecated by NIST since 2013; use 2048-bit minimum
     val keyPair = keyGen.generateKeyPair()
     try {
       java.io.ObjectOutputStream(java.io.FileOutputStream(keyFile)).use { oos ->
@@ -415,27 +424,25 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       entryMap["META-INF/CERT.SF"] = certSfBytes
       entryMap["META-INF/CERT.RSA"] = pkcs7Der
 
-      // 4. Output Complete Signed Binary APK File with Zipalign (4-Byte Alignment - Bug 1.3 Fix)
+      // 4. Output Complete Signed Binary APK File with Zipalign (4-Byte Alignment)
+      // O3 Fix: Direct counting OutputStream over FileOutputStream — removes DataOutputStream
+      // indirection layer and makes writtenBytes tracking simpler and more transparent.
       val fos = java.io.FileOutputStream(targetApkFile)
-      val countingStream = java.io.DataOutputStream(fos)
       var writtenBytes = 0L
 
-      val zos = ZipOutputStream(object : java.io.OutputStream() {
-        override fun write(b: Int) {
-          countingStream.write(b)
-          writtenBytes++
-        }
-        override fun write(b: ByteArray, off: Int, len: Int) {
-          countingStream.write(b, off, len)
-          writtenBytes += len
-        }
-      })
+      val countingOs = object : java.io.OutputStream() {
+        override fun write(b: Int) { fos.write(b); writtenBytes++ }
+        override fun write(b: ByteArray, off: Int, len: Int) { fos.write(b, off, len); writtenBytes += len }
+        override fun flush() = fos.flush()
+        override fun close() = fos.close()
+      }
+
+      val zos = ZipOutputStream(countingOs)
 
       for ((name, data) in entryMap) {
         val newEntry = ZipEntry(name)
         val nameBytes = name.toByteArray(Charsets.UTF_8)
 
-        // Bug 1.3 Fix: Ensure 4-byte zipalign offset alignment for STORED entries (resources.arsc & assets/raw/)
         val isUncompressedRequired = name == "resources.arsc" || name.startsWith("assets/raw/")
         if (isUncompressedRequired) {
           newEntry.method = ZipEntry.STORED
@@ -446,13 +453,11 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
           crc.update(data)
           newEntry.crc = crc.value
 
-          // Calculate offset alignment padding
-          val localHeaderSize = 30 + nameBytes.size
-          val dataOffset = writtenBytes + localHeaderSize
-          val padding = ((4 - (dataOffset % 4)) % 4).toInt()
-          if (padding > 0) {
-            newEntry.extra = ByteArray(padding)
-          }
+          // Zipalign: compute 4-byte padding so data starts at a 4-byte boundary
+          // Local header = 30 (fixed) + nameLen + extraLen; we set extra = padding bytes
+          val dataOffsetWithoutExtra = writtenBytes + 30L + nameBytes.size
+          val padding = ((4 - (dataOffsetWithoutExtra % 4)) % 4).toInt()
+          if (padding > 0) newEntry.extra = ByteArray(padding)
         } else {
           newEntry.method = ZipEntry.DEFLATED
         }
@@ -461,8 +466,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         zos.write(data, 0, data.size)
         zos.closeEntry()
       }
-      zos.close()
-      countingStream.close()
+      zos.close() // also closes countingOs which closes fos
 
       val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetApkFile)
       launchPackageInstallerDirectly(context, apkUri, promise)
