@@ -13,6 +13,7 @@ import com.facebook.react.bridge.ReactMethod
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.MessageDigest
 import java.security.Signature
@@ -92,13 +93,38 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       val targetApkFile = File(context.cacheDir, "${cleanAppId}.apk")
 
       // 2. Direct On-Device Native APK Minting Engine
-      // Uses the pwaFrameworkBundle.js HTML payload directly to compile a signed binary .apk file locally
       val payload = if (!htmlPayload.isNullOrBlank()) htmlPayload else ""
       buildLocalSignedApk(context, appName, targetApkFile, payload, promise)
     } catch (e: Exception) {
       e.printStackTrace()
       promise.reject("INSTALL_ERROR", e.message)
     }
+  }
+
+  private fun getOrCreatePersistentKeyPair(context: ReactApplicationContext): KeyPair {
+    val keyFile = File(context.filesDir, "sanwitch_compiler_key.dat")
+    if (keyFile.exists()) {
+      try {
+        java.io.ObjectInputStream(java.io.FileInputStream(keyFile)).use { ois ->
+          return ois.readObject() as KeyPair
+        }
+      } catch (e: Exception) {
+        e.printStackTrace()
+      }
+    }
+
+    val keyGen = KeyPairGenerator.getInstance("RSA")
+    keyGen.initialize(1024)
+    val keyPair = keyGen.generateKeyPair()
+    try {
+      java.io.ObjectOutputStream(java.io.FileOutputStream(keyFile)).use { oos ->
+        oos.writeObject(keyPair)
+        oos.flush()
+      }
+    } catch (e: Exception) {
+      e.printStackTrace()
+    }
+    return keyPair
   }
 
   private fun buildLocalSignedApk(context: ReactApplicationContext, appName: String, targetApkFile: File, payloadStr: String, promise: Promise) {
@@ -174,10 +200,8 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       val certSfBytes = certSfSb.toString().toByteArray(Charsets.UTF_8)
 
-      // 3. Cryptographic RSA Key Pair Signature
-      val keyGen = KeyPairGenerator.getInstance("RSA")
-      keyGen.initialize(1024)
-      val keyPair = keyGen.generateKeyPair()
+      // 3. Persistent Cryptographic RSA Key Pair Signature
+      val keyPair = getOrCreatePersistentKeyPair(context)
 
       val sig = Signature.getInstance("SHA256withRSA")
       sig.initSign(keyPair.private)
