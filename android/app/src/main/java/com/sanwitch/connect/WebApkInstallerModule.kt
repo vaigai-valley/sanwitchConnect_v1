@@ -13,8 +13,6 @@ import com.facebook.react.bridge.ReactMethod
 import java.io.File
 import java.io.InputStream
 import java.math.BigInteger
-import java.net.HttpURLConnection
-import java.net.URL
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.MessageDigest
@@ -98,7 +96,9 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       // 2. Direct On-Device Native APK Minting Engine
       val payload = if (!htmlPayload.isNullOrBlank()) htmlPayload else ""
-      buildLocalSignedApk(context, appName, targetApkFile, payload, promise)
+      // Issue 2.1 Fix: Run APK compilation on background thread to prevent ANR / JS bridge timeout.
+      // buildLocalSignedApk calls promise.resolve/reject internally (thread-safe in React Native).
+      Thread { buildLocalSignedApk(context, appName, targetApkFile, payload, promise) }.start()
     } catch (e: Exception) {
       e.printStackTrace()
       promise.reject("INSTALL_ERROR", e.message)
@@ -477,26 +477,23 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
   }
 
   @ReactMethod
-  fun openInTwa(urlOrHtml: String, promise: Promise) {
+  fun openInTwa(url: String, promise: Promise) {
     try {
       val context = reactApplicationContext
-      val uri = if (urlOrHtml.trimStart().startsWith("<!DOCTYPE") || urlOrHtml.trimStart().startsWith("<html")) {
-        // Raw HTML string passed directly: save locally to cache for offline TWA preview
-        val previewFile = File(context.cacheDir, "sanwitch_pwa_preview.html")
-        previewFile.writeText(urlOrHtml, Charsets.UTF_8)
-        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", previewFile)
-      } else if (urlOrHtml.startsWith("/") || urlOrHtml.startsWith("file://")) {
-        val cleanPath = urlOrHtml.replace("file://", "")
-        val localFile = File(cleanPath)
-        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", localFile)
-      } else {
-        Uri.parse(urlOrHtml)
+
+      // Issue 1.1 Fix: Only HTTPS URLs accepted. Chrome blocks content:// and file:// URIs.
+      // Dead HTML-string and file:// branches removed — App.js always sends https:// now.
+      if (!url.startsWith("https://") && !url.startsWith("http://")) {
+        promise.reject("TWA_ERROR", "openInTwa requires an https:// URL. Received: $url")
+        return
       }
+
+      val uri = Uri.parse(url)
 
       // 1. Launch Chrome Custom Tabs / TWA (In-App Chromium Activity with WebBluetooth)
       val intent = Intent(Intent.ACTION_VIEW, uri).apply {
         setPackage("com.android.chrome")
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         putExtra("android.support.customtabs.extra.SESSION", null as String?)
         putExtra("android.support.customtabs.extra.TOOLBAR_COLOR", android.graphics.Color.parseColor("#0b0d12"))
         putExtra("android.support.customtabs.extra.TITLE_VISIBILITY", 1)
@@ -508,9 +505,9 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         return
       }
 
-      // 2. Fallback to default browser intent if Chrome is not present
+      // 2. Fallback to default browser if Chrome is not present
       val genericIntent = Intent(Intent.ACTION_VIEW, uri).apply {
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
       context.startActivity(genericIntent)
       promise.resolve("TWA_OPENED_GENERIC")
@@ -524,7 +521,9 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     try {
       val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(apkUri, "application/vnd.android.package-archive")
-        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+        // Issue 1.2 Fix: FLAG_GRANT_WRITE_URI_PERMISSION causes SecurityException on Android 13+.
+        // PackageInstaller only needs READ permission on the FileProvider URI.
+        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
       }
 
       context.startActivity(intent)
