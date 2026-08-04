@@ -398,6 +398,11 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
     </div>
 
     <script>
+      window.triggerHaptic = function(ms) {
+        var duration = ms || 15;
+        try { if (navigator.vibrate) navigator.vibrate(duration); } catch(e) {}
+      };
+
       window.INITIAL_WIDGETS = ${widgetsJson};
       const UUID_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
       const UUID_TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
@@ -458,6 +463,8 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
 
         if (type === 'toggle') {
           document.getElementById('toggle-' + id)?.addEventListener('change', (e) => {
+            window.triggerHaptic(20);
+            localStorage.setItem('sanwitch_val_' + id, e.target.checked ? '1' : '0');
             window.sendData(id.toUpperCase() + ':' + (e.target.checked ? '1' : '0') + '\\n');
           });
         } else if (type === 'slider') {
@@ -468,15 +475,19 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
               if (v) v.textContent = e.target.value + '%';
             });
             s.addEventListener('change', (e) => {
+              window.triggerHaptic(15);
+              localStorage.setItem('sanwitch_val_' + id, e.target.value);
               window.sendData(id.toUpperCase() + ':' + e.target.value + '\\n');
             });
           }
         } else if (type === 'button') {
           document.getElementById('btn-' + id)?.addEventListener('click', () => {
+            window.triggerHaptic(25);
             window.sendData(id.toUpperCase() + ':PUSH\\n');
           });
         } else if (type === 'custom') {
           document.getElementById('custom-' + id)?.addEventListener('click', () => {
+            window.triggerHaptic(25);
             window.sendData(cmd + '\\n');
           });
         } else if (type === 'rgb') {
@@ -484,6 +495,7 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           if (grid) {
             grid.querySelectorAll('.color-dot').forEach(dot => {
               dot.addEventListener('click', () => {
+                window.triggerHaptic(15);
                 const hex = dot.getAttribute('data-color');
                 if (hex) window.sendData('RGB:' + hex + '\\n');
               });
