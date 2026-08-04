@@ -123,18 +123,11 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       while (entry != null) {
         val name = entry.name
-        // Skip old signatures. Skip heavy native lib/ for lightweight PWA APK compilation.
+        // Preserve clean AXML binary structure. Skip heavy native lib/ for lightweight PWA APK compilation.
         val shouldSkipLib = !isHermesBytecode && name.startsWith("lib/")
         if (!name.startsWith("META-INF/") && !shouldSkipLib) {
           var bytes = zis.readBytes()
-          if (name == "AndroidManifest.xml") {
-            // Dynamically patch package identifier to a unique 20-character string (matching "com.sanwitch.connect")
-            val oldPkg = "com.sanwitch.connect"
-            val cleanTitle = appName.lowercase().replace(Regex("[^a-z0-9]"), "")
-            val suffixSeed = (cleanTitle + "app123456789").take(7)
-            val newPkg = "com.sanwitch.$suffixSeed" // Exactly 13 + 7 = 20 characters
-            bytes = patchAxmlPackageName(bytes, oldPkg, newPkg)
-          } else if (name == "assets/index.html" && payloadStr.isNotBlank() && !isHermesBytecode) {
+          if (name == "assets/index.html" && payloadStr.isNotBlank() && !isHermesBytecode) {
             bytes = payloadBytes
           } else if (name == "assets/index.android.bundle" && isHermesBytecode) {
             bytes = payloadBytes
@@ -211,42 +204,6 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       e.printStackTrace()
       promise.reject("BUILD_ERROR", e.message)
     }
-  }
-
-  private fun patchAxmlPackageName(axmlBytes: ByteArray, oldPkg: String, newPkg: String): ByteArray {
-    if (oldPkg.length != newPkg.length) return axmlBytes
-
-    val oldUtf16 = oldPkg.toByteArray(Charsets.UTF_16LE)
-    val newUtf16 = newPkg.toByteArray(Charsets.UTF_16LE)
-    var result = replaceBytes(axmlBytes, oldUtf16, newUtf16)
-
-    val oldUtf8 = oldPkg.toByteArray(Charsets.UTF_8)
-    val newUtf8 = newPkg.toByteArray(Charsets.UTF_8)
-    result = replaceBytes(result, oldUtf8, newUtf8)
-
-    return result
-  }
-
-  private fun replaceBytes(source: ByteArray, target: ByteArray, replacement: ByteArray): ByteArray {
-    val result = source.clone()
-    val tSize = target.size
-    if (tSize == 0 || result.size < tSize) return result
-
-    for (i in 0..(result.size - tSize)) {
-      var match = true
-      for (j in 0 until tSize) {
-        if (result[i + j] != target[j]) {
-          match = false
-          break
-        }
-      }
-      if (match) {
-        for (j in 0 until tSize) {
-          result[i + j] = replacement[j]
-        }
-      }
-    }
-    return result
   }
 
   private fun launchPackageInstallerDirectly(context: ReactApplicationContext, apkUri: Uri, promise: Promise) {
