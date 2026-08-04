@@ -129,13 +129,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
   }
 
   private fun getBaseApkInputStream(context: ReactApplicationContext): InputStream {
-    // Check if custom template file exists in app internal storage (/files/full_template.apk)
-    val customFile = File(context.filesDir, "full_template.apk")
-    if (customFile.exists()) {
-      return java.io.FileInputStream(customFile)
-    }
-
-    // Default to fully compiled installed app package for 100% valid classes.dex & PackageParser success
+    // 100% Reliable On-Device Template: Streams directly from the installed application binary (sourceDir)
     val baseApkPath = context.applicationInfo.sourceDir
     return java.io.FileInputStream(File(baseApkPath))
   }
@@ -202,7 +196,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       for ((name, hash) in digestMap) {
         certSfSb.append("Name: ").append(name).append("\r\n")
-        certSfSb.append("SHA-256-Digest: ").append(hash).append("\r\n\r\n")
+        certSfSfSb.append("SHA-256-Digest: ").append(hash).append("\r\n\r\n")
       }
 
       val certSfBytes = certSfSb.toString().toByteArray(Charsets.UTF_8)
