@@ -337,51 +337,116 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
    * Example: hostPkg="com.sanwitch.connect" (20 chars)
    *        → newPkg ="com.sw.pwa.a1b2c3d4e" (20 chars)
    */
+  /**
+   * Derives a unique Android package name the EXACT same byte-length as hostPkg.
+   *
+   * F1 Fix: The old implementation used padEnd/take which could truncate mid-segment,
+   * producing invalid package names on short host packages. The new implementation
+   * directly computes exactly (targetLen - prefix.length) suffix chars — guaranteed
+   * to fill the field without any mid-dot truncation.
+   *
+   * All chars are ASCII so UTF-8 byte-length == char-length, safe for in-place AXML patch.
+   *
+   * Example: hostPkg="com.sanwitch.connect" (20) → "com.sw.pwa.p1a2b3caa" (20)
+   */
   private fun deriveUniquePackageName(cleanAppId: String, hostPkg: String): String {
+    val targetLen = hostPkg.length
     val crc = java.util.zip.CRC32()
     crc.update(cleanAppId.toByteArray(Charsets.UTF_8))
     var hashStr = java.lang.Long.toString(crc.value, 36).lowercase()
+    // Ensure last segment does not start with a digit (Android package rule)
     if (hashStr[0].isDigit()) hashStr = "p$hashStr"
-    val prefix = "com.sw.pwa."
-    val idLen = (hostPkg.length - prefix.length).coerceAtLeast(4)
-    val safeId = hashStr.padEnd(idLen, 'a').take(idLen)
-    val candidate = "$prefix$safeId"
-    // Ensure exact same byte length as hostPkg for in-place patch safety
-    return candidate.padEnd(hostPkg.length, 'z').take(hostPkg.length)
+
+    val prefix = "com.sw.pwa."  // 11 chars
+    return if (targetLen > prefix.length) {
+      // Normal path: suffix fills exactly the remaining chars — no truncation risk
+      val suffixLen = targetLen - prefix.length
+      val suffix = hashStr.padEnd(suffixLen, 'a').take(suffixLen)
+      "$prefix$suffix"  // exactly targetLen chars ✅
+    } else {
+      // Short host package (< 12 chars): use a compact prefix
+      val shortPrefix = "sw."  // 3 chars
+      val suffixLen = (targetLen - shortPrefix.length).coerceAtLeast(1)
+      val suffix = hashStr.padEnd(suffixLen, 'a').take(suffixLen)
+      val result = "$shortPrefix$suffix"
+      // Pad only if somehow still short — fill with 'a', never truncates a dot segment
+      result.padEnd(targetLen, 'a')
+    }
   }
 
   /**
-   * Patches a binary Android XML (AXML) byte array to replace ALL standalone occurrences
-   * of oldPkg with newPkg in-place. Both must have identical UTF-8 byte lengths.
-   *
-   * In AXML UTF-8 string pool, strings are stored as:
-   *   [charLen][byteLen][utf8-bytes][0x00 null terminator]
-   * We match exact bytes followed by null terminator to avoid replacing substrings
-   * (e.g. "com.sanwitch.connect" inside "com.sanwitch.connect.fileprovider").
+   * Reads a little-endian 32-bit integer from a byte array at the given offset.
    */
-  private fun patchAXMLPackageName(axml: ByteArray, oldPkg: String, newPkg: String): ByteArray {
-    if (oldPkg == newPkg) return axml
-    val oldBytes = oldPkg.toByteArray(Charsets.UTF_8)
-    val newBytes = newPkg.toByteArray(Charsets.UTF_8)
-    if (oldBytes.size != newBytes.size) return axml // safety: must be same length
-    val result = axml.copyOf()
+  private fun readInt32LE(buf: ByteArray, offset: Int): Int =
+    (buf[offset].toInt() and 0xFF) or
+    ((buf[offset + 1].toInt() and 0xFF) shl 8) or
+    ((buf[offset + 2].toInt() and 0xFF) shl 16) or
+    ((buf[offset + 3].toInt() and 0xFF) shl 24)
+
+  /**
+   * Replaces all in-place occurrences of oldBytes followed by nullTerminator
+   * with newBytes (same size) inside buf. The null-terminator check prevents
+   * false matches within longer strings (e.g. avoid matching "com.sanwitch.connect"
+   * inside "com.sanwitch.connect.fileprovider").
+   */
+  private fun replaceInPlaceBytes(buf: ByteArray, oldBytes: ByteArray, newBytes: ByteArray, nullTerminator: ByteArray) {
+    if (oldBytes.size != newBytes.size) return
     var i = 0
-    while (i <= result.size - oldBytes.size) {
+    while (i <= buf.size - oldBytes.size) {
       var match = true
       for (j in oldBytes.indices) {
-        if (result[i + j] != oldBytes[j]) { match = false; break }
+        if (buf[i + j] != oldBytes[j]) { match = false; break }
       }
       if (match) {
         val afterIdx = i + oldBytes.size
-        // Only replace standalone string entries (followed by null terminator in AXML string pool)
-        if (afterIdx < result.size && result[afterIdx] == 0x00.toByte()) {
-          System.arraycopy(newBytes, 0, result, i, newBytes.size)
-          i += newBytes.size + 1
+        var nullMatch = afterIdx + nullTerminator.size <= buf.size
+        if (nullMatch) {
+          for (j in nullTerminator.indices) {
+            if (buf[afterIdx + j] != nullTerminator[j]) { nullMatch = false; break }
+          }
+        }
+        if (nullMatch) {
+          System.arraycopy(newBytes, 0, buf, i, newBytes.size)
+          i += newBytes.size + nullTerminator.size
           continue
         }
       }
       i++
     }
+  }
+
+  /**
+   * Patches a binary Android XML (AXML) byte array to replace the package name string.
+   *
+   * F2 Fix: Previous implementation only handled UTF-8 AXML string pools. Android APKs
+   * built with older aapt or targeting API < 21 use UTF-16LE string pools. This version
+   * reads the string pool flags at AXML byte offset 24 (ResStringPool_header.flags,
+   * bit 0x100 = UTF8_FLAG) and applies the correct encoding and null terminator:
+   *   UTF-8  mode: search [utf8-bytes][0x00]
+   *   UTF-16 mode: search [utf16le-bytes][0x00 0x00]
+   */
+  private fun patchAXMLPackageName(axml: ByteArray, oldPkg: String, newPkg: String): ByteArray {
+    if (oldPkg == newPkg) return axml
+    val oldUtf8 = oldPkg.toByteArray(Charsets.UTF_8)
+    val newUtf8 = newPkg.toByteArray(Charsets.UTF_8)
+    if (oldUtf8.size != newUtf8.size) return axml // safety guard
+    val result = axml.copyOf()
+
+    // AXML layout: [8-byte XML header][StringPool chunk starting at offset 8]
+    // ResStringPool_header.flags is at: 8 (chunk start) + 16 (flags offset in header) = 24
+    val isUtf8Pool = if (axml.size > 28) (readInt32LE(axml, 24) and 0x00000100) != 0 else true
+
+    if (isUtf8Pool) {
+      // UTF-8 string pool: null-terminated with single 0x00
+      replaceInPlaceBytes(result, oldUtf8, newUtf8, byteArrayOf(0x00))
+    } else {
+      // UTF-16LE string pool: null-terminated with 0x00 0x00
+      val oldUtf16 = oldPkg.toByteArray(Charsets.UTF_16LE)
+      val newUtf16 = newPkg.toByteArray(Charsets.UTF_16LE)
+      // ASCII package names always produce equal-length UTF-16LE arrays
+      replaceInPlaceBytes(result, oldUtf16, newUtf16, byteArrayOf(0x00, 0x00))
+    }
+
     return result
   }
 
