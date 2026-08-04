@@ -129,26 +129,13 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
   }
 
   private fun getBaseApkInputStream(context: ReactApplicationContext): InputStream {
-    // 1. Check custom template in internal files directory (/files/standalone_template.apk or /files/pwa_template.apk)
-    val file1 = File(context.filesDir, "standalone_template.apk")
-    if (file1.exists()) return java.io.FileInputStream(file1)
-
-    val file2 = File(context.filesDir, "pwa_template.apk")
-    if (file2.exists()) return java.io.FileInputStream(file2)
-
-    // 2. Check bundled assets for standalone_template.apk
-    try {
-      return context.assets.open("standalone_template.apk")
-    } catch (e: Exception) {
-      // Try fallback asset name
+    // Check if custom template file exists in app internal storage (/files/full_template.apk)
+    val customFile = File(context.filesDir, "full_template.apk")
+    if (customFile.exists()) {
+      return java.io.FileInputStream(customFile)
     }
 
-    try {
-      return context.assets.open("pwa_template.apk")
-    } catch (e: Exception) {
-      // Fallback to installed base app package
-    }
-
+    // Default to fully compiled installed app package for 100% valid classes.dex & PackageParser success
     val baseApkPath = context.applicationInfo.sourceDir
     return java.io.FileInputStream(File(baseApkPath))
   }
