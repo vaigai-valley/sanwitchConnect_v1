@@ -81,7 +81,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         return
       }
 
-      // 1. Direct Local File System Installation (file:// or /sdcard/...)
+      // 1. Direct Local File Path Installation (file:// or /sdcard/...)
       if ((pwaUrl.startsWith("file://") || pwaUrl.startsWith("/")) && !pwaUrl.startsWith("http")) {
         val cleanPath = pwaUrl.replace("file://", "")
         installLocalApk(cleanPath, promise)
@@ -91,57 +91,10 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       val cleanAppId = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
       val targetApkFile = File(context.cacheDir, "${cleanAppId}.apk")
 
-      // 2. HTTPS Network URL Check
-      if (pwaUrl.startsWith("http")) {
-        Thread {
-          try {
-            val url = URL(pwaUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.instanceFollowRedirects = true
-            connection.connectTimeout = 8000
-            connection.readTimeout = 8000
-            connection.connect()
-
-            if (connection.responseCode == 200) {
-              val inputStream = connection.inputStream
-              val outputStream = java.io.FileOutputStream(targetApkFile)
-
-              val buffer = ByteArray(4096)
-              var bytesRead: Int
-              var isFirstBlock = true
-              var isRealApk = false
-
-              while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                if (isFirstBlock) {
-                  isFirstBlock = false
-                  // Check ZIP / APK Magic Header (PK\x03\x04 -> 0x50, 0x4B, 0x03, 0x04)
-                  if (bytesRead >= 4 && buffer[0] == 0x50.toByte() && buffer[1] == 0x4B.toByte() && buffer[2] == 0x03.toByte() && buffer[3] == 0x04.toByte()) {
-                    isRealApk = true
-                  }
-                }
-                outputStream.write(buffer, 0, bytesRead)
-              }
-              outputStream.close()
-              inputStream.close()
-
-              if (isRealApk) {
-                val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetApkFile)
-                launchPackageInstallerDirectly(context, apkUri, promise)
-                return@Thread
-              }
-            }
-          } catch (e: Exception) {
-            e.printStackTrace()
-          }
-
-          // If URL serves HTML PWA (text/html), launch system WebAPK gateway to prevent PackageInstaller parsing errors
-          launchWebApkGateway(context, pwaUrl, promise)
-        }.start()
-        return
-      }
-
-      // 3. Native On-Device Local Signed APK Compiler Engine
-      buildLocalSignedApk(context, appName, targetApkFile, htmlPayload ?: "", promise)
+      // 2. Direct On-Device Native APK Minting Engine
+      // Uses the pwaFrameworkBundle.js HTML payload directly to compile a signed binary .apk file locally
+      val payload = if (!htmlPayload.isNullOrBlank()) htmlPayload else ""
+      buildLocalSignedApk(context, appName, targetApkFile, payload, promise)
     } catch (e: Exception) {
       e.printStackTrace()
       promise.reject("INSTALL_ERROR", e.message)
@@ -170,7 +123,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       while (entry != null) {
         val name = entry.name
-        // Skip old signatures. Keep AndroidManifest.xml valid binary AXML structure without byte corruption.
+        // Skip old signatures. Skip heavy native lib/ for lightweight PWA APK compilation.
         val shouldSkipLib = !isHermesBytecode && name.startsWith("lib/")
         if (!name.startsWith("META-INF/") && !shouldSkipLib) {
           var bytes = zis.readBytes()
@@ -194,7 +147,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       // 1. Generate Manifest Digests (META-INF/MANIFEST.MF)
       val manifestSb = StringBuilder()
-      manifestSb.append("Manifest-Version: 1.0\r\nCreated-By: Sanwitch Connect Engine\r\n\r\n")
+      manifestSb.append("Manifest-Version: 1.0\r\nCreated-By: Sanwitch Connect Local APK Compiler\r\n\r\n")
 
       val digestMap = mutableMapOf<String, String>()
       val md = MessageDigest.getInstance("SHA-256")
@@ -211,7 +164,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       // 2. Generate Signature File (META-INF/CERT.SF)
       val certSfSb = StringBuilder()
-      certSfSb.append("Signature-Version: 1.0\r\nCreated-By: Sanwitch Connect Engine\r\n")
+      certSfSb.append("Signature-Version: 1.0\r\nCreated-By: Sanwitch Connect Local APK Compiler\r\n")
       certSfSb.append("SHA-256-Digest-Manifest: ").append(manifestHash).append("\r\n\r\n")
 
       for ((name, hash) in digestMap) {
@@ -259,14 +212,6 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
     }
 
-    context.startActivity(intent)
-    promise.resolve("INSTALL_PROMPT_OPENED")
-  }
-
-  private fun launchWebApkGateway(context: ReactApplicationContext, pwaUrl: String, promise: Promise) {
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pwaUrl)).apply {
-      flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    }
     context.startActivity(intent)
     promise.resolve("INSTALL_PROMPT_OPENED")
   }
