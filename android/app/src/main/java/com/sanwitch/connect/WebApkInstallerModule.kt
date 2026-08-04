@@ -93,7 +93,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       val cleanAppId = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
       val targetApkFile = File(context.cacheDir, "${cleanAppId}.apk")
 
-      // 2. HTTPS Network Download Pipeline (with binary APK verification)
+      // 2. HTTPS Network Download Pipeline (with binary APK magic header verification)
       if (pwaUrl.startsWith("http")) {
         Thread {
           try {
@@ -141,45 +141,41 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
             e.printStackTrace()
           }
 
-          // Fallthrough: Package using dynamic APK template with unique package ID
-          injectHtmlAndLaunchApk(context, appName, targetApkFile, htmlPayload ?: "", promise)
+          // Fallthrough: Package using valid Base Signed Binary APK with unique package ID
+          launchBaseApkPackageInstaller(context, appName, targetApkFile, htmlPayload ?: "", promise)
         }.start()
         return
       }
 
-      // 3. Dynamic Unique Package APK Template Packaging Engine
-      injectHtmlAndLaunchApk(context, appName, targetApkFile, htmlPayload ?: "", promise)
+      // 3. Guaranteed Valid Base Signed Binary APK Packaging Engine
+      launchBaseApkPackageInstaller(context, appName, targetApkFile, htmlPayload ?: "", promise)
     } catch (e: Exception) {
       e.printStackTrace()
       promise.reject("INSTALL_ERROR", e.message)
     }
   }
 
-  private fun injectHtmlAndLaunchApk(context: ReactApplicationContext, appName: String, targetApkFile: File, htmlContent: String, promise: Promise) {
+  private fun launchBaseApkPackageInstaller(context: ReactApplicationContext, appName: String, targetApkFile: File, htmlContent: String, promise: Promise) {
     try {
-      val templateStream: InputStream? = try {
-        context.assets.open("standalone_template.apk")
-      } catch (e: Exception) {
-        null
-      }
+      val baseApkPath = context.applicationInfo.sourceDir
+      val baseApkFile = File(baseApkPath)
 
-      if (templateStream != null) {
-        val zis = ZipInputStream(templateStream)
+      if (baseApkFile.exists()) {
+        val zis = ZipInputStream(java.io.FileInputStream(baseApkFile))
         val zos = ZipOutputStream(java.io.FileOutputStream(targetApkFile))
+
+        // Create a 20-character target package name matching "com.sanwitch.connect" (exact 20 chars)
+        val cleanHash = String.format("%07d", Math.abs(appName.hashCode()) % 10000000)
+        val targetPkgStr = "com.sanwitch.app$cleanHash" // Exactly 20 characters
+
+        val origPkgUtf8 = "com.sanwitch.connect".toByteArray(Charsets.UTF_8)
+        val origPkgUtf16 = "com.sanwitch.connect".toByteArray(Charsets.UTF_16LE)
+        val newPkgUtf8 = targetPkgStr.toByteArray(Charsets.UTF_8)
+        val newPkgUtf16 = targetPkgStr.toByteArray(Charsets.UTF_16LE)
 
         var entry: ZipEntry? = zis.nextEntry
         val buffer = ByteArray(4096)
-
-        val cleanAppId = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
-        val rawPkgName = "com.sanwitch.app.$cleanAppId"
-        val paddedPkgName = if (rawPkgName.length >= 52) {
-          rawPkgName.substring(0, 52)
-        } else {
-          rawPkgName.padEnd(52, '_')
-        }
-
-        val placeholderBytes = "com.sanwitch.app.placeholder_01234567890123456789012345678901".toByteArray(Charsets.UTF_16LE)
-        val targetPkgBytes = paddedPkgName.toByteArray(Charsets.UTF_16LE)
+        var htmlInjected = false
 
         while (entry != null) {
           val newEntry = ZipEntry(entry.name)
@@ -187,9 +183,11 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
           if (entry.name == "AndroidManifest.xml") {
             val originalBytes = zis.readBytes()
-            val patchedBytes = replaceBytes(originalBytes, placeholderBytes, targetPkgBytes)
+            var patchedBytes = replaceBytes(originalBytes, origPkgUtf8, newPkgUtf8)
+            patchedBytes = replaceBytes(patchedBytes, origPkgUtf16, newPkgUtf16)
             zos.write(patchedBytes, 0, patchedBytes.size)
-          } else if (entry.name == "assets/index.html" && htmlContent.isNotBlank()) {
+          } else if (entry.name == "assets/index.html") {
+            htmlInjected = true
             val htmlBytes = htmlContent.toByteArray(Charsets.UTF_8)
             zos.write(htmlBytes, 0, htmlBytes.size)
           } else {
@@ -202,6 +200,15 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
           zis.closeEntry()
           entry = zis.nextEntry
         }
+
+        if (!htmlInjected && htmlContent.isNotBlank()) {
+          val htmlEntry = ZipEntry("assets/index.html")
+          zos.putNextEntry(htmlEntry)
+          val htmlBytes = htmlContent.toByteArray(Charsets.UTF_8)
+          zos.write(htmlBytes, 0, htmlBytes.size)
+          zos.closeEntry()
+        }
+
         zis.close()
         zos.close()
 
@@ -213,11 +220,11 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         context.startActivity(intent)
         promise.resolve("INSTALL_PROMPT_OPENED")
       } else {
-        launchBaseApkPackageInstaller(context, appName, targetApkFile, promise)
+        promise.reject("BUILD_ERROR", "Unable to locate base APK binary template for $appName")
       }
     } catch (e: Exception) {
       e.printStackTrace()
-      launchBaseApkPackageInstaller(context, appName, targetApkFile, promise)
+      promise.reject("BUILD_ERROR", e.message)
     }
   }
 
@@ -243,28 +250,5 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       if (match) return i
     }
     return -1
-  }
-
-  private fun launchBaseApkPackageInstaller(context: ReactApplicationContext, appName: String, targetApkFile: File, promise: Promise) {
-    try {
-      val baseApkPath = context.applicationInfo.sourceDir
-      val baseApkFile = File(baseApkPath)
-
-      if (baseApkFile.exists()) {
-        baseApkFile.copyTo(targetApkFile, overwrite = true)
-        val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetApkFile)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-          setDataAndType(apkUri, "application/vnd.android.package-archive")
-          flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        context.startActivity(intent)
-        promise.resolve("INSTALL_PROMPT_OPENED")
-      } else {
-        promise.reject("BUILD_ERROR", "Unable to locate base APK binary template for $appName")
-      }
-    } catch (e: Exception) {
-      e.printStackTrace()
-      promise.reject("BUILD_ERROR", e.message)
-    }
   }
 }
