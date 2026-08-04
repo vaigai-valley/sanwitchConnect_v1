@@ -329,6 +329,62 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     return pkcs7
   }
 
+  /**
+   * Derives a unique Android package name the same byte-length as the host package.
+   * Required for in-place binary AXML patching (no offset recalculation needed).
+   * Uses CRC32 of cleanAppId for stable, collision-resistant uniqueness.
+   *
+   * Example: hostPkg="com.sanwitch.connect" (20 chars)
+   *        → newPkg ="com.sw.pwa.a1b2c3d4e" (20 chars)
+   */
+  private fun deriveUniquePackageName(cleanAppId: String, hostPkg: String): String {
+    val crc = java.util.zip.CRC32()
+    crc.update(cleanAppId.toByteArray(Charsets.UTF_8))
+    var hashStr = java.lang.Long.toString(crc.value, 36).lowercase()
+    if (hashStr[0].isDigit()) hashStr = "p$hashStr"
+    val prefix = "com.sw.pwa."
+    val idLen = (hostPkg.length - prefix.length).coerceAtLeast(4)
+    val safeId = hashStr.padEnd(idLen, 'a').take(idLen)
+    val candidate = "$prefix$safeId"
+    // Ensure exact same byte length as hostPkg for in-place patch safety
+    return candidate.padEnd(hostPkg.length, 'z').take(hostPkg.length)
+  }
+
+  /**
+   * Patches a binary Android XML (AXML) byte array to replace ALL standalone occurrences
+   * of oldPkg with newPkg in-place. Both must have identical UTF-8 byte lengths.
+   *
+   * In AXML UTF-8 string pool, strings are stored as:
+   *   [charLen][byteLen][utf8-bytes][0x00 null terminator]
+   * We match exact bytes followed by null terminator to avoid replacing substrings
+   * (e.g. "com.sanwitch.connect" inside "com.sanwitch.connect.fileprovider").
+   */
+  private fun patchAXMLPackageName(axml: ByteArray, oldPkg: String, newPkg: String): ByteArray {
+    if (oldPkg == newPkg) return axml
+    val oldBytes = oldPkg.toByteArray(Charsets.UTF_8)
+    val newBytes = newPkg.toByteArray(Charsets.UTF_8)
+    if (oldBytes.size != newBytes.size) return axml // safety: must be same length
+    val result = axml.copyOf()
+    var i = 0
+    while (i <= result.size - oldBytes.size) {
+      var match = true
+      for (j in oldBytes.indices) {
+        if (result[i + j] != oldBytes[j]) { match = false; break }
+      }
+      if (match) {
+        val afterIdx = i + oldBytes.size
+        // Only replace standalone string entries (followed by null terminator in AXML string pool)
+        if (afterIdx < result.size && result[afterIdx] == 0x00.toByte()) {
+          System.arraycopy(newBytes, 0, result, i, newBytes.size)
+          i += newBytes.size + 1
+          continue
+        }
+      }
+      i++
+    }
+    return result
+  }
+
   private fun buildLocalSignedApk(context: ReactApplicationContext, appName: String, targetApkFile: File, payloadStr: String, promise: Promise) {
     try {
       val baseInputStream = getBaseApkInputStream(context)
@@ -375,6 +431,18 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         entryMap["assets/index.android.bundle"] = payloadBytes
       } else if (payloadStr.isNotBlank()) {
         entryMap["assets/index.html"] = payloadBytes
+      }
+
+      // *** CRITICAL FIX: Patch binary AndroidManifest.xml to unique package name ***
+      // When using host APK as base template, the manifest contains the host package name
+      // (e.g. "com.sanwitch.connect"). Android PackageInstaller sees this as an "update"
+      // but rejects it because the signing key differs → "package conflicts" error.
+      // Solution: Replace the package name string in-place in the binary AXML.
+      val hostPkg = context.packageName
+      val cleanAppId = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+      val newPkg = deriveUniquePackageName(cleanAppId, hostPkg)
+      entryMap["AndroidManifest.xml"]?.let { rawManifest ->
+        entryMap["AndroidManifest.xml"] = patchAXMLPackageName(rawManifest, hostPkg, newPkg)
       }
 
       // 1. Generate Manifest Digests (META-INF/MANIFEST.MF) & CERT.SF Section Digests (Bug 1.1 Fix)
