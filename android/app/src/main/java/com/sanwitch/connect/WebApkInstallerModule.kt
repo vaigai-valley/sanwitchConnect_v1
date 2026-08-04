@@ -12,12 +12,15 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import java.io.File
 import java.io.InputStream
+import java.math.BigInteger
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.MessageDigest
 import java.security.Signature
+import java.security.cert.X509Certificate
+import java.util.Date
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -154,6 +157,169 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     throw java.io.FileNotFoundException("No base APK template found in filesDir, assets, or host application sourceDir.")
   }
 
+  /**
+   * Retrieves or generates a persistent self-signed X.509 v1 DER certificate.
+   * Bug 1 Fix: Uses only Android-native standard Java APIs (no Bouncy Castle).
+   * The DER bytes are cached to disk and parsed back via CertificateFactory.
+   */
+  private fun getOrCreateSelfSignedCert(context: ReactApplicationContext, keyPair: KeyPair): X509Certificate {
+    val certFile = File(context.filesDir, "sanwitch_compiler_cert.dat")
+    if (certFile.exists()) {
+      try {
+        val certFactory = java.security.cert.CertificateFactory.getInstance("X.509")
+        java.io.FileInputStream(certFile).use { fis ->
+          val cert = certFactory.generateCertificate(fis)
+          if (cert is X509Certificate) return cert
+        }
+      } catch (e: Exception) {
+        e.printStackTrace()
+      }
+    }
+
+    // Build a minimal self-signed X.509 v1 DER certificate using only standard Java/Android APIs
+    fun derLen(len: Int): ByteArray = when {
+      len < 0x80 -> byteArrayOf(len.toByte())
+      len < 0x100 -> byteArrayOf(0x81.toByte(), len.toByte())
+      else -> byteArrayOf(0x82.toByte(), (len shr 8).toByte(), (len and 0xFF).toByte())
+    }
+    fun tlv(tag: Byte, c: ByteArray) = byteArrayOf(tag) + derLen(c.size) + c
+    fun seq(c: ByteArray) = tlv(0x30.toByte(), c)
+    fun set(c: ByteArray) = tlv(0x31.toByte(), c)
+    fun oid(hex: String) = tlv(0x06.toByte(), hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray())
+    fun utf8str(s: String) = tlv(0x0C.toByte(), s.toByteArray(Charsets.UTF_8))
+    fun bitString(d: ByteArray) = tlv(0x03.toByte(), byteArrayOf(0x00.toByte()) + d)
+    fun utcTime(s: String) = tlv(0x17.toByte(), s.toByteArray(Charsets.US_ASCII))
+    fun integerDer(d: ByteArray) = tlv(0x02.toByte(), d)
+
+    val sha256WithRsaOid = oid("2a864886f70d01010b")
+    val algId = seq(sha256WithRsaOid + byteArrayOf(0x05, 0x00))
+
+    // Distinguished Name: CN=Sanwitch Connect, O=Vaigaivalley, C=IN
+    val dn = seq(
+      set(seq(oid("550403") + utf8str("Sanwitch Connect"))) +
+      set(seq(oid("55040a") + utf8str("Vaigaivalley"))) +
+      set(seq(oid("550406") + utf8str("IN")))
+    )
+
+    val sdf = java.text.SimpleDateFormat("yyMMddHHmmss", java.util.Locale.US)
+    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+    val now = Date()
+    val tenYears = Date(now.time + 10L * 365 * 24 * 60 * 60 * 1000)
+    val validity = seq(utcTime(sdf.format(now) + "Z") + utcTime(sdf.format(tenYears) + "Z"))
+
+    val serialBytes = BigInteger.valueOf(System.currentTimeMillis()).toByteArray()
+    val serial = integerDer(serialBytes)
+
+    // subjectPublicKeyInfo: already DER-encoded SubjectPublicKeyInfo by Java's RSA key generator
+    val spki = keyPair.public.encoded
+
+    val tbsCert = seq(serial + algId + dn + validity + dn + spki)
+
+    val sigEngine = Signature.getInstance("SHA256withRSA")
+    sigEngine.initSign(keyPair.private)
+    sigEngine.update(tbsCert)
+    val sigBytes = sigEngine.sign()
+
+    val certDer = seq(tbsCert + algId + bitString(sigBytes))
+
+    try {
+      java.io.FileOutputStream(certFile).use { fos -> fos.write(certDer) }
+    } catch (e: Exception) {
+      e.printStackTrace()
+    }
+
+    val certFactory = java.security.cert.CertificateFactory.getInstance("X.509")
+    return certFactory.generateCertificate(java.io.ByteArrayInputStream(certDer)) as X509Certificate
+  }
+
+  /**
+   * Constructs a minimal PKCS#7 SignedData ASN.1 DER structure for META-INF/CERT.RSA.
+   *
+   * Android's JarVerifier (PackageParser) requires CERT.RSA to be a DER-encoded PKCS#7
+   * ContentInfo structure containing:
+   *   - SignedData OID (1.2.840.113549.1.7.2)
+   *   - X.509 certificate (for public key extraction)
+   *   - SignerInfo with SHA256withRSA algorithm and raw RSA signature bytes
+   *
+   * This is a hand-crafted minimal PKCS#7 envelope. No external Bouncy Castle SignedData
+   * builder is used so it is compatible with all Android SDK levels.
+   */
+  private fun buildPkcs7SignedData(cert: X509Certificate, rawSignature: ByteArray): ByteArray {
+    val certDer = cert.encoded
+
+    fun derLen(len: Int): ByteArray {
+      return when {
+        len < 0x80 -> byteArrayOf(len.toByte())
+        len < 0x100 -> byteArrayOf(0x81.toByte(), len.toByte())
+        else -> byteArrayOf(0x82.toByte(), (len shr 8).toByte(), (len and 0xFF).toByte())
+      }
+    }
+
+    fun tlv(tag: Byte, content: ByteArray): ByteArray =
+      byteArrayOf(tag) + derLen(content.size) + content
+
+    fun seq(content: ByteArray) = tlv(0x30.toByte(), content)
+    fun set(content: ByteArray) = tlv(0x31.toByte(), content)
+    fun ctx0(content: ByteArray) = tlv(0xA0.toByte(), content)
+    fun oid(hex: String): ByteArray = tlv(0x06.toByte(), hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray())
+    fun integer(value: Int) = tlv(0x02.toByte(), byteArrayOf(value.toByte()))
+    fun octetString(data: ByteArray) = tlv(0x04.toByte(), data)
+
+    // OIDs
+    val oidSignedData = oid("2a864886f70d010702")   // pkcs7-signedData
+    val oidSha256 = oid("608648016503040201")         // sha-256
+    val oidSha256WithRsa = oid("2a864886f70d01010b") // sha256WithRSAEncryption
+    val oidData = oid("2a864886f70d010701")          // pkcs7-data
+
+    // AlgorithmIdentifier: sha256 NULL
+    val sha256AlgId = seq(oidSha256 + byteArrayOf(0x05, 0x00))
+    // AlgorithmIdentifier: sha256WithRSA NULL (Bug 2 Fix: removed unused rsaAlgId)
+    val sha256WithRsaAlgId = seq(oidSha256WithRsa + byteArrayOf(0x05, 0x00))
+
+    // X.509 Certificate wrapped in [0] IMPLICIT context tag (Bug 3 Fix: was ctx3/0xA3, must be ctx0/0xA0)
+    // PKCS#7 SignedData.certificates is [0] IMPLICIT CertificateSet per RFC 2315
+    val certificates = ctx0(certDer)
+
+    // IssuerAndSerialNumber
+    val issuerAndSerial = seq(cert.issuerX500Principal.encoded + tlv(0x02.toByte(),
+      cert.serialNumber.toByteArray().let { b ->
+        if (b[0] < 0) byteArrayOf(0x00) + b else b
+      }
+    ))
+
+    // SignerInfo
+    val signerInfo = seq(
+      integer(1) +                      // version
+      issuerAndSerial +
+      sha256AlgId +                     // digestAlgorithm
+      sha256WithRsaAlgId +              // digestEncryptionAlgorithm
+      octetString(rawSignature)         // encryptedDigest
+    )
+
+    // DigestAlgorithmIdentifiers SET
+    val digestAlgIds = set(sha256AlgId)
+
+    // ContentInfo: pkcs7-data with EMPTY content
+    val contentInfo = seq(oidData)
+
+    // SignerInfos SET
+    val signerInfos = set(signerInfo)
+
+    // SignedData
+    val signedData = seq(
+      integer(1) +                      // version
+      digestAlgIds +
+      contentInfo +
+      certificates +
+      signerInfos
+    )
+
+    // ContentInfo wrapper: pkcs7-signedData [0] EXPLICIT
+    val pkcs7 = seq(oidSignedData + ctx0(signedData))
+
+    return pkcs7
+  }
+
   private fun buildLocalSignedApk(context: ReactApplicationContext, appName: String, targetApkFile: File, payloadStr: String, promise: Promise) {
     try {
       val baseInputStream = getBaseApkInputStream(context)
@@ -165,19 +331,29 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
           payloadBytes[2] == 0x1E.toByte() && payloadBytes[3] == 0xCE.toByte()
 
       val entryMap = mutableMapOf<String, ByteArray>()
+      val md = MessageDigest.getInstance("SHA-256")
+      val buffer = ByteArray(8192)
+
       val zis = ZipInputStream(baseInputStream)
       var entry: ZipEntry? = zis.nextEntry
 
+      // Pass 1: Stream entries safely into memory/temp storage & calculate digests
       while (entry != null) {
         val name = entry.name
-        // Preserve clean AXML binary structure & resources.arsc match. Skip heavy native lib/ for lightweight PWA APK compilation.
         val shouldSkipLib = !isHermesBytecode && name.startsWith("lib/")
         if (!name.startsWith("META-INF/") && !shouldSkipLib) {
-          var bytes = zis.readBytes()
+          var bytes: ByteArray
           if (name == "assets/index.html" && payloadStr.isNotBlank() && !isHermesBytecode) {
             bytes = payloadBytes
           } else if (name == "assets/index.android.bundle" && isHermesBytecode) {
             bytes = payloadBytes
+          } else {
+            val baos = java.io.ByteArrayOutputStream()
+            var len: Int
+            while (zis.read(buffer).also { len = it } > 0) {
+              baos.write(buffer, 0, len)
+            }
+            bytes = baos.toByteArray()
           }
           entryMap[name] = bytes
         }
@@ -192,18 +368,23 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         entryMap["assets/index.html"] = payloadBytes
       }
 
-      // 1. Generate Manifest Digests (META-INF/MANIFEST.MF)
+      // 1. Generate Manifest Digests (META-INF/MANIFEST.MF) & CERT.SF Section Digests (Bug 1.1 Fix)
       val manifestSb = StringBuilder()
       manifestSb.append("Manifest-Version: 1.0\r\nCreated-By: Sanwitch Connect Local APK Compiler\r\n\r\n")
 
-      val digestMap = mutableMapOf<String, String>()
-      val md = MessageDigest.getInstance("SHA-256")
+      val certSfSectionsSb = StringBuilder()
 
       for ((name, data) in entryMap) {
-        val hash = Base64.encodeToString(md.digest(data), Base64.NO_WRAP)
-        digestMap[name] = hash
-        manifestSb.append("Name: ").append(name).append("\r\n")
-        manifestSb.append("SHA-256-Digest: ").append(hash).append("\r\n\r\n")
+        val fileHash = Base64.encodeToString(md.digest(data), Base64.NO_WRAP)
+        
+        // Manifest section for this entry
+        val manifestSection = "Name: $name\r\nSHA-256-Digest: $fileHash\r\n\r\n"
+        manifestSb.append(manifestSection)
+
+        // Bug 1.1 Fix: CERT.SF SHA-256-Digest MUST be the hash of the MANIFEST.MF section snippet
+        val sectionBytes = manifestSection.toByteArray(Charsets.UTF_8)
+        val sectionHash = Base64.encodeToString(md.digest(sectionBytes), Base64.NO_WRAP)
+        certSfSectionsSb.append("Name: $name\r\nSHA-256-Digest: $sectionHash\r\n\r\n")
       }
 
       val manifestBytes = manifestSb.toString().toByteArray(Charsets.UTF_8)
@@ -213,11 +394,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       val certSfSb = StringBuilder()
       certSfSb.append("Signature-Version: 1.0\r\nCreated-By: Sanwitch Connect Local APK Compiler\r\n")
       certSfSb.append("SHA-256-Digest-Manifest: ").append(manifestHash).append("\r\n\r\n")
-
-      for ((name, hash) in digestMap) {
-        certSfSb.append("Name: ").append(name).append("\r\n")
-        certSfSb.append("SHA-256-Digest: ").append(hash).append("\r\n\r\n")
-      }
+      certSfSb.append(certSfSectionsSb.toString())
 
       val certSfBytes = certSfSb.toString().toByteArray(Charsets.UTF_8)
 
@@ -227,18 +404,38 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       val sig = Signature.getInstance("SHA256withRSA")
       sig.initSign(keyPair.private)
       sig.update(certSfBytes)
-      val signatureData = sig.sign()
+      val rawSignatureBytes = sig.sign()
+
+      // Bug 1.1 (PKCS#7 Fix): Android JarVerifier requires CERT.RSA to be a valid
+      // PKCS#7 SignedData ASN.1 DER structure, not a raw RSA byte array.
+      val selfSignedCert = getOrCreateSelfSignedCert(context, keyPair)
+      val pkcs7Der = buildPkcs7SignedData(selfSignedCert, rawSignatureBytes)
 
       entryMap["META-INF/MANIFEST.MF"] = manifestBytes
       entryMap["META-INF/CERT.SF"] = certSfBytes
-      entryMap["META-INF/CERT.RSA"] = signatureData
+      entryMap["META-INF/CERT.RSA"] = pkcs7Der
 
-      // 4. Output Complete Signed Binary APK File with Proper Zip Compression Rules
-      val zos = ZipOutputStream(java.io.FileOutputStream(targetApkFile))
+      // 4. Output Complete Signed Binary APK File with Zipalign (4-Byte Alignment - Bug 1.3 Fix)
+      val fos = java.io.FileOutputStream(targetApkFile)
+      val countingStream = java.io.DataOutputStream(fos)
+      var writtenBytes = 0L
+
+      val zos = ZipOutputStream(object : java.io.OutputStream() {
+        override fun write(b: Int) {
+          countingStream.write(b)
+          writtenBytes++
+        }
+        override fun write(b: ByteArray, off: Int, len: Int) {
+          countingStream.write(b, off, len)
+          writtenBytes += len
+        }
+      })
+
       for ((name, data) in entryMap) {
         val newEntry = ZipEntry(name)
+        val nameBytes = name.toByteArray(Charsets.UTF_8)
 
-        // Fix B: resources.arsc and uncompressed assets MUST be STORED (method 0), NOT DEFLATED!
+        // Bug 1.3 Fix: Ensure 4-byte zipalign offset alignment for STORED entries (resources.arsc & assets/raw/)
         val isUncompressedRequired = name == "resources.arsc" || name.startsWith("assets/raw/")
         if (isUncompressedRequired) {
           newEntry.method = ZipEntry.STORED
@@ -248,6 +445,14 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
           val crc = java.util.zip.CRC32()
           crc.update(data)
           newEntry.crc = crc.value
+
+          // Calculate offset alignment padding
+          val localHeaderSize = 30 + nameBytes.size
+          val dataOffset = writtenBytes + localHeaderSize
+          val padding = ((4 - (dataOffset % 4)) % 4).toInt()
+          if (padding > 0) {
+            newEntry.extra = ByteArray(padding)
+          }
         } else {
           newEntry.method = ZipEntry.DEFLATED
         }
@@ -257,6 +462,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         zos.closeEntry()
       }
       zos.close()
+      countingStream.close()
 
       val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetApkFile)
       launchPackageInstallerDirectly(context, apkUri, promise)

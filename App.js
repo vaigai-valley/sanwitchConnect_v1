@@ -187,28 +187,58 @@ export default function App() {
   const [activeRunnerApp, setActiveRunnerApp] = useState(null);
   const [isAppRunnerVisible, setIsAppRunnerVisible] = useState(false);
 
-  const handleRunAppInApp = (appTitleOrItem) => {
+  const handleRunAppInApp = async (appTitleOrItem, pwaPublishedUrl = null) => {
     const title = typeof appTitleOrItem === 'string' ? appTitleOrItem : (appTitleOrItem?.name || exportAppName || 'My Sanwitch App');
-    const html = (typeof appTitleOrItem === 'object' && appTitleOrItem?.html) ? appTitleOrItem.html : generateCompleteStandaloneAppHtml(title);
+    const html = (typeof appTitleOrItem === 'object' && appTitleOrItem?.html) ? appTitleOrItem.html : generateCompleteStandaloneAppHtml(title, widgets, wifiIP);
+    const cleanSlug = title.toLowerCase().replace(/[^a-z0-9]/g, '_');
 
     setIsExportModalVisible(false);
     setIsMyAppsModalVisible(false);
 
-    // Launch inside Chrome TWA container (Full WebBluetooth support & 0 browser redirects)
-    if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.openInTwa) {
-      NativeModules.WebApkInstallerModule.openInTwa(html)
-        .then(() => {
-          log(`Launched "${title}" in-app via Chrome TWA container`, 'sys');
-        })
-        .catch(() => {
-          setActiveRunnerApp({ name: title, html });
-          setIsAppRunnerVisible(true);
-        });
-      return;
+    let isOnline = false;
+    let targetUrl = pwaPublishedUrl || appTitleOrItem?.publishedUrl || appTitleOrItem?.pwaUrl;
+    if (!targetUrl || targetUrl.endsWith('.apk')) {
+      targetUrl = `https://sanwitch.vaigaivalley.workers.dev/pwa/${cleanSlug}`;
     }
 
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
+      const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: title, html }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      // Bug 5 Fix: isOnline=true whenever TCP/HTTP reached successfully.
+      // Server 4xx/5xx (rate limits, errors) must NOT suppress Chrome TWA.
+      isOnline = true;
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.url && !data.url.endsWith('.apk')) targetUrl = data.url;
+      }
+    } catch (e) {
+      // Only mark offline on true network errors (DNS fail, no TCP, timeout abort)
+      isOnline = false;
+    }
+
+    // Option 1: Chrome TWA (openInTwa) when ONLINE
+    if (isOnline && Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.openInTwa) {
+      try {
+        await NativeModules.WebApkInstallerModule.openInTwa(targetUrl);
+        log(`Launched "${title}" in Chrome TWA container: ${targetUrl}`, 'sys');
+        return;
+      } catch (err) {
+        console.log('openInTwa error:', err);
+      }
+    }
+
+    // OFFLINE FALLBACK: Launch local WebRunner Modal inside app (0 Internet Required!)
     setActiveRunnerApp({ name: title, html });
     setIsAppRunnerVisible(true);
+    log(`Launched "${title}" in Offline In-App WebRunner`, 'sys');
   };
 
   const [savedApps, setSavedApps] = useState([]);
@@ -231,11 +261,13 @@ export default function App() {
     loadSavedApps();
   }, []);
 
-  // OPTION 1: INSTALL APP DIRECTLY INTO ANDROID SYSTEM (NO BROWSER NEEDED)
+  // OPTION 2: INSTALL APP DIRECTLY INTO ANDROID SYSTEM (ON-DEVICE COMPILER VIA HTML STRING)
   const handleInstallReadyApp = async () => {
     const appTitle = exportAppName.trim() || 'My Sanwitch App';
     const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
     const html = generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
+    const cleanSlug = appTitle.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const pwaWebUrl = `https://sanwitch.vaigaivalley.workers.dev/pwa/${cleanSlug}`;
 
     const newApp = {
       id: Date.now().toString(),
@@ -244,7 +276,8 @@ export default function App() {
       widgets: JSON.parse(JSON.stringify(widgets)),
       wifiIP,
       createdAt: new Date().toLocaleDateString(),
-      html
+      html,
+      publishedUrl: pwaWebUrl
     };
 
     const updatedApps = [newApp, ...savedApps.filter(a => a.name !== appTitle)];
@@ -256,8 +289,12 @@ export default function App() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsExportModalVisible(false);
 
-    // Silent Background Sync to Worker Cloud Storage & Binary APK Generator
-    let publishedUrl = '';
+    // Bug 4 Fix: Show loading indicator during sync so UI is never blank between modal close & prompt
+    setIsInstallModalVisible(true);
+    setInstallProgress(20);
+    setInstallStepText('Syncing app bundle to cloud storage...');
+
+    let publishedUrl = `${pwaWebUrl}.apk`;
     try {
       const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
         method: 'POST',
@@ -272,9 +309,9 @@ export default function App() {
     } catch (e) {
       console.log('Silent APK sync error:', e);
     }
-    if (!publishedUrl) {
-      publishedUrl = `https://sanwitch.vaigaivalley.workers.dev/pwa/${appTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}.apk`;
-    }
+
+    setIsInstallModalVisible(false);
+    setInstallProgress(0);
 
     customAlert(
       'Standalone App Ready',
@@ -288,6 +325,7 @@ export default function App() {
             setInstallStepText('Writing APK package to device cache & launching PackageInstaller...');
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+            // Option 2: Native WebApkInstallerModule uses raw HTML String for on-device APK compilation
             if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
               try {
                 const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl, html);
@@ -339,7 +377,7 @@ export default function App() {
           text: 'Preview App',
           onPress: () => {
             setInstallProgress(0);
-            handleRunAppInApp(newApp);
+            handleRunAppInApp(newApp, pwaWebUrl);
           }
         }
       ]
@@ -840,6 +878,8 @@ export default function App() {
     setLogs(prev => [{ id: Date.now().toString(), msg, type }, ...prev.slice(0, 49)]);
   };
 
+  const voiceSubRef = useRef(null);
+
   const startVoice = async () => {
     if (!user && !token) {
       customAlert(
@@ -860,12 +900,19 @@ export default function App() {
     // 1. Native Android SpeechRecognizer Engine (Turns on Phone Microphone)
     if (Platform.OS === 'android' && NativeModules.VoiceModule?.startListening) {
       try {
+        if (voiceSubRef.current) {
+          voiceSubRef.current.remove();
+          voiceSubRef.current = null;
+        }
         const voiceEmitter = new NativeEventEmitter(NativeModules.VoiceModule);
-        voiceEmitter.removeAllListeners('onSpeechResults');
-        voiceEmitter.addListener('onSpeechResults', (e) => {
+        voiceSubRef.current = voiceEmitter.addListener('onSpeechResults', (e) => {
           if (e && e.value) {
             setVoiceInputText(e.value);
             processVoice(e.value);
+            if (voiceSubRef.current) {
+              voiceSubRef.current.remove();
+              voiceSubRef.current = null;
+            }
           }
         });
         await NativeModules.VoiceModule.startListening();
@@ -924,7 +971,7 @@ export default function App() {
     widgets.forEach(w => {
       const name = w.id.toLowerCase();
       const cmd = w.id.toUpperCase();
-      if (raw.includes(name) || widgets.length === 1) {
+      if (raw.includes(name)) {
         handled = true;
         if (w.type === 'toggle') {
           if (raw.includes('on') || raw.includes('start') || raw.includes('active') || raw.includes('1')) {
