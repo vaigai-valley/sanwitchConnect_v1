@@ -276,7 +276,7 @@ export default function App() {
 
             if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
               try {
-                const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl);
+                const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl, html);
 
                 setInstallProgress(100);
                 setInstallStepText('Package Installer Ready!');

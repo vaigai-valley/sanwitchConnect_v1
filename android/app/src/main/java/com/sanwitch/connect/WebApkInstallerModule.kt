@@ -10,8 +10,12 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import java.io.File
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
   override fun getName(): String = "WebApkInstallerModule"
@@ -70,7 +74,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
   }
 
   @ReactMethod
-  fun installWebApk(appName: String, pwaUrl: String, promise: Promise) {
+  fun installWebApk(appName: String, pwaUrl: String, htmlPayload: String?, promise: Promise) {
     val context = reactApplicationContext
     try {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
@@ -88,7 +92,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       val targetApkFile = File(context.cacheDir, "${appName.lowercase().replace(Regex("[^a-z0-9]"), "_")}.apk")
 
-      // 2. HTTPS Network Download Pipeline (with automatic base APK fallback)
+      // 2. HTTPS Network Download Pipeline (with binary APK verification)
       if (pwaUrl.startsWith("http")) {
         Thread {
           try {
@@ -136,17 +140,68 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
             e.printStackTrace()
           }
 
-          // Fallthrough: Server returned non-APK / HTML or offline -> Package using Base Signed Binary APK Template
-          launchBaseApkPackageInstaller(context, appName, targetApkFile, promise)
+          // Fallthrough: Package using pre-compiled lightweight APK template
+          injectHtmlAndLaunchApk(context, appName, targetApkFile, htmlPayload ?: "", promise)
         }.start()
         return
       }
 
-      // 3. Preferred Base Signed Binary APK Template Packaging (Instant 0 Network / 100% Offline)
-      launchBaseApkPackageInstaller(context, appName, targetApkFile, promise)
+      // 3. Primary Pre-compiled APK Template Packaging Engine
+      injectHtmlAndLaunchApk(context, appName, targetApkFile, htmlPayload ?: "", promise)
     } catch (e: Exception) {
       e.printStackTrace()
       promise.reject("INSTALL_ERROR", e.message)
+    }
+  }
+
+  private fun injectHtmlAndLaunchApk(context: ReactApplicationContext, appName: String, targetApkFile: File, htmlContent: String, promise: Promise) {
+    try {
+      val templateStream: InputStream? = try {
+        context.assets.open("standalone_template.apk")
+      } catch (e: Exception) {
+        null
+      }
+
+      if (templateStream != null) {
+        val zis = ZipInputStream(templateStream)
+        val zos = ZipOutputStream(java.io.FileOutputStream(targetApkFile))
+
+        var entry: ZipEntry? = zis.nextEntry
+        val buffer = ByteArray(4096)
+
+        while (entry != null) {
+          val newEntry = ZipEntry(entry.name)
+          zos.putNextEntry(newEntry)
+
+          if (entry.name == "assets/index.html" && htmlContent.isNotBlank()) {
+            val htmlBytes = htmlContent.toByteArray(Charsets.UTF_8)
+            zos.write(htmlBytes, 0, htmlBytes.size)
+          } else {
+            var count: Int
+            while (zis.read(buffer).also { count = it } != -1) {
+              zos.write(buffer, 0, count)
+            }
+          }
+          zos.closeEntry()
+          zis.closeEntry()
+          entry = zis.nextEntry
+        }
+        zis.close()
+        zos.close()
+
+        val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetApkFile)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+          setDataAndType(apkUri, "application/vnd.android.package-archive")
+          flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+        promise.resolve("INSTALL_PROMPT_OPENED")
+      } else {
+        launchBaseApkPackageInstaller(context, appName, targetApkFile, promise)
+      }
+    } catch (e: Exception) {
+      e.printStackTrace()
+      launchBaseApkPackageInstaller(context, appName, targetApkFile, promise)
     }
   }
 
