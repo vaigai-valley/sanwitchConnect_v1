@@ -127,6 +127,48 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     return keyPair
   }
 
+  private fun patchPackageNameOnly(axmlBytes: ByteArray, oldPkg: String, newPkg: String): ByteArray {
+    if (oldPkg.length != newPkg.length) return axmlBytes
+
+    val oldBytesUtf8 = oldPkg.toByteArray(Charsets.UTF_8)
+    val newBytesUtf8 = newPkg.toByteArray(Charsets.UTF_8)
+
+    val oldBytesUtf16 = oldPkg.toByteArray(Charsets.UTF_16LE)
+    val newBytesUtf16 = newPkg.toByteArray(Charsets.UTF_16LE)
+
+    val patched = axmlBytes.clone()
+
+    // 1. Try UTF-8 string pool match (first occurrence only = package attribute)
+    val indexUtf8 = findBytePattern(patched, oldBytesUtf8)
+    if (indexUtf8 != -1) {
+      System.arraycopy(newBytesUtf8, 0, patched, indexUtf8, newBytesUtf8.size)
+      return patched
+    }
+
+    // 2. Try UTF-16LE string pool match (first occurrence only = package attribute)
+    val indexUtf16 = findBytePattern(patched, oldBytesUtf16)
+    if (indexUtf16 != -1) {
+      System.arraycopy(newBytesUtf16, 0, patched, indexUtf16, newBytesUtf16.size)
+      return patched
+    }
+
+    return axmlBytes
+  }
+
+  private fun findBytePattern(source: ByteArray, pattern: ByteArray): Int {
+    for (i in 0..(source.size - pattern.size)) {
+      var found = true
+      for (j in pattern.indices) {
+        if (source[i + j] != pattern[j]) {
+          found = false
+          break
+        }
+      }
+      if (found) return i
+    }
+    return -1
+  }
+
   private fun buildLocalSignedApk(context: ReactApplicationContext, appName: String, targetApkFile: File, payloadStr: String, promise: Promise) {
     try {
       val baseApkPath = context.applicationInfo.sourceDir
@@ -147,13 +189,22 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       val zis = ZipInputStream(java.io.FileInputStream(baseApkFile))
       var entry: ZipEntry? = zis.nextEntry
 
+      // Dynamically generate unique 20-character package ID for independent app installation
+      val oldPkg = "com.sanwitch.connect" // 20 characters
+      val cleanTitle = appName.lowercase().replace(Regex("[^a-z0-9]"), "")
+      val suffixSeed = (cleanTitle + "app123456789").take(7)
+      val newPkg = "com.sanwitch.$suffixSeed" // Exactly 13 + 7 = 20 characters
+
       while (entry != null) {
         val name = entry.name
         // Preserve clean AXML binary structure. Skip heavy native lib/ for lightweight PWA APK compilation.
         val shouldSkipLib = !isHermesBytecode && name.startsWith("lib/")
         if (!name.startsWith("META-INF/") && !shouldSkipLib) {
           var bytes = zis.readBytes()
-          if (name == "assets/index.html" && payloadStr.isNotBlank() && !isHermesBytecode) {
+          if (name == "AndroidManifest.xml") {
+            // Patch ONLY the package attribute entry in binary AXML string pool
+            bytes = patchPackageNameOnly(bytes, oldPkg, newPkg)
+          } else if (name == "assets/index.html" && payloadStr.isNotBlank() && !isHermesBytecode) {
             bytes = payloadBytes
           } else if (name == "assets/index.android.bundle" && isHermesBytecode) {
             bytes = payloadBytes
