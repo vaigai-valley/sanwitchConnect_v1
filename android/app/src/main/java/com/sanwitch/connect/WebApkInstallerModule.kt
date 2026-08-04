@@ -11,6 +11,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import java.io.File
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.KeyPair
@@ -127,15 +128,27 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     return keyPair
   }
 
+  private fun getBaseApkInputStream(context: ReactApplicationContext): InputStream {
+    // 1. Dedicated custom template stored in app files (/files/pwa_template.apk)
+    val customTemplateFile = File(context.filesDir, "pwa_template.apk")
+    if (customTemplateFile.exists()) {
+      return java.io.FileInputStream(customTemplateFile)
+    }
+
+    // 2. Dedicated custom template bundled in app assets (assets/pwa_template.apk)
+    try {
+      return context.assets.open("pwa_template.apk")
+    } catch (e: Exception) {
+      // Fallback to installed app package
+    }
+
+    val baseApkPath = context.applicationInfo.sourceDir
+    return java.io.FileInputStream(File(baseApkPath))
+  }
+
   private fun buildLocalSignedApk(context: ReactApplicationContext, appName: String, targetApkFile: File, payloadStr: String, promise: Promise) {
     try {
-      val baseApkPath = context.applicationInfo.sourceDir
-      val baseApkFile = File(baseApkPath)
-
-      if (!baseApkFile.exists()) {
-        promise.reject("BUILD_ERROR", "Base APK template missing at $baseApkPath")
-        return
-      }
+      val baseInputStream = getBaseApkInputStream(context)
 
       // Detect Hermes Bytecode Header (0x1F 0x06 0x1E 0xCE) vs HTML String
       val payloadBytes = payloadStr.toByteArray(Charsets.UTF_8)
@@ -144,7 +157,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
           payloadBytes[2] == 0x1E.toByte() && payloadBytes[3] == 0xCE.toByte()
 
       val entryMap = mutableMapOf<String, ByteArray>()
-      val zis = ZipInputStream(java.io.FileInputStream(baseApkFile))
+      val zis = ZipInputStream(baseInputStream)
       var entry: ZipEntry? = zis.nextEntry
 
       while (entry != null) {
