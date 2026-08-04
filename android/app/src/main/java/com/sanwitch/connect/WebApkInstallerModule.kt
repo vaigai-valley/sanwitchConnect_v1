@@ -90,7 +90,8 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         return
       }
 
-      val targetApkFile = File(context.cacheDir, "${appName.lowercase().replace(Regex("[^a-z0-9]"), "_")}.apk")
+      val cleanAppId = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+      val targetApkFile = File(context.cacheDir, "${cleanAppId}.apk")
 
       // 2. HTTPS Network Download Pipeline (with binary APK verification)
       if (pwaUrl.startsWith("http")) {
@@ -140,13 +141,13 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
             e.printStackTrace()
           }
 
-          // Fallthrough: Package using pre-compiled lightweight APK template
+          // Fallthrough: Package using dynamic APK template with unique package ID
           injectHtmlAndLaunchApk(context, appName, targetApkFile, htmlPayload ?: "", promise)
         }.start()
         return
       }
 
-      // 3. Primary Pre-compiled APK Template Packaging Engine
+      // 3. Dynamic Unique Package APK Template Packaging Engine
       injectHtmlAndLaunchApk(context, appName, targetApkFile, htmlPayload ?: "", promise)
     } catch (e: Exception) {
       e.printStackTrace()
@@ -169,11 +170,26 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         var entry: ZipEntry? = zis.nextEntry
         val buffer = ByteArray(4096)
 
+        val cleanAppId = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+        val rawPkgName = "com.sanwitch.app.$cleanAppId"
+        val paddedPkgName = if (rawPkgName.length >= 52) {
+          rawPkgName.substring(0, 52)
+        } else {
+          rawPkgName.padEnd(52, '_')
+        }
+
+        val placeholderBytes = "com.sanwitch.app.placeholder_01234567890123456789012345678901".toByteArray(Charsets.UTF_16LE)
+        val targetPkgBytes = paddedPkgName.toByteArray(Charsets.UTF_16LE)
+
         while (entry != null) {
           val newEntry = ZipEntry(entry.name)
           zos.putNextEntry(newEntry)
 
-          if (entry.name == "assets/index.html" && htmlContent.isNotBlank()) {
+          if (entry.name == "AndroidManifest.xml") {
+            val originalBytes = zis.readBytes()
+            val patchedBytes = replaceBytes(originalBytes, placeholderBytes, targetPkgBytes)
+            zos.write(patchedBytes, 0, patchedBytes.size)
+          } else if (entry.name == "assets/index.html" && htmlContent.isNotBlank()) {
             val htmlBytes = htmlContent.toByteArray(Charsets.UTF_8)
             zos.write(htmlBytes, 0, htmlBytes.size)
           } else {
@@ -203,6 +219,30 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       e.printStackTrace()
       launchBaseApkPackageInstaller(context, appName, targetApkFile, promise)
     }
+  }
+
+  private fun replaceBytes(source: ByteArray, target: ByteArray, replacement: ByteArray): ByteArray {
+    val index = indexOfBytes(source, target)
+    if (index == -1) return source
+    val result = ByteArray(source.size)
+    System.arraycopy(source, 0, result, 0, source.size)
+    System.arraycopy(replacement, 0, result, index, replacement.size)
+    return result
+  }
+
+  private fun indexOfBytes(source: ByteArray, target: ByteArray): Int {
+    if (source.size < target.size) return -1
+    for (i in 0..source.size - target.size) {
+      var match = true
+      for (j in target.indices) {
+        if (source[i + j] != target[j]) {
+          match = false
+          break
+        }
+      }
+      if (match) return i
+    }
+    return -1
   }
 
   private fun launchBaseApkPackageInstaller(context: ReactApplicationContext, appName: String, targetApkFile: File, promise: Promise) {
