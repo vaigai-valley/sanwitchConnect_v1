@@ -20,7 +20,8 @@ import {
   Image,
   Linking,
   NativeModules,
-  Share
+  Share,
+  AppState
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, RefreshCcw, LogOut, KeyRound, Smartphone, ExternalLink, Sparkles, ChevronsUp, Folder, Edit3, FileText, HelpCircle, ChevronRight, Play, Download, Share2 } from 'lucide-react-native';
@@ -187,6 +188,85 @@ export default function App() {
   const [activeRunnerApp, setActiveRunnerApp] = useState(null);
   const [isAppRunnerVisible, setIsAppRunnerVisible] = useState(false);
 
+  // F1 Fix: Stores pending install params when PERMISSION_NEEDED fires.
+  // AppState listener auto-retries install when user returns from Android Settings.
+  const pendingInstallRef = useRef(null);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (nextState !== 'active' || !pendingInstallRef.current) return;
+      if (Platform.OS !== 'android' || !NativeModules.WebApkInstallerModule?.canInstallPackages) return;
+      try {
+        const canInstall = await NativeModules.WebApkInstallerModule.canInstallPackages();
+        if (canInstall) {
+          const { appTitle, publishedUrl, html } = pendingInstallRef.current;
+          pendingInstallRef.current = null; // consume — only retry once
+          launchInstallStep(appTitle, publishedUrl, html);
+        }
+      } catch (e) {
+        console.log('Post-settings permission check error:', e);
+      }
+    });
+    return () => sub?.remove();
+  }, []);
+
+  // Extracted install step — called directly from the Install App button
+  // AND auto-called by AppState listener after permission grant (F1 fix).
+  const launchInstallStep = async (appTitle, publishedUrl, html) => {
+    if (Platform.OS !== 'android' || !NativeModules.WebApkInstallerModule?.installWebApk) return;
+    setIsInstallModalVisible(true);
+    setInstallProgress(85);
+    setInstallStepText('Writing APK package to device cache & launching PackageInstaller...');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    let animPct = 85;
+    const progressTimer = setInterval(() => {
+      animPct = Math.min(animPct + 1, 95);
+      setInstallProgress(animPct);
+      setInstallStepText(`Building APK package... ${animPct}%`);
+    }, 600);
+
+    try {
+      const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl, html);
+      clearInterval(progressTimer);
+      setInstallProgress(100);
+      setInstallStepText('Package Installer Ready!');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await new Promise(r => setTimeout(r, 400));
+      setIsInstallModalVisible(false);
+      setInstallProgress(0);
+
+      if (res === 'PERMISSION_NEEDED') {
+        // Save params — AppState listener will auto-retry when user returns from Settings
+        pendingInstallRef.current = { appTitle, publishedUrl, html };
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        customAlert(
+          'Permission Required',
+          'Android Settings opened! Please turn ON "Allow from this source" for Sanwitch Connect. The install will start automatically when you return.',
+          'info'
+        );
+      } else if (res === 'INSTALL_PROMPT_OPENED') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        customAlert(
+          'Package Installer Ready',
+          `Android System prompt has appeared! Tap INSTALL to add "${appTitle}" directly to your device.`,
+          'success'
+        );
+      }
+    } catch (e) {
+      clearInterval(progressTimer);
+      console.log('WebApkInstallerModule error:', e);
+      setIsInstallModalVisible(false);
+      setInstallProgress(0);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      customAlert(
+        'Installation Error',
+        `Failed to launch PackageInstaller: ${e.message || 'Unknown Native Error'}`,
+        'error'
+      );
+    }
+  };
+
   const handleRunAppInApp = async (appTitleOrItem, pwaPublishedUrl = null) => {
     const title = typeof appTitleOrItem === 'string' ? appTitleOrItem : (appTitleOrItem?.name || exportAppName || 'My Sanwitch App');
     const html = (typeof appTitleOrItem === 'object' && appTitleOrItem?.html) ? appTitleOrItem.html : generateCompleteStandaloneAppHtml(title, widgets, wifiIP);
@@ -324,69 +404,9 @@ export default function App() {
       [
         {
           text: 'Install App',
-          onPress: async () => {
-            setIsInstallModalVisible(true);
-            setInstallProgress(85);
-            setInstallStepText('Writing APK package to device cache & launching PackageInstaller...');
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-            // Option 2: Native WebApkInstallerModule uses raw HTML String for on-device APK compilation
-            if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
-              // F2 Fix: Animate 85→95% while native APK compile runs on background thread
-              // prevents the modal looking frozen during RSA keygen + ZIP streaming (5–15s)
-              let animPct = 85;
-              const progressTimer = setInterval(() => {
-                animPct = Math.min(animPct + 1, 95);
-                setInstallProgress(animPct);
-                setInstallStepText(`Building APK package... ${animPct}%`);
-              }, 600);
-              try {
-                const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl, html);
-                clearInterval(progressTimer);
-
-                setInstallProgress(100);
-                setInstallStepText('Package Installer Ready!');
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-                await new Promise(r => setTimeout(r, 400));
-                setIsInstallModalVisible(false);
-                setInstallProgress(0);
-
-                if (res === 'PERMISSION_NEEDED') {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                  customAlert(
-                    'Permission Required',
-                    'Android Settings opened! Please turn ON "Allow from this source" for Sanwitch Connect, then tap INSTALL APP again.',
-                    'info'
-                  );
-                  return;
-                } else if (res === 'INSTALL_PROMPT_OPENED') {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  customAlert(
-                    'Package Installer Ready',
-                    `Android System prompt "Do you want to install this app?" has popped up! Tap INSTALL to add "${appTitle}" directly to your device!`,
-                    'success'
-                  );
-                  return;
-                }
-              } catch (e) {
-                clearInterval(progressTimer);
-                console.log('WebApkInstallerModule error:', e);
-                setIsInstallModalVisible(false);
-                setInstallProgress(0);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                customAlert(
-                  'Installation Error',
-                  `Failed to launch PackageInstaller: ${e.message || 'Unknown Native Error'}`,
-                  'error'
-                );
-                return;
-              }
-            } else {
-              setIsInstallModalVisible(false);
-              setInstallProgress(0);
-            }
-          }
+          // F1 Fix: delegates to launchInstallStep() which is also called by
+          // AppState listener when user returns from Android Settings.
+          onPress: () => launchInstallStep(appTitle, publishedUrl, html)
         },
         {
           text: 'Preview App',
