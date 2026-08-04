@@ -91,7 +91,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       val cleanAppId = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
       val targetApkFile = File(context.cacheDir, "${cleanAppId}.apk")
 
-      // 2. HTTPS Binary Download Check
+      // 2. HTTPS Network URL Check
       if (pwaUrl.startsWith("http")) {
         Thread {
           try {
@@ -134,13 +134,13 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
             e.printStackTrace()
           }
 
-          // Fallthrough: Mint APK locally using HTML or Hermes Bytecode payload
-          buildLocalSignedApk(context, appName, targetApkFile, htmlPayload ?: "", promise)
+          // If URL serves HTML PWA (text/html), launch system WebAPK gateway to prevent PackageInstaller parsing errors
+          launchWebApkGateway(context, pwaUrl, promise)
         }.start()
         return
       }
 
-      // 3. Native On-Device Hybrid APK Compiler Engine (HTML + Hermes Bytecode Support)
+      // 3. Native On-Device Local Signed APK Compiler Engine
       buildLocalSignedApk(context, appName, targetApkFile, htmlPayload ?: "", promise)
     } catch (e: Exception) {
       e.printStackTrace()
@@ -158,14 +158,6 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         return
       }
 
-      val cleanHash = String.format("%07d", Math.abs(appName.hashCode()) % 10000000)
-      val targetPkgStr = "com.sanwitch.app$cleanHash" // Exactly 20 characters matching "com.sanwitch.connect"
-
-      val origPkgUtf8 = "com.sanwitch.connect".toByteArray(Charsets.UTF_8)
-      val origPkgUtf16 = "com.sanwitch.connect".toByteArray(Charsets.UTF_16LE)
-      val newPkgUtf8 = targetPkgStr.toByteArray(Charsets.UTF_8)
-      val newPkgUtf16 = targetPkgStr.toByteArray(Charsets.UTF_16LE)
-
       // Detect Hermes Bytecode Header (0x1F 0x06 0x1E 0xCE) vs HTML String
       val payloadBytes = payloadStr.toByteArray(Charsets.UTF_8)
       val isHermesBytecode = payloadBytes.size >= 4 &&
@@ -178,14 +170,11 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       while (entry != null) {
         val name = entry.name
-        // Skip old signatures. If using Hermes, include lib/ entries; otherwise skip lib/ for lightweight PWA APK.
+        // Skip old signatures. Keep AndroidManifest.xml valid binary AXML structure without byte corruption.
         val shouldSkipLib = !isHermesBytecode && name.startsWith("lib/")
         if (!name.startsWith("META-INF/") && !shouldSkipLib) {
           var bytes = zis.readBytes()
-          if (name == "AndroidManifest.xml") {
-            bytes = replaceBytes(bytes, origPkgUtf8, newPkgUtf8)
-            bytes = replaceBytes(bytes, origPkgUtf16, newPkgUtf16)
-          } else if (name == "assets/index.html" && payloadStr.isNotBlank() && !isHermesBytecode) {
+          if (name == "assets/index.html" && payloadStr.isNotBlank() && !isHermesBytecode) {
             bytes = payloadBytes
           } else if (name == "assets/index.android.bundle" && isHermesBytecode) {
             bytes = payloadBytes
@@ -205,7 +194,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       // 1. Generate Manifest Digests (META-INF/MANIFEST.MF)
       val manifestSb = StringBuilder()
-      manifestSb.append("Manifest-Version: 1.0\r\nCreated-By: Sanwitch Connect Hybrid Engine (PWA + Hermes)\r\n\r\n")
+      manifestSb.append("Manifest-Version: 1.0\r\nCreated-By: Sanwitch Connect Engine\r\n\r\n")
 
       val digestMap = mutableMapOf<String, String>()
       val md = MessageDigest.getInstance("SHA-256")
@@ -222,7 +211,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       // 2. Generate Signature File (META-INF/CERT.SF)
       val certSfSb = StringBuilder()
-      certSfSb.append("Signature-Version: 1.0\r\nCreated-By: Sanwitch Connect Hybrid Engine (PWA + Hermes)\r\n")
+      certSfSb.append("Signature-Version: 1.0\r\nCreated-By: Sanwitch Connect Engine\r\n")
       certSfSb.append("SHA-256-Digest-Manifest: ").append(manifestHash).append("\r\n\r\n")
 
       for ((name, hash) in digestMap) {
@@ -274,27 +263,11 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     promise.resolve("INSTALL_PROMPT_OPENED")
   }
 
-  private fun replaceBytes(source: ByteArray, target: ByteArray, replacement: ByteArray): ByteArray {
-    val index = indexOfBytes(source, target)
-    if (index == -1) return source
-    val result = ByteArray(source.size)
-    System.arraycopy(source, 0, result, 0, source.size)
-    System.arraycopy(replacement, 0, result, index, replacement.size)
-    return result
-  }
-
-  private fun indexOfBytes(source: ByteArray, target: ByteArray): Int {
-    if (source.size < target.size) return -1
-    for (i in 0..source.size - target.size) {
-      var match = true
-      for (j in target.indices) {
-        if (source[i + j] != target[j]) {
-          match = false
-          break
-        }
-      }
-      if (match) return i
+  private fun launchWebApkGateway(context: ReactApplicationContext, pwaUrl: String, promise: Promise) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pwaUrl)).apply {
+      flags = Intent.FLAG_ACTIVITY_NEW_TASK
     }
-    return -1
+    context.startActivity(intent)
+    promise.resolve("INSTALL_PROMPT_OPENED")
   }
 }
