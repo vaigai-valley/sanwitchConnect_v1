@@ -137,15 +137,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     }
 
     // 2. Priority 2: Check bundled assets (assets/pwa_template.apk)
-    try {
-      return context.assets.open("pwa_template.apk")
-    } catch (e: Exception) {
-      // Asset not found, fallback to sourceDir
-    }
-
-    // 3. Fallback: Installed base package
-    val baseApkPath = context.applicationInfo.sourceDir
-    return java.io.FileInputStream(File(baseApkPath))
+    return context.assets.open("pwa_template.apk")
   }
 
   private fun buildLocalSignedApk(context: ReactApplicationContext, appName: String, targetApkFile: File, payloadStr: String, promise: Promise) {
