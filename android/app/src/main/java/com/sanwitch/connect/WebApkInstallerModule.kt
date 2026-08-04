@@ -134,13 +134,13 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
             e.printStackTrace()
           }
 
-          // Fallthrough: Mint APK locally using HTML payload
+          // Fallthrough: Mint APK locally using HTML or Hermes Bytecode payload
           buildLocalSignedApk(context, appName, targetApkFile, htmlPayload ?: "", promise)
         }.start()
         return
       }
 
-      // 3. Native On-Device Local APK Compiler Engine
+      // 3. Native On-Device Hybrid APK Compiler Engine (HTML + Hermes Bytecode Support)
       buildLocalSignedApk(context, appName, targetApkFile, htmlPayload ?: "", promise)
     } catch (e: Exception) {
       e.printStackTrace()
@@ -148,7 +148,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     }
   }
 
-  private fun buildLocalSignedApk(context: ReactApplicationContext, appName: String, targetApkFile: File, htmlContent: String, promise: Promise) {
+  private fun buildLocalSignedApk(context: ReactApplicationContext, appName: String, targetApkFile: File, payloadStr: String, promise: Promise) {
     try {
       val baseApkPath = context.applicationInfo.sourceDir
       val baseApkFile = File(baseApkPath)
@@ -166,20 +166,29 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       val newPkgUtf8 = targetPkgStr.toByteArray(Charsets.UTF_8)
       val newPkgUtf16 = targetPkgStr.toByteArray(Charsets.UTF_16LE)
 
+      // Detect Hermes Bytecode Header (0x1F 0x06 0x1E 0xCE) vs HTML String
+      val payloadBytes = payloadStr.toByteArray(Charsets.UTF_8)
+      val isHermesBytecode = payloadBytes.size >= 4 &&
+          payloadBytes[0] == 0x1F.toByte() && payloadBytes[1] == 0x06.toByte() &&
+          payloadBytes[2] == 0x1E.toByte() && payloadBytes[3] == 0xCE.toByte()
+
       val entryMap = mutableMapOf<String, ByteArray>()
       val zis = ZipInputStream(java.io.FileInputStream(baseApkFile))
       var entry: ZipEntry? = zis.nextEntry
 
       while (entry != null) {
         val name = entry.name
-        // Skip old signatures and non-essential native libraries to keep APK tiny and pre-aligned
-        if (!name.startsWith("META-INF/") && !name.startsWith("lib/")) {
+        // Skip old signatures. If using Hermes, include lib/ entries; otherwise skip lib/ for lightweight PWA APK.
+        val shouldSkipLib = !isHermesBytecode && name.startsWith("lib/")
+        if (!name.startsWith("META-INF/") && !shouldSkipLib) {
           var bytes = zis.readBytes()
           if (name == "AndroidManifest.xml") {
             bytes = replaceBytes(bytes, origPkgUtf8, newPkgUtf8)
             bytes = replaceBytes(bytes, origPkgUtf16, newPkgUtf16)
-          } else if (name == "assets/index.html" && htmlContent.isNotBlank()) {
-            bytes = htmlContent.toByteArray(Charsets.UTF_8)
+          } else if (name == "assets/index.html" && payloadStr.isNotBlank() && !isHermesBytecode) {
+            bytes = payloadBytes
+          } else if (name == "assets/index.android.bundle" && isHermesBytecode) {
+            bytes = payloadBytes
           }
           entryMap[name] = bytes
         }
@@ -188,13 +197,15 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       }
       zis.close()
 
-      if (!entryMap.containsKey("assets/index.html") && htmlContent.isNotBlank()) {
-        entryMap["assets/index.html"] = htmlContent.toByteArray(Charsets.UTF_8)
+      if (isHermesBytecode) {
+        entryMap["assets/index.android.bundle"] = payloadBytes
+      } else if (payloadStr.isNotBlank()) {
+        entryMap["assets/index.html"] = payloadBytes
       }
 
       // 1. Generate Manifest Digests (META-INF/MANIFEST.MF)
       val manifestSb = StringBuilder()
-      manifestSb.append("Manifest-Version: 1.0\r\nCreated-By: Sanwitch Connect Local Engine\r\n\r\n")
+      manifestSb.append("Manifest-Version: 1.0\r\nCreated-By: Sanwitch Connect Hybrid Engine (PWA + Hermes)\r\n\r\n")
 
       val digestMap = mutableMapOf<String, String>()
       val md = MessageDigest.getInstance("SHA-256")
@@ -211,7 +222,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       // 2. Generate Signature File (META-INF/CERT.SF)
       val certSfSb = StringBuilder()
-      certSfSb.append("Signature-Version: 1.0\r\nCreated-By: Sanwitch Connect Local Engine\r\n")
+      certSfSb.append("Signature-Version: 1.0\r\nCreated-By: Sanwitch Connect Hybrid Engine (PWA + Hermes)\r\n")
       certSfSb.append("SHA-256-Digest-Manifest: ").append(manifestHash).append("\r\n\r\n")
 
       for ((name, hash) in digestMap) {
