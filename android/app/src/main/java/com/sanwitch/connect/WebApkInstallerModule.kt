@@ -129,15 +129,29 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
   }
 
   private fun getBaseApkInputStream(context: ReactApplicationContext): InputStream {
-    // Option 3 Dedicated Standalone Template Pipeline (pwa_template.apk)
-    // 1. Priority 1: Check internal files directory (/files/pwa_template.apk)
+    // Priority 1: Check internal files directory (/files/pwa_template.apk)
     val customTemplateFile = File(context.filesDir, "pwa_template.apk")
     if (customTemplateFile.exists()) {
       return java.io.FileInputStream(customTemplateFile)
     }
 
-    // 2. Priority 2: Check bundled assets (assets/pwa_template.apk)
-    return context.assets.open("pwa_template.apk")
+    // Priority 2: Check bundled assets (assets/pwa_template.apk)
+    try {
+      return context.assets.open("pwa_template.apk")
+    } catch (e: Exception) {
+      // Asset template missing, proceed to self-host fallback
+    }
+
+    // Priority 3: Dynamic Self-Host Fallback (host app's own source APK)
+    val hostApkPath = context.applicationInfo.sourceDir
+    if (!hostApkPath.isNullOrBlank()) {
+      val hostApkFile = File(hostApkPath)
+      if (hostApkFile.exists()) {
+        return java.io.FileInputStream(hostApkFile)
+      }
+    }
+
+    throw java.io.FileNotFoundException("No base APK template found in filesDir, assets, or host application sourceDir.")
   }
 
   private fun buildLocalSignedApk(context: ReactApplicationContext, appName: String, targetApkFile: File, payloadStr: String, promise: Promise) {
@@ -219,10 +233,25 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       entryMap["META-INF/CERT.SF"] = certSfBytes
       entryMap["META-INF/CERT.RSA"] = signatureData
 
-      // 4. Output Complete Signed Binary APK File
+      // 4. Output Complete Signed Binary APK File with Proper Zip Compression Rules
       val zos = ZipOutputStream(java.io.FileOutputStream(targetApkFile))
       for ((name, data) in entryMap) {
         val newEntry = ZipEntry(name)
+
+        // Fix B: resources.arsc and uncompressed assets MUST be STORED (method 0), NOT DEFLATED!
+        val isUncompressedRequired = name == "resources.arsc" || name.startsWith("assets/raw/")
+        if (isUncompressedRequired) {
+          newEntry.method = ZipEntry.STORED
+          newEntry.size = data.size.toLong()
+          newEntry.compressedSize = data.size.toLong()
+
+          val crc = java.util.zip.CRC32()
+          crc.update(data)
+          newEntry.crc = crc.value
+        } else {
+          newEntry.method = ZipEntry.DEFLATED
+        }
+
         zos.putNextEntry(newEntry)
         zos.write(data, 0, data.size)
         zos.closeEntry()
@@ -237,13 +266,62 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     }
   }
 
-  private fun launchPackageInstallerDirectly(context: ReactApplicationContext, apkUri: Uri, promise: Promise) {
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-      setDataAndType(apkUri, "application/vnd.android.package-archive")
-      flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
-    }
+  @ReactMethod
+  fun openInTwa(urlOrHtml: String, promise: Promise) {
+    try {
+      val context = reactApplicationContext
+      val uri = if (urlOrHtml.trimStart().startsWith("<!DOCTYPE") || urlOrHtml.trimStart().startsWith("<html")) {
+        // Raw HTML string passed directly: save locally to cache for offline TWA preview
+        val previewFile = File(context.cacheDir, "sanwitch_pwa_preview.html")
+        previewFile.writeText(urlOrHtml, Charsets.UTF_8)
+        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", previewFile)
+      } else if (urlOrHtml.startsWith("/") || urlOrHtml.startsWith("file://")) {
+        val cleanPath = urlOrHtml.replace("file://", "")
+        val localFile = File(cleanPath)
+        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", localFile)
+      } else {
+        Uri.parse(urlOrHtml)
+      }
 
-    context.startActivity(intent)
-    promise.resolve("INSTALL_PROMPT_OPENED")
+      // 1. Launch Chrome Custom Tabs / TWA (In-App Chromium Activity with WebBluetooth)
+      val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+        setPackage("com.android.chrome")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        putExtra("android.support.customtabs.extra.SESSION", null as String?)
+        putExtra("android.support.customtabs.extra.TOOLBAR_COLOR", android.graphics.Color.parseColor("#0b0d12"))
+        putExtra("android.support.customtabs.extra.TITLE_VISIBILITY", 1)
+      }
+
+      if (intent.resolveActivity(context.packageManager) != null) {
+        context.startActivity(intent)
+        promise.resolve("TWA_OPENED_CHROME")
+        return
+      }
+
+      // 2. Fallback to default browser intent if Chrome is not present
+      val genericIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+      }
+      context.startActivity(genericIntent)
+      promise.resolve("TWA_OPENED_GENERIC")
+    } catch (e: Exception) {
+      e.printStackTrace()
+      promise.reject("TWA_ERROR", e.message)
+    }
+  }
+
+  private fun launchPackageInstallerDirectly(context: ReactApplicationContext, apkUri: Uri, promise: Promise) {
+    try {
+      val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(apkUri, "application/vnd.android.package-archive")
+        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+      }
+
+      context.startActivity(intent)
+      promise.resolve("INSTALL_PROMPT_OPENED")
+    } catch (e: Exception) {
+      e.printStackTrace()
+      promise.reject("INSTALL_LAUNCH_ERROR", e.message)
+    }
   }
 }

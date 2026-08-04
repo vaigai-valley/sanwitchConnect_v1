@@ -191,9 +191,23 @@ export default function App() {
     const title = typeof appTitleOrItem === 'string' ? appTitleOrItem : (appTitleOrItem?.name || exportAppName || 'My Sanwitch App');
     const html = (typeof appTitleOrItem === 'object' && appTitleOrItem?.html) ? appTitleOrItem.html : generateCompleteStandaloneAppHtml(title);
 
-    setActiveRunnerApp({ name: title, html });
     setIsExportModalVisible(false);
     setIsMyAppsModalVisible(false);
+
+    // Launch inside Chrome TWA container (Full WebBluetooth support & 0 browser redirects)
+    if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.openInTwa) {
+      NativeModules.WebApkInstallerModule.openInTwa(html)
+        .then(() => {
+          log(`Launched "${title}" in-app via Chrome TWA container`, 'sys');
+        })
+        .catch(() => {
+          setActiveRunnerApp({ name: title, html });
+          setIsAppRunnerVisible(true);
+        });
+      return;
+    }
+
+    setActiveRunnerApp({ name: title, html });
     setIsAppRunnerVisible(true);
   };
 
@@ -776,7 +790,17 @@ export default function App() {
           setConnectedDevice(discovered);
           log('Connected!', 'success');
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          discovered.onDisconnected((err, dev) => {
+            setConnectedDevice(null);
+            log('BLE Device disconnected', 'warning');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          });
           discovered.monitorCharacteristicForService(UUID_SERVICE, UUID_TX, (err, char) => {
+            if (err) {
+              setConnectedDevice(null);
+              log('BLE Stream Error: ' + (err.message || 'Disconnected'), 'error');
+              return;
+            }
             if (char?.value) handleIncoming(Buffer.from(char.value, 'base64').toString());
           });
         } catch (e) { log('Connection Failed', 'error'); }
@@ -803,7 +827,12 @@ export default function App() {
     } else if (connectedDevice) {
       try {
         await connectedDevice.writeCharacteristicWithResponseForService(UUID_SERVICE, UUID_RX, Buffer.from(data).toString('base64'));
-      } catch (e) { log('BLE TX Failed', 'error'); }
+      } catch (e) {
+        log(`BLE TX Failed: ${e.message || 'GATT Link Broken'}. Resetting connection state.`, 'error');
+        setConnectedDevice(null);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        bleManager?.cancelDeviceConnection(connectedDevice.id).catch(() => {});
+      }
     }
   };
 

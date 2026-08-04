@@ -1,4 +1,4 @@
-﻿// Sanwitch Connect PWA App Framework Bundle Exporter
+// Sanwitch Connect PWA App Framework Bundle Exporter
 // Premium Fixed-Layout PWA Runtime (Stunning Cyber-Glassmorphism UI)
 
 export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widgets = [], wifiIP = '192.168.4.1') => {
@@ -552,9 +552,20 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
       window.sendData = async (data) => {
         log('TX: ' + data.trim(), 'tx');
         if (bleCharacteristicRx) {
-          try { await bleCharacteristicRx.writeValue(new TextEncoder().encode(data)); } catch(e) { log('BLE Err: ' + e.message, 'err'); }
+          try {
+            await bleCharacteristicRx.writeValue(new TextEncoder().encode(data));
+          } catch(e) {
+            log('BLE Transmission Failed: ' + e.message, 'err');
+            bleCharacteristicRx = null;
+            bleDevice = null;
+            const connStatus = document.getElementById('conn-status');
+            if (connStatus) {
+              connStatus.textContent = 'DISCONNECTED';
+              connStatus.className = 'status-badge disconnected';
+            }
+          }
         } else {
-          const ip = document.getElementById('wifi-ip').value || '${wifiIpVal}';
+          const ip = document.getElementById('wifi-ip')?.value || '${wifiIpVal}';
           fetch('http://' + ip + '/control?cmd=' + encodeURIComponent(data.trim()), { mode: 'no-cors' }).catch(()=>{});
         }
       };
@@ -563,8 +574,11 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
         const div = document.createElement('div');
         div.style.color = type === 'rx' ? 'var(--secondary)' : (type === 'tx' ? 'var(--primary)' : (type === 'err' ? 'var(--accent)' : 'var(--text-muted)'));
         div.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
-        termOutput.appendChild(div);
-        termOutput.scrollTop = termOutput.scrollHeight;
+        const termOutput = document.getElementById('terminal-output');
+        if (termOutput) {
+          termOutput.appendChild(div);
+          termOutput.scrollTop = termOutput.scrollHeight;
+        }
       }
 
       document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -580,15 +594,15 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
         });
       });
 
-      document.getElementById('terminal-input').addEventListener('keypress', (e) => {
+      document.getElementById('terminal-input')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
           const val = e.target.value.trim();
           if (val) { window.sendData(val + '\\n'); e.target.value = ''; }
         }
       });
 
-      // BLE Scanner Trigger & Telemetry Notifications
-      document.getElementById('ble-scan-btn').addEventListener('click', async () => {
+      document.getElementById('ble-scan-btn')?.addEventListener('click', async () => {
+        const connStatus = document.getElementById('conn-status');
         if ('bluetooth' in navigator) {
           try {
             log('Requesting WebBluetooth device...', 'sys');
@@ -618,18 +632,22 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
               }
             } catch(e) { log('TX Notifications not available: ' + e.message, 'sys'); }
 
-            connStatus.classList.add('connected');
+            if (connStatus) connStatus.classList.add('connected');
             document.getElementById('conn-text').textContent = 'BLE Connected';
             log('Connected to ' + bleDevice.name, 'sys');
           } catch(e) { log('BLE Error: ' + e.message, 'err'); }
         } else {
-          log('WebBluetooth is not supported on this browser.', 'err');
+          log('WebBluetooth requires Chrome TWA (Trusted Web Activity).', 'err');
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LAUNCH_TWA' }));
+          } else {
+            alert('WebBluetooth requires Chrome TWA / Custom Tabs on Android. Please open in Chrome for full WebBluetooth support.');
+          }
         }
       });
 
-      // Web Speech Recognition Engine
       const voiceBtn = document.getElementById('voice-btn');
-      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      if (voiceBtn && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SpeechRecognition();
         rec.onstart = () => log('Listening for voice command...', 'sys');
@@ -663,7 +681,6 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
         voiceBtn.addEventListener('click', () => rec.start());
       }
 
-      // Automatic Android PWA System Prompt Trigger (beforeinstallprompt)
       let deferredInstallPrompt = null;
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
