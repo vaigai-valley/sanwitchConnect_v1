@@ -330,22 +330,10 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
   }
 
   /**
-   * Derives a unique Android package name the same byte-length as the host package.
+   * Derives a unique Android package name the EXACT same byte-length as hostPkg.
    * Required for in-place binary AXML patching (no offset recalculation needed).
    * Uses CRC32 of cleanAppId for stable, collision-resistant uniqueness.
-   *
-   * Example: hostPkg="com.sanwitch.connect" (20 chars)
-   *        → newPkg ="com.sw.pwa.a1b2c3d4e" (20 chars)
-   */
-  /**
-   * Derives a unique Android package name the EXACT same byte-length as hostPkg.
-   *
-   * F1 Fix: The old implementation used padEnd/take which could truncate mid-segment,
-   * producing invalid package names on short host packages. The new implementation
-   * directly computes exactly (targetLen - prefix.length) suffix chars — guaranteed
-   * to fill the field without any mid-dot truncation.
-   *
-   * All chars are ASCII so UTF-8 byte-length == char-length, safe for in-place AXML patch.
+   * All chars are ASCII so UTF-8 byte-length == char-length.
    *
    * Example: hostPkg="com.sanwitch.connect" (20) → "com.sw.pwa.p1a2b3caa" (20)
    */
@@ -389,8 +377,9 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
    * false matches within longer strings (e.g. avoid matching "com.sanwitch.connect"
    * inside "com.sanwitch.connect.fileprovider").
    */
-  private fun replaceInPlaceBytes(buf: ByteArray, oldBytes: ByteArray, newBytes: ByteArray, nullTerminator: ByteArray) {
-    if (oldBytes.size != newBytes.size) return
+  private fun replaceInPlaceBytes(buf: ByteArray, oldBytes: ByteArray, newBytes: ByteArray, nullTerminator: ByteArray): Boolean {
+    if (oldBytes.size != newBytes.size) return false
+    var replaced = false
     var i = 0
     while (i <= buf.size - oldBytes.size) {
       var match = true
@@ -399,54 +388,51 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       }
       if (match) {
         val afterIdx = i + oldBytes.size
-        var nullMatch = afterIdx + nullTerminator.size <= buf.size
-        if (nullMatch) {
-          for (j in nullTerminator.indices) {
-            if (buf[afterIdx + j] != nullTerminator[j]) { nullMatch = false; break }
-          }
-        }
+        val nullMatch = if (nullTerminator.isEmpty()) true
+          else afterIdx + nullTerminator.size <= buf.size &&
+               (0 until nullTerminator.size).all { buf[afterIdx + it] == nullTerminator[it] }
         if (nullMatch) {
           System.arraycopy(newBytes, 0, buf, i, newBytes.size)
+          replaced = true
           i += newBytes.size + nullTerminator.size
           continue
         }
       }
       i++
     }
+    return replaced
   }
 
   /**
    * Patches a binary Android XML (AXML) byte array to replace the package name string.
-   *
-   * F2 Fix: Previous implementation only handled UTF-8 AXML string pools. Android APKs
-   * built with older aapt or targeting API < 21 use UTF-16LE string pools. This version
-   * reads the string pool flags at AXML byte offset 24 (ResStringPool_header.flags,
-   * bit 0x100 = UTF8_FLAG) and applies the correct encoding and null terminator:
-   *   UTF-8  mode: search [utf8-bytes][0x00]
-   *   UTF-16 mode: search [utf16le-bytes][0x00 0x00]
+   * Handles both UTF-8 and UTF-16LE string pools.
+   * Falls back to a brute-force search (without null-terminator check) if the
+   * null-terminated search finds zero matches — covers edge cases in AXML variants.
    */
   private fun patchAXMLPackageName(axml: ByteArray, oldPkg: String, newPkg: String): ByteArray {
     if (oldPkg == newPkg) return axml
     val oldUtf8 = oldPkg.toByteArray(Charsets.UTF_8)
     val newUtf8 = newPkg.toByteArray(Charsets.UTF_8)
-    if (oldUtf8.size != newUtf8.size) return axml // safety guard
+    if (oldUtf8.size != newUtf8.size) return axml
     val result = axml.copyOf()
 
-    // AXML layout: [8-byte XML header][StringPool chunk starting at offset 8]
-    // ResStringPool_header.flags is at: 8 (chunk start) + 16 (flags offset in header) = 24
+    // Read AXML string pool flags at offset 24 (UTF8_FLAG = 0x100)
     val isUtf8Pool = if (axml.size > 28) (readInt32LE(axml, 24) and 0x00000100) != 0 else true
 
+    var replaced = false
     if (isUtf8Pool) {
-      // UTF-8 string pool: null-terminated with single 0x00
-      replaceInPlaceBytes(result, oldUtf8, newUtf8, byteArrayOf(0x00))
+      // Primary: null-terminated UTF-8 search
+      replaced = replaceInPlaceBytes(result, oldUtf8, newUtf8, byteArrayOf(0x00))
+      // Fallback: brute-force (no null-terminator) if primary found nothing
+      if (!replaced) replaced = replaceInPlaceBytes(result, oldUtf8, newUtf8, byteArrayOf())
     } else {
-      // UTF-16LE string pool: null-terminated with 0x00 0x00
       val oldUtf16 = oldPkg.toByteArray(Charsets.UTF_16LE)
       val newUtf16 = newPkg.toByteArray(Charsets.UTF_16LE)
-      // ASCII package names always produce equal-length UTF-16LE arrays
-      replaceInPlaceBytes(result, oldUtf16, newUtf16, byteArrayOf(0x00, 0x00))
+      replaced = replaceInPlaceBytes(result, oldUtf16, newUtf16, byteArrayOf(0x00, 0x00))
+      if (!replaced) replaced = replaceInPlaceBytes(result, oldUtf16, newUtf16, byteArrayOf())
     }
 
+    if (!replaced) android.util.Log.w("WebApkInstaller", "AXML patch: package name not found in manifest! APK may conflict.")
     return result
   }
 

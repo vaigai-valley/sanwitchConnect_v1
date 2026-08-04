@@ -296,11 +296,16 @@ export default function App() {
 
     let publishedUrl = `${pwaWebUrl}.apk`;
     try {
+      // F3 Fix: 5s timeout prevents infinite hang on captive portal / ESP32-only WiFi
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 5000);
       const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: appTitle, html, format: 'apk' })
+        body: JSON.stringify({ name: appTitle, html, format: 'apk' }),
+        signal: ctrl.signal
       });
+      clearTimeout(tid);
       if (resp.ok) {
         const data = await resp.json();
         if (data.apkUrl) publishedUrl = data.apkUrl;
@@ -327,8 +332,17 @@ export default function App() {
 
             // Option 2: Native WebApkInstallerModule uses raw HTML String for on-device APK compilation
             if (Platform.OS === 'android' && NativeModules.WebApkInstallerModule?.installWebApk) {
+              // F2 Fix: Animate 85→95% while native APK compile runs on background thread
+              // prevents the modal looking frozen during RSA keygen + ZIP streaming (5–15s)
+              let animPct = 85;
+              const progressTimer = setInterval(() => {
+                animPct = Math.min(animPct + 1, 95);
+                setInstallProgress(animPct);
+                setInstallStepText(`Building APK package... ${animPct}%`);
+              }, 600);
               try {
                 const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl, html);
+                clearInterval(progressTimer);
 
                 setInstallProgress(100);
                 setInstallStepText('Package Installer Ready!');
@@ -356,6 +370,7 @@ export default function App() {
                   return;
                 }
               } catch (e) {
+                clearInterval(progressTimer);
                 console.log('WebApkInstallerModule error:', e);
                 setIsInstallModalVisible(false);
                 setInstallProgress(0);
