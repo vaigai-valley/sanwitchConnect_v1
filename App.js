@@ -162,9 +162,6 @@ export default function App() {
   const [widgets, setWidgets] = useState([]);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isInstallModalVisible, setIsInstallModalVisible] = useState(false);
-  const [installProgress, setInstallProgress] = useState(0);
-  const [installStepText, setInstallStepText] = useState('');
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [isNameModalVisible, setIsNameModalVisible] = useState(false);
@@ -335,10 +332,12 @@ export default function App() {
   }, []);
 
   // OPTION 2: INSTALL APP DIRECTLY INTO ANDROID SYSTEM (ON-DEVICE COMPILER VIA HTML STRING)
-  const handleInstallReadyApp = async () => {
+  // B2 fix: accepts pre-built html param — avoids double generateCompleteStandaloneAppHtml() call
+  // when invoked from installStandalonePwa (which already generated it).
+  const handleInstallReadyApp = async (prebuiltHtml = null) => {
     const appTitle = exportAppName.trim() || 'My Sanwitch App';
     const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
-    const html = generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
+    const html = prebuiltHtml || generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
     const cleanSlug = appTitle.toLowerCase().replace(/[^a-z0-9]/g, '_');
     const pwaWebUrl = `https://sanwitch.vaigaivalley.workers.dev/pwa/${cleanSlug}`;
 
@@ -362,10 +361,9 @@ export default function App() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsExportModalVisible(false);
 
-    // Bug 4 Fix: Show loading indicator during sync so UI is never blank between modal close & prompt
-    setIsInstallModalVisible(true);
-    setInstallProgress(20);
-    setInstallStepText('Syncing app bundle to cloud storage...');
+    // B1/B2 fix: removed dead setIsInstallModalVisible / setInstallProgress / setInstallStepText
+    // calls — ProgressBarModal no longer exists. Log to terminal instead.
+    log('[Build] Syncing bundle to cloud (5s timeout)...', 'sys');
 
     let publishedUrl = `${pwaWebUrl}.apk`;
     try {
@@ -383,30 +381,26 @@ export default function App() {
         const data = await resp.json();
         if (data.apkUrl) publishedUrl = data.apkUrl;
         else if (data.url) publishedUrl = data.url.endsWith('.apk') ? data.url : `${data.url}.apk`;
+        log('[Build] ✓ Cloud sync done', 'sys');
       }
     } catch (e) {
-      console.log('Silent APK sync error:', e);
+      log('[Build] Cloud sync skipped (offline / timeout)', 'sys');
     }
 
-    setIsInstallModalVisible(false);
-    setInstallProgress(0);
-
+    // B1/B2 fix: removed dead setIsInstallModalVisible(false) / setInstallProgress(0)
     customAlert(
       'Standalone App Ready',
-      `"${appTitle}" has been compiled directly by Sanwitch Connect! Select how you want to run your standalone app:`,
+      `"${appTitle}" compiled! Select how to run your standalone app:`,
       [
         {
           text: 'Install App',
-          // F1 Fix: delegates to launchInstallStep() which is also called by
-          // AppState listener when user returns from Android Settings.
+          // F1 Fix: delegates to launchInstallStep() — also used by AppState auto-retry
           onPress: () => launchInstallStep(appTitle, publishedUrl, html)
         },
         {
           text: 'Preview App',
-          onPress: () => {
-            setInstallProgress(0);
-            handleRunAppInApp(newApp, pwaWebUrl);
-          }
+          // B1 fix: removed dead setInstallProgress(0) here
+          onPress: () => handleRunAppInApp(newApp, pwaWebUrl)
         }
       ]
     );
@@ -1380,34 +1374,27 @@ export default function App() {
     return py;
   };
 
+  // B1/B3 fix: removed fake 1.4s delays and dead modal state calls.
+  // HTML is generated ONCE here and passed to handleInstallReadyApp (B2 fix).
   const installStandalonePwa = async () => {
     try {
-      setIsInstallModalVisible(true);
-      setInstallProgress(15);
-      setInstallStepText('Extracting layout state & custom payloads...');
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-      await new Promise(r => setTimeout(r, 400));
-      setInstallProgress(45);
-      setInstallStepText('Generating Cyber-Glassmorphism CSS & Web Manifest...');
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
       const appTitle = exportAppName.trim() || 'Sanwitch App';
-      const pwaHtml = generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
 
-      await new Promise(r => setTimeout(r, 500));
-      setInstallProgress(75);
-      setInstallStepText('Embedding Base64 PWA Icon & WebBluetooth drivers...');
+      // Switch to terminal immediately so user sees live feedback
+      setActiveView('term');
+      log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'sys');
+      log(`[Build] Generating standalone HTML for "${appTitle}"...`, 'sys');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      // B3 fix: generate HTML once and pass it through — no longer a dead variable
+      const html = generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
+      log(`[Build] HTML ready (${Math.round(html.length / 1024)}KB) — saving & syncing...`, 'sys');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      await new Promise(r => setTimeout(r, 500));
-      setIsInstallModalVisible(false);
-
-      // Execute compile & save pipeline (triggers Standalone App Ready prompt)
-      await handleInstallReadyApp();
+      // B2 fix: pass html so handleInstallReadyApp doesn't regenerate it
+      await handleInstallReadyApp(html);
     } catch (e) {
-      setIsInstallModalVisible(false);
-      setInstallProgress(0);
+      log(`[Build] ✗ ERROR: ${e.message}`, 'error');
       customAlert('Compilation Error', e.message, 'error');
     }
   };
