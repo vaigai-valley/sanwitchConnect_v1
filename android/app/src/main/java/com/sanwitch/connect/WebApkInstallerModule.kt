@@ -553,6 +553,28 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         entryMap["AndroidManifest.xml"] = patched
       }
 
+      emitBuildLog("► Patching resources.arsc...")
+      entryMap["resources.arsc"]?.let { rawArsc ->
+        var patched = rawArsc.copyOf()
+        
+        // resources.arsc strings can be UTF-8 or UTF-16LE. Since we don't parse the ARSC header here,
+        // we just attempt to replace in both encodings. Safe because sizes are identical.
+        val oldUtf8 = hostPkg.toByteArray(Charsets.UTF_8)
+        val newUtf8 = newPkg.toByteArray(Charsets.UTF_8)
+        val oldUtf16 = hostPkg.toByteArray(Charsets.UTF_16LE)
+        val newUtf16 = newPkg.toByteArray(Charsets.UTF_16LE)
+        
+        val found8 = replaceInPlaceBytes(patched, oldUtf8, newUtf8, byteArrayOf())
+        val found16 = replaceInPlaceBytes(patched, oldUtf16, newUtf16, byteArrayOf())
+        
+        if (found8 || found16) {
+          emitBuildLog("► resources.arsc fully patched")
+        } else {
+          emitBuildLog("⚠ WARNING: Could not find package name in resources.arsc.")
+        }
+        entryMap["resources.arsc"] = patched
+      }
+
       // 1. Generate Manifest Digests (META-INF/MANIFEST.MF) & CERT.SF
       emitBuildLog("► Computing SHA-256 digests for ${entryMap.size} entries...")
       val manifestSb = StringBuilder()
