@@ -179,4 +179,7 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // Official Google APK Signer for V2/V3 signatures on-device
+    implementation("com.android.tools.build:apksig:8.1.1")
 }

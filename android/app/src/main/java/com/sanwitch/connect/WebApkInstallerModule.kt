@@ -10,6 +10,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import com.android.apksig.ApkSigner
 import java.io.File
 import java.io.InputStream
 import java.math.BigInteger
@@ -608,58 +609,13 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         entryMap["resources.arsc"] = patched
       }
 
-      // 1. Generate Manifest Digests (META-INF/MANIFEST.MF) & CERT.SF
-      emitBuildLog("► Computing SHA-256 digests for ${entryMap.size} entries...")
-      val manifestSb = StringBuilder()
-      manifestSb.append("Manifest-Version: 1.0\r\nCreated-By: Sanwitch Connect Local APK Compiler\r\n\r\n")
+      // Remove any existing META-INF files from base APK (they are invalid now)
+      val keysToRemove = entryMap.keys.filter { it.startsWith("META-INF/") }
+      keysToRemove.forEach { entryMap.remove(it) }
 
-      val certSfSectionsSb = StringBuilder()
-
-      for ((name, data) in entryMap) {
-        val fileHash = Base64.encodeToString(md.digest(data), Base64.NO_WRAP)
-        
-        // Manifest section for this entry
-        val manifestSection = "Name: $name\r\nSHA-256-Digest: $fileHash\r\n\r\n"
-        manifestSb.append(manifestSection)
-
-        // Bug 1.1 Fix: CERT.SF SHA-256-Digest MUST be the hash of the MANIFEST.MF section snippet
-        val sectionBytes = manifestSection.toByteArray(Charsets.UTF_8)
-        val sectionHash = Base64.encodeToString(md.digest(sectionBytes), Base64.NO_WRAP)
-        certSfSectionsSb.append("Name: $name\r\nSHA-256-Digest: $sectionHash\r\n\r\n")
-      }
-
-      val manifestBytes = manifestSb.toString().toByteArray(Charsets.UTF_8)
-      val manifestHash = Base64.encodeToString(md.digest(manifestBytes), Base64.NO_WRAP)
-
-      // 2. Generate Signature File (META-INF/CERT.SF)
-      val certSfSb = StringBuilder()
-      certSfSb.append("Signature-Version: 1.0\r\nCreated-By: Sanwitch Connect Local APK Compiler\r\n")
-      certSfSb.append("SHA-256-Digest-Manifest: ").append(manifestHash).append("\r\n\r\n")
-      certSfSb.append(certSfSectionsSb.toString())
-
-      val certSfBytes = certSfSb.toString().toByteArray(Charsets.UTF_8)
-      emitBuildLog("► CERT.SF generated")
-
-      // Key+cert already obtained above before AXML patch — reuse here
-      emitBuildLog("► Signing with RSA-2048 / SHA256withRSA...")
-      val sig = Signature.getInstance("SHA256withRSA")
-      sig.initSign(keyPair.private)
-      sig.update(certSfBytes)
-      val rawSignatureBytes = sig.sign()
-
-      // Bug 1.1 (PKCS#7 Fix): Android JarVerifier requires CERT.RSA to be a valid
-      // PKCS#7 SignedData ASN.1 DER structure, not a raw RSA byte array.
-      val pkcs7Der = buildPkcs7SignedData(selfSignedCert, rawSignatureBytes)
-      emitBuildLog("► PKCS#7 SignedData (CERT.RSA) assembled")
-
-      entryMap["META-INF/MANIFEST.MF"] = manifestBytes
-      entryMap["META-INF/CERT.SF"] = certSfBytes
-      entryMap["META-INF/CERT.RSA"] = pkcs7Der
-
-      // 4. Output Complete Signed Binary APK File with Zipalign (4-Byte Alignment)
-      // O3 Fix: Direct counting OutputStream over FileOutputStream — removes DataOutputStream
-      // indirection layer and makes writtenBytes tracking simpler and more transparent.
-      val fos = java.io.FileOutputStream(targetApkFile)
+      emitBuildLog("► Packaging unsigned APK...")
+      val unsignedApkFile = File(context.filesDir, "unsigned_temp.apk")
+      val fos = java.io.FileOutputStream(unsignedApkFile)
       var writtenBytes = 0L
 
       val countingOs = object : java.io.OutputStream() {
@@ -674,31 +630,38 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       for ((name, data) in entryMap) {
         val newEntry = ZipEntry(name)
         val nameBytes = name.toByteArray(Charsets.UTF_8)
-
         val isUncompressedRequired = name == "resources.arsc" || name.startsWith("assets/raw/")
         if (isUncompressedRequired) {
           newEntry.method = ZipEntry.STORED
           newEntry.size = data.size.toLong()
           newEntry.compressedSize = data.size.toLong()
-
           val crc = java.util.zip.CRC32()
           crc.update(data)
           newEntry.crc = crc.value
-
           // Zipalign: compute 4-byte padding so data starts at a 4-byte boundary
-          // Local header = 30 (fixed) + nameLen + extraLen; we set extra = padding bytes
           val dataOffsetWithoutExtra = writtenBytes + 30L + nameBytes.size
           val padding = ((4 - (dataOffsetWithoutExtra % 4)) % 4).toInt()
           if (padding > 0) newEntry.extra = ByteArray(padding)
         } else {
           newEntry.method = ZipEntry.DEFLATED
         }
-
         zos.putNextEntry(newEntry)
         zos.write(data, 0, data.size)
         zos.closeEntry()
       }
-      zos.close() // also closes countingOs which closes fos
+      zos.close()
+
+      emitBuildLog("► Signing with APK Signature Scheme V2...")
+      val signerConfig = ApkSigner.SignerConfig.Builder("pwa-key", keyPair.private, listOf(selfSignedCert)).build()
+      val signer = ApkSigner.Builder(listOf(signerConfig))
+          .setInputApk(unsignedApkFile)
+          .setOutputApk(targetApkFile)
+          .setV1SigningEnabled(true)
+          .setV2SigningEnabled(true)
+          .build()
+      signer.sign()
+      
+      unsignedApkFile.delete() // cleanup
 
       val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetApkFile)
       emitBuildLog("► APK written to ${targetApkFile.name} (${targetApkFile.length() / 1024}KB) — launching PackageInstaller...")
