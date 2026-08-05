@@ -332,34 +332,52 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
   /**
    * Derives a unique Android package name the EXACT same byte-length as hostPkg.
    * Required for in-place binary AXML patching (no offset recalculation needed).
-   * Uses CRC32 of cleanAppId for stable, collision-resistant uniqueness.
    * All chars are ASCII so UTF-8 byte-length == char-length.
    *
-   * Example: hostPkg="com.sanwitch.connect" (20) → "com.sw.pwa.p1a2b3caa" (20)
+   * The suffix is split into two halves:
+   *   namePart: CRC32(cleanAppId) — stable per app name
+   *   certPart: CRC32(cert.encoded) — changes when the signing key is regenerated
+   *
+   * Result:
+   *   Same app name + same key → same package → Android "update" dialog    ✅
+   *   Same app name + new key  → new package  → fresh install, no conflict ✅
+   *
+   * Example: hostPkg="com.sanwitch.connect" (20) → "com.sw.pwa.naaa1kbcd" (20)
    */
-  private fun deriveUniquePackageName(cleanAppId: String, hostPkg: String): String {
+  private fun deriveUniquePackageName(cleanAppId: String, cert: java.security.cert.X509Certificate, hostPkg: String): String {
     val targetLen = hostPkg.length
-    val crc = java.util.zip.CRC32()
-    crc.update(cleanAppId.toByteArray(Charsets.UTF_8))
-    var hashStr = java.lang.Long.toString(crc.value, 36).lowercase()
-    // Ensure last segment does not start with a digit (Android package rule)
-    if (hashStr[0].isDigit()) hashStr = "p$hashStr"
-
     val prefix = "com.sw.pwa."  // 11 chars
-    return if (targetLen > prefix.length) {
-      // Normal path: suffix fills exactly the remaining chars — no truncation risk
-      val suffixLen = targetLen - prefix.length
-      val suffix = hashStr.padEnd(suffixLen, 'a').take(suffixLen)
-      "$prefix$suffix"  // exactly targetLen chars ✅
-    } else {
-      // Short host package (< 12 chars): use a compact prefix
-      val shortPrefix = "sw."  // 3 chars
+
+    if (targetLen <= prefix.length) {
+      // Short host package fallback: compact prefix + name hash
+      val shortPrefix = "sw."
       val suffixLen = (targetLen - shortPrefix.length).coerceAtLeast(1)
-      val suffix = hashStr.padEnd(suffixLen, 'a').take(suffixLen)
-      val result = "$shortPrefix$suffix"
-      // Pad only if somehow still short — fill with 'a', never truncates a dot segment
-      result.padEnd(targetLen, 'a')
+      val crc = java.util.zip.CRC32()
+      crc.update(cleanAppId.toByteArray(Charsets.UTF_8))
+      var h = java.lang.Long.toString(crc.value, 36).lowercase()
+      if (h[0].isDigit()) h = "n$h"
+      return ("$shortPrefix${h.padEnd(suffixLen, 'a').take(suffixLen)}").padEnd(targetLen, 'a')
     }
+
+    val suffixLen = targetLen - prefix.length  // e.g. 9 for "com.sanwitch.connect"
+    val halfA = suffixLen / 2                  // name-identity chars (e.g. 4)
+    val halfB = suffixLen - halfA              // cert-identity chars (e.g. 5)
+
+    // Part A: stable per app name
+    val nameCrc = java.util.zip.CRC32()
+    nameCrc.update(cleanAppId.toByteArray(Charsets.UTF_8))
+    var nameHash = java.lang.Long.toString(nameCrc.value, 36).lowercase()
+    if (nameHash[0].isDigit()) nameHash = "n$nameHash"
+    val namePart = nameHash.padEnd(halfA, 'a').take(halfA)
+
+    // Part B: changes when the signing key/cert is regenerated — prevents signature mismatch conflict
+    val certCrc = java.util.zip.CRC32()
+    certCrc.update(cert.encoded)
+    var certHash = java.lang.Long.toString(certCrc.value, 36).lowercase()
+    if (certHash[0].isDigit()) certHash = "k$certHash"
+    val certPart = certHash.padEnd(halfB, 'a').take(halfB)
+
+    return "$prefix$namePart$certPart"  // exactly targetLen chars ✅
   }
 
   /**
@@ -485,13 +503,16 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       }
 
       // *** CRITICAL FIX: Patch binary AndroidManifest.xml to unique package name ***
-      // When using host APK as base template, the manifest contains the host package name
-      // (e.g. "com.sanwitch.connect"). Android PackageInstaller sees this as an "update"
-      // but rejects it because the signing key differs → "package conflicts" error.
-      // Solution: Replace the package name string in-place in the binary AXML.
+      // Key+cert are loaded FIRST so the cert fingerprint can be included in the derived
+      // package name. This ensures:
+      //   Same key  → same cert CRC32 → same package → Android shows "update" dialog
+      //   New key   → new cert CRC32  → new package  → fresh install, no conflict
+      val keyPair = getOrCreatePersistentKeyPair(context)
+      val selfSignedCert = getOrCreateSelfSignedCert(context, keyPair)
+
       val hostPkg = context.packageName
       val cleanAppId = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
-      val newPkg = deriveUniquePackageName(cleanAppId, hostPkg)
+      val newPkg = deriveUniquePackageName(cleanAppId, selfSignedCert, hostPkg)
       entryMap["AndroidManifest.xml"]?.let { rawManifest ->
         entryMap["AndroidManifest.xml"] = patchAXMLPackageName(rawManifest, hostPkg, newPkg)
       }
@@ -526,9 +547,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       val certSfBytes = certSfSb.toString().toByteArray(Charsets.UTF_8)
 
-      // 3. Persistent Cryptographic RSA Key Pair Signature
-      val keyPair = getOrCreatePersistentKeyPair(context)
-
+      // Key+cert already obtained above before AXML patch — reuse here
       val sig = Signature.getInstance("SHA256withRSA")
       sig.initSign(keyPair.private)
       sig.update(certSfBytes)
@@ -536,7 +555,6 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
       // Bug 1.1 (PKCS#7 Fix): Android JarVerifier requires CERT.RSA to be a valid
       // PKCS#7 SignedData ASN.1 DER structure, not a raw RSA byte array.
-      val selfSignedCert = getOrCreateSelfSignedCert(context, keyPair)
       val pkcs7Der = buildPkcs7SignedData(selfSignedCert, rawSignatureBytes)
 
       entryMap["META-INF/MANIFEST.MF"] = manifestBytes
