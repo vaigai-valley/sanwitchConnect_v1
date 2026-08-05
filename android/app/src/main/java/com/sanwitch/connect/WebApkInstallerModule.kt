@@ -401,6 +401,37 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     ((buf[offset + 2].toInt() and 0xFF) shl 16) or
     ((buf[offset + 3].toInt() and 0xFF) shl 24)
 
+  private fun writeInt32LE(buf: ByteArray, offset: Int, value: Int) {
+    buf[offset] = (value and 0xFF).toByte()
+    buf[offset + 1] = ((value ushr 8) and 0xFF).toByte()
+    buf[offset + 2] = ((value ushr 16) and 0xFF).toByte()
+    buf[offset + 3] = ((value ushr 24) and 0xFF).toByte()
+  }
+
+  private fun clearArscSortedFlags(buf: ByteArray) {
+    if (buf.size < 12) return
+    val type = (buf[0].toInt() and 0xFF) or ((buf[1].toInt() and 0xFF) shl 8)
+    if (type != 0x0002) return // RES_TABLE_TYPE
+    val headerSize = (buf[2].toInt() and 0xFF) or ((buf[3].toInt() and 0xFF) shl 8)
+    
+    var offset = headerSize
+    while (offset + 8 <= buf.size) {
+      val cType = (buf[offset].toInt() and 0xFF) or ((buf[offset + 1].toInt() and 0xFF) shl 8)
+      val cHeaderSize = (buf[offset + 2].toInt() and 0xFF) or ((buf[offset + 3].toInt() and 0xFF) shl 8)
+      val cSize = readInt32LE(buf, offset + 4)
+      if (cSize <= 0 || offset + cSize > buf.size) break
+      
+      if (cType == 0x0001 && cHeaderSize >= 28) { // RES_STRING_POOL_TYPE
+        val flagsOffset = offset + 16
+        val flags = readInt32LE(buf, flagsOffset)
+        if ((flags and 0x00000001) != 0) { // SORTED_FLAG
+          writeInt32LE(buf, flagsOffset, flags and 0xFFFFFFFE.toInt())
+        }
+      }
+      offset += cSize
+    }
+  }
+
   /**
    * Replaces all in-place occurrences of oldBytes followed by nullTerminator
    * with newBytes (same size) inside buf. The null-terminator check prevents
@@ -568,7 +599,8 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         val found16 = replaceInPlaceBytes(patched, oldUtf16, newUtf16, byteArrayOf())
         
         if (found8 || found16) {
-          emitBuildLog("► resources.arsc fully patched")
+          clearArscSortedFlags(patched)
+          emitBuildLog("► resources.arsc fully patched (sorting flags cleared)")
         } else {
           emitBuildLog("⚠ WARNING: Could not find package name in resources.arsc.")
         }
