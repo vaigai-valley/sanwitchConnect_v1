@@ -408,10 +408,10 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     buf[offset + 3] = ((value ushr 24) and 0xFF).toByte()
   }
 
-  private fun clearArscSortedFlags(buf: ByteArray) {
-    if (buf.size < 12) return
+  private fun clearStringPoolSortedFlags(buf: ByteArray) {
+    if (buf.size < 8) return
     val type = (buf[0].toInt() and 0xFF) or ((buf[1].toInt() and 0xFF) shl 8)
-    if (type != 0x0002) return // RES_TABLE_TYPE
+    if (type != 0x0002 && type != 0x0003) return // Accept ARSC or AXML
     val headerSize = (buf[2].toInt() and 0xFF) or ((buf[3].toInt() and 0xFF) shl 8)
     
     var offset = headerSize
@@ -578,6 +578,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
           android.util.Log.w("WebApkInstaller", "AXML: package name patch may not have applied — conflict possible")
           emitBuildLog("⚠ WARNING: Could not find package name in manifest. Install may conflict.")
         } else {
+          clearStringPoolSortedFlags(patched)
           emitBuildLog("► AndroidManifest fully patched (package + all providers)")
         }
         
@@ -599,7 +600,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         val found16 = replaceInPlaceBytes(patched, oldUtf16, newUtf16, byteArrayOf())
         
         if (found8 || found16) {
-          clearArscSortedFlags(patched)
+          clearStringPoolSortedFlags(patched)
           emitBuildLog("► resources.arsc fully patched (sorting flags cleared)")
         } else {
           emitBuildLog("⚠ WARNING: Could not find package name in resources.arsc.")
