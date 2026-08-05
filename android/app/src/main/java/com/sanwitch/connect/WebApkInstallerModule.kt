@@ -529,34 +529,28 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       val newPkg = deriveUniquePackageName(cleanAppId2, selfSignedCert, hostPkg)
       emitBuildLog("► Patching AndroidManifest: $hostPkg → $newPkg")
       entryMap["AndroidManifest.xml"]?.let { rawManifest ->
-        // Patch package name + all ContentProvider authority strings in a single call.
-        // All target strings have the same byte-length as their replacements because
-        // newPkg.length == hostPkg.length is guaranteed by deriveUniquePackageName.
-        val replacements = mutableListOf(hostPkg to newPkg)
-        listOf(".fileprovider", ".provider", ".imagepickerprovider",
-               ".cacheprovider", ".documents", ".authorities").forEach { suffix ->
-          replacements.add("$hostPkg$suffix" to "$newPkg$suffix")
-        }
         var patched = rawManifest.copyOf()
-        // Detect encoding once, then apply all replacements in a single pass each
         val isUtf8Pool = if (patched.size > 28) (readInt32LE(patched, 24) and 0x00000100) != 0 else true
-        for ((oldStr, newStr) in replacements) {
-          val oldBytes = if (isUtf8Pool) oldStr.toByteArray(Charsets.UTF_8)
-                         else           oldStr.toByteArray(Charsets.UTF_16LE)
-          val newBytes = if (isUtf8Pool) newStr.toByteArray(Charsets.UTF_8)
-                         else           newStr.toByteArray(Charsets.UTF_16LE)
-          if (oldBytes.size != newBytes.size) continue
-          val nullTerm = if (isUtf8Pool) byteArrayOf(0x00) else byteArrayOf(0x00, 0x00)
-          val found = replaceInPlaceBytes(patched, oldBytes, newBytes, nullTerm)
-          if (!found) replaceInPlaceBytes(patched, oldBytes, newBytes, byteArrayOf()) // brute-force fallback
-        }
-        if (!replaceInPlaceBytes(patched.copyOf(),
-              hostPkg.toByteArray(Charsets.UTF_8),
-              newPkg.toByteArray(Charsets.UTF_8), byteArrayOf(0x00))) {
+        
+        val oldBytes = if (isUtf8Pool) hostPkg.toByteArray(Charsets.UTF_8)
+                       else           hostPkg.toByteArray(Charsets.UTF_16LE)
+        val newBytes = if (isUtf8Pool) newPkg.toByteArray(Charsets.UTF_8)
+                       else           newPkg.toByteArray(Charsets.UTF_16LE)
+
+        // Global prefix replacement: replace hostPkg with newPkg everywhere it appears in the AXML.
+        // By passing an empty nullTerminator, it will replace "com.sanwitch.connect" even when it's
+        // part of a longer string like "com.sanwitch.connect.FileSystemFileProvider".
+        // This guarantees EVERY provider authority and intent action is isolated.
+        val found = replaceInPlaceBytes(patched, oldBytes, newBytes, byteArrayOf())
+        
+        if (!found) {
           android.util.Log.w("WebApkInstaller", "AXML: package name patch may not have applied — conflict possible")
+          emitBuildLog("⚠ WARNING: Could not find package name in manifest. Install may conflict.")
+        } else {
+          emitBuildLog("► AndroidManifest fully patched (package + all providers)")
         }
+        
         entryMap["AndroidManifest.xml"] = patched
-        emitBuildLog("► AndroidManifest patched (pkg + ${replacements.size - 1} authorities)")
       }
 
       // 1. Generate Manifest Digests (META-INF/MANIFEST.MF) & CERT.SF
