@@ -21,7 +21,8 @@ import {
   Linking,
   NativeModules,
   Share,
-  AppState
+  AppState,
+  DeviceEventEmitter
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Mic, Bluetooth, Wifi, Plus, X, Terminal as TermIcon, Code as CodeIcon, LayoutGrid, Trash2, Copy, Zap, Info, CheckCircle2, XCircle, AlertTriangle, QrCode, Camera as CameraIcon, RefreshCw, RefreshCcw, LogOut, KeyRound, Smartphone, ExternalLink, Sparkles, ChevronsUp, Folder, Edit3, FileText, HelpCircle, ChevronRight, Play, Download, Share2 } from 'lucide-react-native';
@@ -200,7 +201,7 @@ export default function App() {
         const canInstall = await NativeModules.WebApkInstallerModule.canInstallPackages();
         if (canInstall) {
           const { appTitle, publishedUrl, html } = pendingInstallRef.current;
-          pendingInstallRef.current = null; // consume — only retry once
+          pendingInstallRef.current = null;
           launchInstallStep(appTitle, publishedUrl, html);
         }
       } catch (e) {
@@ -210,35 +211,34 @@ export default function App() {
     return () => sub?.remove();
   }, []);
 
-  // Extracted install step — called directly from the Install App button
-  // AND auto-called by AppState listener after permission grant (F1 fix).
+  // Stream native APK build log events → terminal view
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('APKBuildLog', (msg) => {
+      const isError = typeof msg === 'string' && (msg.startsWith('✗') || msg.startsWith('ERROR'));
+      log(`[APK] ${msg}`, isError ? 'error' : 'sys');
+    });
+    return () => sub.remove();
+  }, []);
+
+  // Extracted install step — terminal-log edition (no progress bar modal).
+  // Switches to the 'term' view so the user sees live build logs streamed
+  // by the native APKBuildLog DeviceEventEmitter events.
   const launchInstallStep = async (appTitle, publishedUrl, html) => {
     if (Platform.OS !== 'android' || !NativeModules.WebApkInstallerModule?.installWebApk) return;
-    setIsInstallModalVisible(true);
-    setInstallProgress(85);
-    setInstallStepText('Writing APK package to device cache & launching PackageInstaller...');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    let animPct = 85;
-    const progressTimer = setInterval(() => {
-      animPct = Math.min(animPct + 1, 95);
-      setInstallProgress(animPct);
-      setInstallStepText(`Building APK package... ${animPct}%`);
-    }, 600);
+    // Switch to terminal so user can watch live build logs
+    setActiveView('term');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`, 'sys');
+    log(`[APK Build] Starting → "${appTitle}"`, 'sys');
 
     try {
       const res = await NativeModules.WebApkInstallerModule.installWebApk(appTitle, publishedUrl, html);
-      clearInterval(progressTimer);
-      setInstallProgress(100);
-      setInstallStepText('Package Installer Ready!');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await new Promise(r => setTimeout(r, 400));
-      setIsInstallModalVisible(false);
-      setInstallProgress(0);
 
       if (res === 'PERMISSION_NEEDED') {
-        // Save params — AppState listener will auto-retry when user returns from Settings
         pendingInstallRef.current = { appTitle, publishedUrl, html };
+        log('[APK Build] ⚠ Permission needed — opening Android Settings...', 'sys');
+        log('[APK Build] Turn ON "Allow from this source", then return here.', 'sys');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         customAlert(
           'Permission Required',
@@ -246,22 +246,15 @@ export default function App() {
           'info'
         );
       } else if (res === 'INSTALL_PROMPT_OPENED') {
+        log(`[APK Build] ✓ PackageInstaller launched for "${appTitle}" — tap INSTALL on the Android prompt!`, 'sys');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        customAlert(
-          'Package Installer Ready',
-          `Android System prompt has appeared! Tap INSTALL to add "${appTitle}" directly to your device.`,
-          'success'
-        );
       }
     } catch (e) {
-      clearInterval(progressTimer);
-      console.log('WebApkInstallerModule error:', e);
-      setIsInstallModalVisible(false);
-      setInstallProgress(0);
+      log(`[APK Build] ✗ ERROR: ${e.message || 'Unknown native error'}`, 'error');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       customAlert(
         'Installation Error',
-        `Failed to launch PackageInstaller: ${e.message || 'Unknown Native Error'}`,
+        `Native build failed: ${e.message || 'Unknown error'}`,
         'error'
       );
     }
@@ -1823,12 +1816,7 @@ export default function App() {
           <View style={styles.termContainer}><FlatList data={logs} keyExtractor={item => item.id} renderItem={({ item }) => (<Text style={[styles.logText, { color: item.type === 'tx' ? THEME.primary : THEME.textMuted }]}>{`> ${item.msg}`}</Text>)} inverted /></View>
         )}
 
-        <ProgressBarModal
-          visible={isInstallModalVisible}
-          progress={installProgress}
-          stepText={installStepText}
-          title="Standalone App Ready"
-        />
+        {/* ProgressBarModal removed — build steps now stream to the terminal (term view) */}
 
         <Modal visible={isModalVisible} transparent animationType="fade">
           <View style={styles.modalOverlay}><View style={styles.modalContent}><Text style={styles.modalTitle}>Choose Widget</Text><View style={styles.optionsGrid}>{['toggle', 'slider', 'button', 'gauge', 'rgb', 'joystick', 'custom'].map(t => (<TouchableOpacity key={t} style={styles.optBtn} onPress={() => { setPendingType(t); setIsModalVisible(false); setIsNameModalVisible(true); }}><Text style={styles.navBtnText}>{t.toUpperCase()}</Text></TouchableOpacity>))}</View><TouchableOpacity style={styles.modalClose} onPress={() => setIsModalVisible(false)}><X size={24} color={THEME.textMuted} /></TouchableOpacity></View></View>

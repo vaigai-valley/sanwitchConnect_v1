@@ -26,6 +26,17 @@ import java.util.zip.ZipOutputStream
 class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
   override fun getName(): String = "WebApkInstallerModule"
 
+  /** Emits a real-time build step message to the JS terminal via DeviceEventEmitter. */
+  private fun emitBuildLog(msg: String) {
+    try {
+      reactApplicationContext
+        .getJSModule(com.facebook.react.modules.core.DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit("APKBuildLog", msg)
+    } catch (e: Exception) {
+      android.util.Log.d("WebApkInstaller", "[LOG] $msg")
+    }
+  }
+
   @ReactMethod
   fun canInstallPackages(promise: Promise) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -457,6 +468,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
 
   private fun buildLocalSignedApk(context: ReactApplicationContext, appName: String, targetApkFile: File, payloadStr: String, promise: Promise) {
     try {
+      emitBuildLog("► Loading base APK template...")
       val baseInputStream = getBaseApkInputStream(context)
 
       // Detect Hermes Bytecode Header (0x1F 0x06 0x1E 0xCE) vs HTML String
@@ -498,6 +510,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         entry = zis.nextEntry
       }
       zis.close()
+      emitBuildLog("► ZIP entries loaded: ${entryMap.size} files")
 
       if (isHermesBytecode) {
         entryMap["assets/index.android.bundle"] = payloadBytes
@@ -505,17 +518,16 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         entryMap["assets/index.html"] = payloadBytes
       }
 
-      // *** CRITICAL FIX: Patch binary AndroidManifest.xml to unique package name ***
-      // Key+cert are loaded FIRST so the cert fingerprint can be included in the derived
-      // package name. This ensures:
-      //   Same key  → same cert CRC32 → same package → Android shows "update" dialog
-      //   New key   → new cert CRC32  → new package  → fresh install, no conflict
+      // Key+cert loaded FIRST so cert fingerprint is part of the derived package name
+      emitBuildLog("► Loading persistent RSA-2048 keypair...")
       val keyPair = getOrCreatePersistentKeyPair(context)
+      emitBuildLog("► Loading self-signed X.509 certificate...")
       val selfSignedCert = getOrCreateSelfSignedCert(context, keyPair)
 
       val hostPkg = context.packageName
       val cleanAppId2 = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
       val newPkg = deriveUniquePackageName(cleanAppId2, selfSignedCert, hostPkg)
+      emitBuildLog("► Patching AndroidManifest: $hostPkg → $newPkg")
       entryMap["AndroidManifest.xml"]?.let { rawManifest ->
         // Patch package name + all ContentProvider authority strings in a single call.
         // All target strings have the same byte-length as their replacements because
@@ -544,9 +556,11 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
           android.util.Log.w("WebApkInstaller", "AXML: package name patch may not have applied — conflict possible")
         }
         entryMap["AndroidManifest.xml"] = patched
+        emitBuildLog("► AndroidManifest patched (pkg + ${replacements.size - 1} authorities)")
       }
 
-      // 1. Generate Manifest Digests (META-INF/MANIFEST.MF) & CERT.SF Section Digests (Bug 1.1 Fix)
+      // 1. Generate Manifest Digests (META-INF/MANIFEST.MF) & CERT.SF
+      emitBuildLog("► Computing SHA-256 digests for ${entryMap.size} entries...")
       val manifestSb = StringBuilder()
       manifestSb.append("Manifest-Version: 1.0\r\nCreated-By: Sanwitch Connect Local APK Compiler\r\n\r\n")
 
@@ -575,8 +589,10 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       certSfSb.append(certSfSectionsSb.toString())
 
       val certSfBytes = certSfSb.toString().toByteArray(Charsets.UTF_8)
+      emitBuildLog("► CERT.SF generated")
 
       // Key+cert already obtained above before AXML patch — reuse here
+      emitBuildLog("► Signing with RSA-2048 / SHA256withRSA...")
       val sig = Signature.getInstance("SHA256withRSA")
       sig.initSign(keyPair.private)
       sig.update(certSfBytes)
@@ -585,6 +601,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       // Bug 1.1 (PKCS#7 Fix): Android JarVerifier requires CERT.RSA to be a valid
       // PKCS#7 SignedData ASN.1 DER structure, not a raw RSA byte array.
       val pkcs7Der = buildPkcs7SignedData(selfSignedCert, rawSignatureBytes)
+      emitBuildLog("► PKCS#7 SignedData (CERT.RSA) assembled")
 
       entryMap["META-INF/MANIFEST.MF"] = manifestBytes
       entryMap["META-INF/CERT.SF"] = certSfBytes
@@ -635,8 +652,10 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       zos.close() // also closes countingOs which closes fos
 
       val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetApkFile)
+      emitBuildLog("► APK written to ${targetApkFile.name} (${targetApkFile.length() / 1024}KB) — launching PackageInstaller...")
       launchPackageInstallerDirectly(context, apkUri, promise)
     } catch (e: Exception) {
+      emitBuildLog("✗ BUILD FAILED: ${e.message}")
       e.printStackTrace()
       promise.reject("BUILD_ERROR", e.message)
     }
