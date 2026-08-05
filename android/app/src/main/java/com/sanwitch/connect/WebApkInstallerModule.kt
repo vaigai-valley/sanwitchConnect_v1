@@ -514,7 +514,36 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       val cleanAppId = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
       val newPkg = deriveUniquePackageName(cleanAppId, selfSignedCert, hostPkg)
       entryMap["AndroidManifest.xml"]?.let { rawManifest ->
-        entryMap["AndroidManifest.xml"] = patchAXMLPackageName(rawManifest, hostPkg, newPkg)
+        var patched = patchAXMLPackageName(rawManifest, hostPkg, newPkg)
+
+        // *** ALSO patch ContentProvider authority strings ***
+        // The generated APK inherits the host app's <provider android:authorities=
+        // "com.sanwitch.connect.fileprovider"/> (and any other sub-authorities).
+        // Android registers authorities globally: if a NEW app tries to register
+        // "com.sanwitch.connect.fileprovider" but the host app already owns it,
+        // PackageInstaller throws INSTALL_FAILED_CONFLICTING_PROVIDER →
+        // "App not installed as package conflicts with an existing package."
+        //
+        // Fix: patch every "{hostPkg}.{suffix}" string in the AXML string pool.
+        // Since newPkg.length == hostPkg.length, all authority strings are the
+        // same byte length → safe same-size in-place replacement.
+        //
+        // Common authorities in a React Native APK:
+        //   com.sanwitch.connect.fileprovider         (FileProvider)
+        //   com.sanwitch.connect.imagepickerprovider  (expo-image-picker)
+        //   com.sanwitch.connect.provider             (generic)
+        val commonSuffixes = listOf(
+          ".fileprovider", ".provider", ".imagepickerprovider",
+          ".cacheprovider", ".documents", ".authorities"
+        )
+        for (suffix in commonSuffixes) {
+          val oldAuthority = "$hostPkg$suffix"
+          val newAuthority = "$newPkg$suffix"
+          // Both have same byte length (hostPkg.length == newPkg.length guaranteed by derive fn)
+          patched = patchAXMLPackageName(patched, oldAuthority, newAuthority)
+        }
+
+        entryMap["AndroidManifest.xml"] = patched
       }
 
       // 1. Generate Manifest Digests (META-INF/MANIFEST.MF) & CERT.SF Section Digests (Bug 1.1 Fix)
