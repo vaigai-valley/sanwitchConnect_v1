@@ -92,7 +92,8 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       }
 
       val cleanAppId = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
-      val targetApkFile = File(context.cacheDir, "${cleanAppId}.apk")
+      // Use filesDir not cacheDir: Android OS can purge cacheDir before PackageInstaller reads the APK
+      val targetApkFile = File(context.filesDir, "${cleanAppId}_pwa.apk")
 
       // 2. Direct On-Device Native APK Minting Engine
       val payload = if (!htmlPayload.isNullOrBlank()) htmlPayload else ""
@@ -484,7 +485,9 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
           } else {
             val baos = java.io.ByteArrayOutputStream()
             var len: Int
-            while (zis.read(buffer).also { len = it } > 0) {
+            // Fix: use != -1 not > 0; read() can return 0 on AssetInputStream (non-blocking)
+            // which caused silent truncation of large entries on some Android versions.
+            while (zis.read(buffer).also { len = it } != -1) {
               baos.write(buffer, 0, len)
             }
             bytes = baos.toByteArray()
@@ -511,38 +514,35 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       val selfSignedCert = getOrCreateSelfSignedCert(context, keyPair)
 
       val hostPkg = context.packageName
-      val cleanAppId = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
-      val newPkg = deriveUniquePackageName(cleanAppId, selfSignedCert, hostPkg)
+      val cleanAppId2 = appName.lowercase().replace(Regex("[^a-z0-9]"), "_")
+      val newPkg = deriveUniquePackageName(cleanAppId2, selfSignedCert, hostPkg)
       entryMap["AndroidManifest.xml"]?.let { rawManifest ->
-        var patched = patchAXMLPackageName(rawManifest, hostPkg, newPkg)
-
-        // *** ALSO patch ContentProvider authority strings ***
-        // The generated APK inherits the host app's <provider android:authorities=
-        // "com.sanwitch.connect.fileprovider"/> (and any other sub-authorities).
-        // Android registers authorities globally: if a NEW app tries to register
-        // "com.sanwitch.connect.fileprovider" but the host app already owns it,
-        // PackageInstaller throws INSTALL_FAILED_CONFLICTING_PROVIDER →
-        // "App not installed as package conflicts with an existing package."
-        //
-        // Fix: patch every "{hostPkg}.{suffix}" string in the AXML string pool.
-        // Since newPkg.length == hostPkg.length, all authority strings are the
-        // same byte length → safe same-size in-place replacement.
-        //
-        // Common authorities in a React Native APK:
-        //   com.sanwitch.connect.fileprovider         (FileProvider)
-        //   com.sanwitch.connect.imagepickerprovider  (expo-image-picker)
-        //   com.sanwitch.connect.provider             (generic)
-        val commonSuffixes = listOf(
-          ".fileprovider", ".provider", ".imagepickerprovider",
-          ".cacheprovider", ".documents", ".authorities"
-        )
-        for (suffix in commonSuffixes) {
-          val oldAuthority = "$hostPkg$suffix"
-          val newAuthority = "$newPkg$suffix"
-          // Both have same byte length (hostPkg.length == newPkg.length guaranteed by derive fn)
-          patched = patchAXMLPackageName(patched, oldAuthority, newAuthority)
+        // Patch package name + all ContentProvider authority strings in a single call.
+        // All target strings have the same byte-length as their replacements because
+        // newPkg.length == hostPkg.length is guaranteed by deriveUniquePackageName.
+        val replacements = mutableListOf(hostPkg to newPkg)
+        listOf(".fileprovider", ".provider", ".imagepickerprovider",
+               ".cacheprovider", ".documents", ".authorities").forEach { suffix ->
+          replacements.add("$hostPkg$suffix" to "$newPkg$suffix")
         }
-
+        var patched = rawManifest.copyOf()
+        // Detect encoding once, then apply all replacements in a single pass each
+        val isUtf8Pool = if (patched.size > 28) (readInt32LE(patched, 24) and 0x00000100) != 0 else true
+        for ((oldStr, newStr) in replacements) {
+          val oldBytes = if (isUtf8Pool) oldStr.toByteArray(Charsets.UTF_8)
+                         else           oldStr.toByteArray(Charsets.UTF_16LE)
+          val newBytes = if (isUtf8Pool) newStr.toByteArray(Charsets.UTF_8)
+                         else           newStr.toByteArray(Charsets.UTF_16LE)
+          if (oldBytes.size != newBytes.size) continue
+          val nullTerm = if (isUtf8Pool) byteArrayOf(0x00) else byteArrayOf(0x00, 0x00)
+          val found = replaceInPlaceBytes(patched, oldBytes, newBytes, nullTerm)
+          if (!found) replaceInPlaceBytes(patched, oldBytes, newBytes, byteArrayOf()) // brute-force fallback
+        }
+        if (!replaceInPlaceBytes(patched.copyOf(),
+              hostPkg.toByteArray(Charsets.UTF_8),
+              newPkg.toByteArray(Charsets.UTF_8), byteArrayOf(0x00))) {
+          android.util.Log.w("WebApkInstaller", "AXML: package name patch may not have applied — conflict possible")
+        }
         entryMap["AndroidManifest.xml"] = patched
       }
 
