@@ -71,7 +71,33 @@ const THEME = {
   error: '#ef4444'
 };
 
+const standaloneHtml = NativeModules.WebApkInstaller ? NativeModules.WebApkInstaller.getStandaloneHtml() : null;
+
 export default function App() {
+  if (standaloneHtml) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#000' }}>
+        <StatusBar hidden />
+        {WebView ? (
+          <WebView
+            source={{ html: standaloneHtml }}
+            style={{ flex: 1 }}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            originWhitelist={['*']}
+            allowFileAccess={true}
+            allowUniversalAccessFromFileURLs={true}
+            mixedContentMode="always"
+          />
+        ) : (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: '#fff' }}>WebView engine not found</Text>
+          </View>
+        )}
+      </View>
+    );
+  }
+
   const [activeView, setActiveView] = useState('auth'); // Default to auth until login check
 
   useEffect(() => {
