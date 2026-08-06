@@ -62,6 +62,16 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
     }
   }
 
+  @ReactMethod(isBlockingSynchronousMethod = true)
+  fun getStandaloneHtml(): String? {
+    try {
+      val isStream = reactApplicationContext.assets.open("index.html")
+      return isStream.bufferedReader().use { it.readText() }
+    } catch (e: Exception) {
+      return null
+    }
+  }
+
   @ReactMethod
   fun installLocalApk(filePath: String, promise: Promise) {
     val context = reactApplicationContext
