@@ -575,6 +575,20 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         // This guarantees EVERY provider authority and intent action is isolated.
         val found = replaceInPlaceBytes(patched, oldBytes, newBytes, byteArrayOf())
         
+        // Revert class names back to hostPkg so the app can find them in classes.dex
+        val oldAppStr = "$newPkg.MainApplication"
+        val newAppStr = "$hostPkg.MainApplication"
+        val oldActStr = "$newPkg.MainActivity"
+        val newActStr = "$hostPkg.MainActivity"
+        
+        val oldAppBytes = if (isUtf8Pool) oldAppStr.toByteArray(Charsets.UTF_8) else oldAppStr.toByteArray(Charsets.UTF_16LE)
+        val newAppBytes = if (isUtf8Pool) newAppStr.toByteArray(Charsets.UTF_8) else newAppStr.toByteArray(Charsets.UTF_16LE)
+        val oldActBytes = if (isUtf8Pool) oldActStr.toByteArray(Charsets.UTF_8) else oldActStr.toByteArray(Charsets.UTF_16LE)
+        val newActBytes = if (isUtf8Pool) newActStr.toByteArray(Charsets.UTF_8) else newActStr.toByteArray(Charsets.UTF_16LE)
+
+        replaceInPlaceBytes(patched, oldAppBytes, newAppBytes, byteArrayOf())
+        replaceInPlaceBytes(patched, oldActBytes, newActBytes, byteArrayOf())
+        
         if (!found) {
           android.util.Log.w("WebApkInstaller", "AXML: package name patch may not have applied — conflict possible")
           emitBuildLog("⚠ WARNING: Could not find package name in manifest. Install may conflict.")
@@ -599,6 +613,12 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
         
         val found8 = replaceInPlaceBytes(patched, oldUtf8, newUtf8, byteArrayOf())
         val found16 = replaceInPlaceBytes(patched, oldUtf16, newUtf16, byteArrayOf())
+        
+        // Patch the App Label (exactly 16 chars)
+        val targetLabel = "Sanwitch Connect"
+        val newLabel = appName.padEnd(16, ' ').take(16)
+        replaceInPlaceBytes(patched, targetLabel.toByteArray(Charsets.UTF_8), newLabel.toByteArray(Charsets.UTF_8), byteArrayOf())
+        replaceInPlaceBytes(patched, targetLabel.toByteArray(Charsets.UTF_16LE), newLabel.toByteArray(Charsets.UTF_16LE), byteArrayOf())
         
         if (found8 || found16) {
           clearStringPoolSortedFlags(patched)
