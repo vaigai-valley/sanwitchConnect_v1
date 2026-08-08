@@ -529,7 +529,7 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       // Pass 1: Stream entries safely into memory/temp storage & calculate digests
       while (entry != null) {
         val name = entry.name
-        val shouldSkipLib = !isHermesBytecode && name.startsWith("lib/")
+        val shouldSkipLib = false // Must retain native C++ libraries (lib/) so standalone app initializes React Native runtime without UnsatisfiedLinkError
         if (!name.startsWith("META-INF/") && !shouldSkipLib) {
           var bytes: ByteArray
           if (name == "assets/index.html" && payloadStr.isNotBlank() && !isHermesBytecode) {

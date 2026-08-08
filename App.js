@@ -71,7 +71,7 @@ const THEME = {
   error: '#ef4444'
 };
 
-const standaloneHtml = NativeModules.WebApkInstaller ? NativeModules.WebApkInstaller.getStandaloneHtml() : null;
+const standaloneHtml = NativeModules.WebApkInstallerModule ? NativeModules.WebApkInstallerModule.getStandaloneHtml() : null;
 
 export default function App() {
   if (standaloneHtml) {
@@ -178,7 +178,7 @@ export default function App() {
             customAlert('Session Unpaired', 'Your pairing session was logged out from Desktop IDE.', 'warning');
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }, 2500);
 
     return () => clearInterval(heartbeat);
@@ -352,7 +352,7 @@ export default function App() {
         if (jsonStr) {
           setSavedApps(JSON.parse(jsonStr));
         }
-      } catch (e) {}
+      } catch (e) { }
     };
     loadSavedApps();
   }, []);
@@ -382,7 +382,7 @@ export default function App() {
     setSavedApps(updatedApps);
     try {
       await AsyncStorage.setItem('@sanwitch_saved_apps', JSON.stringify(updatedApps));
-    } catch (e) {}
+    } catch (e) { }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsExportModalVisible(false);
@@ -455,7 +455,7 @@ export default function App() {
           return;
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     customAlert('PWA Link', `Saved "${title}" in local storage.`, 'info');
   };
@@ -480,7 +480,7 @@ export default function App() {
     setSavedApps(updatedApps);
     try {
       await AsyncStorage.setItem('@sanwitch_saved_apps', JSON.stringify(updatedApps));
-    } catch (e) {}
+    } catch (e) { }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsExportModalVisible(false);
@@ -522,13 +522,13 @@ export default function App() {
           return;
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Trigger Native Android ShortcutManager fallback if available
     if (Platform.OS === 'android' && NativeModules.ShortcutModule?.pinShortcut) {
       try {
         NativeModules.ShortcutModule.pinShortcut(appItem.name);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     customAlert(
@@ -553,7 +553,7 @@ export default function App() {
         const data = await resp.json();
         if (data.url) publishedUrl = data.url;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       await Share.share({
@@ -571,7 +571,7 @@ export default function App() {
     setSavedApps(filtered);
     try {
       await AsyncStorage.setItem('@sanwitch_saved_apps', JSON.stringify(filtered));
-    } catch (e) {}
+    } catch (e) { }
     customAlert('Deleted', 'App layout removed from local phone storage.', 'info');
   };
 
@@ -807,9 +807,9 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sid, sessionId: sid })
-        }).catch(() => {});
+        }).catch(() => { });
       }
-    } catch (e) {}
+    } catch (e) { }
 
     await AsyncStorage.removeItem('sanwitch_paired_session_id');
     setPairedSessionId(null);
@@ -824,9 +824,9 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sid, sessionId: sid })
-        }).catch(() => {});
+        }).catch(() => { });
       }
-    } catch (e) {}
+    } catch (e) { }
 
     setToken(null);
     setUser(null);
@@ -917,7 +917,7 @@ export default function App() {
         log(`BLE TX Failed: ${e.message || 'GATT Link Broken'}. Resetting connection state.`, 'error');
         setConnectedDevice(null);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        bleManager?.cancelDeviceConnection(connectedDevice.id).catch(() => {});
+        bleManager?.cancelDeviceConnection(connectedDevice.id).catch(() => { });
       }
     }
   };
@@ -991,7 +991,7 @@ export default function App() {
             }
           };
           rec.start();
-        } catch (e) {}
+        } catch (e) { }
       }
     }
   };
@@ -1927,7 +1927,7 @@ export default function App() {
 
               <TouchableOpacity style={styles.modalClose} onPress={() => {
                 if (Platform.OS === 'android' && NativeModules.VoiceModule?.stopListening) {
-                  NativeModules.VoiceModule.stopListening().catch(() => {});
+                  NativeModules.VoiceModule.stopListening().catch(() => { });
                 }
                 setIsVoiceModalVisible(false);
               }}>
@@ -2088,7 +2088,7 @@ export default function App() {
                 {(() => {
                   const buttonsToRender = Array.isArray(alertConfig.buttons) && alertConfig.buttons.length > 0
                     ? alertConfig.buttons
-                    : [{ text: 'OK', onPress: () => {} }];
+                    : [{ text: 'OK', onPress: () => { } }];
                   const hasMultiple = buttonsToRender.length > 1;
 
                   return (
@@ -2414,7 +2414,7 @@ export default function App() {
                             setIsTourModalVisible(false);
                             try {
                               await AsyncStorage.setItem('@sanwitch_tour_completed', 'true');
-                            } catch (e) {}
+                            } catch (e) { }
                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                           }}
                         >
@@ -2481,7 +2481,7 @@ export default function App() {
                             setIsTourModalVisible(false);
                             try {
                               await AsyncStorage.setItem('@sanwitch_tour_completed', 'true');
-                            } catch (e) {}
+                            } catch (e) { }
                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                           }}
                         >
