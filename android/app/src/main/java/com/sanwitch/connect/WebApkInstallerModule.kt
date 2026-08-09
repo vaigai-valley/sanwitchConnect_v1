@@ -660,7 +660,8 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
       for ((name, data) in entryMap) {
         val newEntry = ZipEntry(name)
         val nameBytes = name.toByteArray(Charsets.UTF_8)
-        val isUncompressedRequired = name == "resources.arsc" || name.startsWith("assets/raw/")
+        val isSoFile = name.startsWith("lib/")
+        val isUncompressedRequired = name == "resources.arsc" || name.startsWith("assets/raw/") || isSoFile
         if (isUncompressedRequired) {
           newEntry.method = ZipEntry.STORED
           newEntry.size = data.size.toLong()
@@ -668,9 +669,10 @@ class WebApkInstallerModule(reactContext: ReactApplicationContext) : ReactContex
           val crc = java.util.zip.CRC32()
           crc.update(data)
           newEntry.crc = crc.value
-          // Zipalign: compute 4-byte padding so data starts at a 4-byte boundary
+          // Zipalign: compute padding so data starts at page boundary (4096 for .so files, 4 for others)
+          val alignBoundary = if (isSoFile) 4096 else 4
           val dataOffsetWithoutExtra = writtenBytes + 30L + nameBytes.size
-          val padding = ((4 - (dataOffsetWithoutExtra % 4)) % 4).toInt()
+          val padding = ((alignBoundary - (dataOffsetWithoutExtra % alignBoundary)) % alignBoundary).toInt()
           if (padding > 0) newEntry.extra = ByteArray(padding)
         } else {
           newEntry.method = ZipEntry.DEFLATED
