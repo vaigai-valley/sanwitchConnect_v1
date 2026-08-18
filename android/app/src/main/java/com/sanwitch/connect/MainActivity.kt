@@ -35,7 +35,7 @@ class MainActivity : ReactActivity() {
       stage1View?.visibility = View.VISIBLE
       stage2View?.visibility = View.GONE
 
-      // Stage 2 (1.8s - 3.6s): Euantix 8genn AI
+      // Stage 2 (1.8s - 3.6s): CRUD
       Handler(Looper.getMainLooper()).postDelayed({
         stage1View?.visibility = View.GONE
         stage2View?.visibility = View.VISIBLE
