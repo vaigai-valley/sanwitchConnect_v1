@@ -56,7 +56,7 @@ const UUID_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Mobile Write -> ESP32
 const UUID_TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // ESP32 TX Notify -> Mobile Read
 
 const { width } = Dimensions.get('window');
-const API_BASE_URL = 'https://sanwitch.vaigaivalley.workers.dev/api';
+const API_BASE_URL = 'https://curd.vaigaivalley.co.in/api';
 
 const THEME = {
   primary: '#38bdf8',
@@ -164,7 +164,7 @@ export default function App() {
 
     const heartbeat = setInterval(async () => {
       try {
-        const resp = await fetch(`https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/status?session_id=${pairedSessionId}`, { cache: 'no-store' });
+        const resp = await fetch(`${API_BASE_URL}/auth/qr/status?session_id=${pairedSessionId}`, { cache: 'no-store' });
         if (resp.ok) {
           const data = await resp.json();
           if (data.status === 'unpaired' || data.status === 'expired') {
@@ -294,13 +294,13 @@ export default function App() {
     let isOnline = false;
     let targetUrl = pwaPublishedUrl || appTitleOrItem?.publishedUrl || appTitleOrItem?.pwaUrl;
     if (!targetUrl || targetUrl.endsWith('.apk')) {
-      targetUrl = `https://sanwitch.vaigaivalley.workers.dev/pwa/${cleanSlug}`;
+      targetUrl = `https://curd.vaigaivalley.co.in/pwa/${cleanSlug}`;
     }
 
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 1500);
-      const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
+      const resp = await fetch(`${API_BASE_URL}/auth/pwa/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: title, html }),
@@ -365,7 +365,7 @@ export default function App() {
     const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
     const html = prebuiltHtml || generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
     const cleanSlug = appTitle.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    const pwaWebUrl = `https://sanwitch.vaigaivalley.workers.dev/pwa/${cleanSlug}`;
+    const pwaWebUrl = `https://curd.vaigaivalley.co.in/pwa/${cleanSlug}`;
 
     const newApp = {
       id: Date.now().toString(),
@@ -396,7 +396,7 @@ export default function App() {
       // F3 Fix: 5s timeout prevents infinite hang on captive portal / ESP32-only WiFi
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 5000);
-      const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
+      const resp = await fetch(`${API_BASE_URL}/auth/pwa/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: appTitle, html, format: 'apk' }),
@@ -437,7 +437,7 @@ export default function App() {
     const html = (typeof appTitleOrItem === 'object' && appTitleOrItem?.html) ? appTitleOrItem.html : generateCompleteStandaloneAppHtml(title, widgets, wifiIP);
 
     try {
-      const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
+      const resp = await fetch(`${API_BASE_URL}/auth/pwa/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: title, html })
@@ -504,7 +504,7 @@ export default function App() {
     const html = appItem.html || generateCompleteStandaloneAppHtml(appItem.name);
 
     try {
-      const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
+      const resp = await fetch(`${API_BASE_URL}/auth/pwa/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: appItem.name, html })
@@ -541,10 +541,10 @@ export default function App() {
   const handleSharePwaLink = async (appItem) => {
     const title = appItem?.name || exportAppName || 'My Sanwitch App';
     const html = appItem?.html || generateCompleteStandaloneAppHtml(title, widgets, wifiIP);
-    let publishedUrl = `https://sanwitch.vaigaivalley.workers.dev/pwa/${encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]/g, ''))}`;
+    let publishedUrl = `https://curd.vaigaivalley.co.in/pwa/${encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]/g, ''))}`;
 
     try {
-      const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/pwa/publish', {
+      const resp = await fetch(`${API_BASE_URL}/auth/pwa/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: title, html })
@@ -653,7 +653,7 @@ export default function App() {
         }
 
         const realDeviceName = Platform.OS === 'android' ? 'Vivo Y20' : (Platform.OS === 'ios' ? 'iPhone 14' : 'Sanwitch Mobile');
-        const resp = await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/pair', {
+        const resp = await fetch(`${API_BASE_URL}/auth/qr/pair`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -803,7 +803,7 @@ export default function App() {
     try {
       const sid = pairedSessionId || (await AsyncStorage.getItem('sanwitch_paired_session_id'));
       if (sid) {
-        await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/unpair', {
+        await fetch(`${API_BASE_URL}/auth/qr/unpair`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sid, sessionId: sid })
@@ -820,7 +820,7 @@ export default function App() {
     try {
       const sid = pairedSessionId || (await AsyncStorage.getItem('sanwitch_paired_session_id'));
       if (sid) {
-        await fetch('https://sanwitch.vaigaivalley.workers.dev/api/auth/qr/unpair', {
+        await fetch(`${API_BASE_URL}/auth/qr/unpair`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sid, sessionId: sid })
