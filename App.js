@@ -1729,6 +1729,17 @@ export default function App() {
                 </View>
               )
             )}
+
+            {/* LEGAL LINKS: PRIVACY & TERMS */}
+            <View style={{ marginTop: 24, marginBottom: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity onPress={() => Linking.openURL('http://sanwitch.crud.vaigaivalley.co.in/Sanwitch%20IDE%20-%20Sanwitch%20Connect%20Mobile%20Privacy%20Policy.html')}>
+                <Text style={{ fontSize: 12, color: THEME.textMuted, fontWeight: '600', textDecorationLine: 'underline' }}>Privacy</Text>
+              </TouchableOpacity>
+              <Text style={{ color: THEME.textMuted, fontSize: 12 }}>•</Text>
+              <TouchableOpacity onPress={() => Linking.openURL('http://sanwitch.crud.vaigaivalley.co.in/Sanwitch%20IDE%20-%20Sanwitch%20Connect%20Mobile%20Terms%20of%20Service.html')}>
+                <Text style={{ fontSize: 12, color: THEME.textMuted, fontWeight: '600', textDecorationLine: 'underline' }}>Terms</Text>
+              </TouchableOpacity>
+            </View>
           </KeyboardAvoidingView>
         )}
 

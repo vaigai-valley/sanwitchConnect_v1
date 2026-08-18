@@ -395,6 +395,16 @@ export const generateCompleteStandaloneAppHtml = (appName = 'Sanwitch App', widg
           </div>
         </div>
       </main>
+
+      <footer style="margin-top: 30px; padding: 20px 0; text-align: center; border-top: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 8px; align-items: center;">
+        <div style="display: flex; gap: 16px; font-size: 0.8rem;">
+          <a href="http://sanwitch.crud.vaigaivalley.co.in/Sanwitch%20IDE%20-%20Sanwitch%20Connect%20Mobile%20Privacy%20Policy.html" target="_blank" rel="noopener noreferrer" style="color: var(--text-muted); text-decoration: none;">Privacy</a>
+          <a href="http://sanwitch.crud.vaigaivalley.co.in/Sanwitch%20IDE%20-%20Sanwitch%20Connect%20Mobile%20Terms%20of%20Service.html" target="_blank" rel="noopener noreferrer" style="color: var(--text-muted); text-decoration: none;">Terms</a>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); opacity: 0.8;">
+          &copy; 2026 <a href="https://crud.vaigaivalley.co.in/" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none; font-weight: 600;">CRUD</a>, <a href="https://vaigaivalley.co.in/" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none; font-weight: 600;">Vaigai Valley</a>. All Rights Reserved.
+        </div>
+      </footer>
     </div>
 
     <script>
