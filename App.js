@@ -56,7 +56,7 @@ const UUID_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Mobile Write -> ESP32
 const UUID_TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // ESP32 TX Notify -> Mobile Read
 
 const { width } = Dimensions.get('window');
-const API_BASE_URL = 'https://crud.vaigaivalley.co.in/api';
+const API_BASE_URL = 'https://sanwitch.crud.vaigaivalley.co.in/api';
 
 const THEME = {
   primary: '#38bdf8',
@@ -294,7 +294,7 @@ export default function App() {
     let isOnline = false;
     let targetUrl = pwaPublishedUrl || appTitleOrItem?.publishedUrl || appTitleOrItem?.pwaUrl;
     if (!targetUrl || targetUrl.endsWith('.apk')) {
-      targetUrl = `https://crud.vaigaivalley.co.in/pwa/${cleanSlug}`;
+      targetUrl = `https://sanwitch.crud.vaigaivalley.co.in/pwa/${cleanSlug}`;
     }
 
     try {
@@ -365,7 +365,7 @@ export default function App() {
     const fileName = `${appTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
     const html = prebuiltHtml || generateCompleteStandaloneAppHtml(appTitle, widgets, wifiIP);
     const cleanSlug = appTitle.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    const pwaWebUrl = `https://crud.vaigaivalley.co.in/pwa/${cleanSlug}`;
+    const pwaWebUrl = `https://sanwitch.crud.vaigaivalley.co.in/pwa/${cleanSlug}`;
 
     const newApp = {
       id: Date.now().toString(),
@@ -541,7 +541,7 @@ export default function App() {
   const handleSharePwaLink = async (appItem) => {
     const title = appItem?.name || exportAppName || 'My Sanwitch App';
     const html = appItem?.html || generateCompleteStandaloneAppHtml(title, widgets, wifiIP);
-    let publishedUrl = `https://crud.vaigaivalley.co.in/pwa/${encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]/g, ''))}`;
+    let publishedUrl = `https://sanwitch.crud.vaigaivalley.co.in/pwa/${encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]/g, ''))}`;
 
     try {
       const resp = await fetch(`${API_BASE_URL}/auth/pwa/publish`, {
