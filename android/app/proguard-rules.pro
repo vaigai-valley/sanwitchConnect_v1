@@ -1,14 +1,36 @@
 # Add project specific ProGuard rules here.
-# By default, the flags in this file are appended to flags specified
-# in /usr/local/Cellar/android-sdk/24.3.3/tools/proguard/proguard-android.txt
-# You can edit the include path and order by changing the proguardFiles
-# directive in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
-
-# react-native-reanimated
+# React Native & Reanimated
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
+-keep class com.facebook.react.** { *; }
+-keep class com.facebook.jni.** { *; }
+-keep class com.facebook.hermes.unicode.** { *; }
+-keep class com.facebook.jni.HybridData { *; }
 
-# Add any project specific keep options here:
+# Expo Modules
+-keep class expo.modules.** { *; }
+-keep class expo.modules.core.** { *; }
+
+# Sanwitch Connect Native Modules & WebApk Installer
+-keep class com.sanwitch.connect.** { *; }
+-keepclassmembers class com.sanwitch.connect.** { *; }
+
+# Android WebKit & WebView
+-keepclassmembers class * extends android.webkit.WebViewClient { *; }
+-keepclassmembers class * extends android.webkit.WebChromeClient { *; }
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# Keep native methods and JNI bindings
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# Kotlin Coroutines & Reflection
+-dontwarn kotlin.**
+-dontwarn kotlinx.**
+-dontwarn javax.annotation.**
+-dontwarn org.conscrypt.**
+-dontwarn okhttp3.**
+-dontwarn okio.**
