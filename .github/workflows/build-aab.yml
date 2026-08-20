@@ -1,0 +1,99 @@
+name: Build Production Android App Bundle (.aab)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'App Version Name (e.g. 1.0.0)'
+        required: false
+        default: '1.0.0'
+
+jobs:
+  build-aab:
+    name: Build Android .aab Bundle
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: ☕ Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 📦 Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: 🔧 Ensure Android Project & Gradlew Exist
+        run: |
+          if [ ! -f "android/gradlew" ]; then
+            echo "Gradlew not found, running expo prebuild..."
+            npx expo prebuild --platform android --clean
+          fi
+
+      - name: 🔑 Configure Release Keystore (if secret provided)
+        working-directory: android/app
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "Decoding release keystore from GitHub Secrets..."
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
+            echo "KEYSTORE_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "No custom keystore secret found. Using default build signing."
+            echo "KEYSTORE_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: 🛠️ Make Gradlew Executable
+        run: chmod +x android/gradlew
+
+      - name: 📦 Bundle Offline JavaScript Bundle
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx expo export:embed --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+
+      - name: 🏗️ Build Android App Bundle (.aab)
+        working-directory: android
+        env:
+          MYAPP_UPLOAD_STORE_FILE: ${{ env.KEYSTORE_EXISTS == 'true' && 'release.keystore' || '' }}
+          MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || '' }}
+          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
+          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || '' }}
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: 📤 Upload .aab Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sanwitch-Connect-v1.0.0-Release-AAB
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: 🚀 Create GitHub Release (on version tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/bundle/release/*.aab
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Sanwitch Connect Mobile App Release
+            - **App**: Sanwitch Connect (`com.sanwitch.connect`)
+            - **Target**: Google Play Store (`.aab` Android App Bundle)
+            - **Version**: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

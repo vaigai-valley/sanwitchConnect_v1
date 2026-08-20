@@ -168,14 +168,10 @@ export default function App() {
         if (resp.ok) {
           const data = await resp.json();
           if (data.status === 'unpaired' || data.status === 'expired') {
-            await AsyncStorage.removeItem('sanwitch_token');
-            await AsyncStorage.removeItem('sanwitch_user');
+            // Only unpair desktop connection — NEVER log out the user from their mobile app!
             await AsyncStorage.removeItem('sanwitch_paired_session_id');
-            setToken(null);
-            setUser(null);
             setPairedSessionId(null);
-            setActiveView('auth');
-            customAlert('Session Unpaired', 'Your pairing session was logged out from Desktop IDE.', 'warning');
+            console.log('[Pairing] Desktop session expired or unpaired. Mobile user session retained.');
           }
         }
       } catch (e) { }
@@ -652,7 +648,34 @@ export default function App() {
           activeUser = { username: 'Chef' };
         }
 
-        const realDeviceName = Platform.OS === 'android' ? 'Vivo Y20' : (Platform.OS === 'ios' ? 'iPhone 14' : 'Sanwitch Mobile');
+        const getRealDeviceName = () => {
+          try {
+            const brand = Platform.constants?.Brand || Platform.constants?.brand || '';
+            const model = Platform.constants?.Model || Platform.constants?.model || '';
+            const manufacturer = Platform.constants?.Manufacturer || Platform.constants?.manufacturer || '';
+
+            let devName = '';
+            if (model) {
+              if (brand && !model.toLowerCase().includes(brand.toLowerCase())) {
+                devName = `${brand} ${model}`;
+              } else {
+                devName = model;
+              }
+            } else if (brand) {
+              devName = `${brand} Device`;
+            } else if (manufacturer) {
+              devName = `${manufacturer} Device`;
+            }
+
+            if (!devName) {
+              devName = Platform.OS === 'android' ? 'Android Device' : (Platform.OS === 'ios' ? 'iPhone' : 'Sanwitch Mobile');
+            }
+            return devName;
+          } catch (e) {
+            return Platform.OS === 'android' ? 'Android Device' : 'Sanwitch Mobile';
+          }
+        };
+        const realDeviceName = getRealDeviceName();
         const resp = await fetch(`${API_BASE_URL}/auth/qr/pair`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -779,8 +802,10 @@ export default function App() {
 
         setToken(tokenVal);
         setUser(userData);
+        setPairedSessionId(null);
         await AsyncStorage.setItem('sanwitch_token', tokenVal);
         await AsyncStorage.setItem('sanwitch_user', JSON.stringify(userData));
+        await AsyncStorage.removeItem('sanwitch_paired_session_id');
         setActiveView('panel');
         const tourDone = await AsyncStorage.getItem('@sanwitch_tour_completed').catch(() => null);
         if (!tourDone) {
