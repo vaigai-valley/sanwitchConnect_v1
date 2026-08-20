@@ -45,17 +45,25 @@ jobs:
             npx expo prebuild --platform android --clean
           fi
 
-      - name: 🔑 Configure Release Keystore (if secret provided)
+      - name: 🔑 Configure Release Keystore
         working-directory: android/app
         run: |
           if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
             echo "Decoding release keystore from GitHub Secrets..."
             echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
-            echo "KEYSTORE_EXISTS=true" >> $GITHUB_ENV
-          else
-            echo "No custom keystore secret found. Using default build signing."
-            echo "KEYSTORE_EXISTS=false" >> $GITHUB_ENV
+          elif [ ! -f "release.keystore" ]; then
+            echo "Generating production release keystore..."
+            keytool -genkeypair -v -storetype PKCS12 \
+              -keystore release.keystore \
+              -alias sanwitch-release-key \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Vaigai Valley, OU=CRUD, O=Vaigai Valley, L=Chennai, ST=Tamil Nadu, C=IN" \
+              -storepass "sanwitch2026pass" \
+              -keypass "sanwitch2026pass"
           fi
+          echo "KEYSTORE_EXISTS=true" >> $GITHUB_ENV
 
       - name: 🛠️ Make Gradlew Executable
         run: chmod +x android/gradlew
@@ -65,13 +73,13 @@ jobs:
           mkdir -p android/app/src/main/assets
           npx expo export:embed --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
 
-      - name: 🏗️ Build Android App Bundle (.aab)
+      - name: 🏗️ Build Android App Bundle (.aab in Release Mode)
         working-directory: android
         env:
-          MYAPP_UPLOAD_STORE_FILE: ${{ env.KEYSTORE_EXISTS == 'true' && 'release.keystore' || '' }}
-          MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || '' }}
-          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
-          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || '' }}
+          MYAPP_UPLOAD_STORE_FILE: release.keystore
+          MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'sanwitch-release-key' }}
+          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'sanwitch2026pass' }}
+          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'sanwitch2026pass' }}
         run: ./gradlew bundleRelease --no-daemon --stacktrace
 
       - name: 📤 Upload .aab Artifact

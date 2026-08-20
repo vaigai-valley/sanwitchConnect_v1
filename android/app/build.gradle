@@ -108,14 +108,14 @@ android {
             def storeFilePath = System.getenv("MYAPP_UPLOAD_STORE_FILE") ?: (findProperty('MYAPP_UPLOAD_STORE_FILE') ?: '')
             if (storeFilePath && file(storeFilePath).exists()) {
                 storeFile file(storeFilePath)
-                storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD") ?: findProperty('MYAPP_UPLOAD_STORE_PASSWORD')
-                keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS") ?: findProperty('MYAPP_UPLOAD_KEY_ALIAS')
-                keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD") ?: findProperty('MYAPP_UPLOAD_KEY_PASSWORD')
+                storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD") ?: (findProperty('MYAPP_UPLOAD_STORE_PASSWORD') ?: 'sanwitch2026pass')
+                keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS") ?: (findProperty('MYAPP_UPLOAD_KEY_ALIAS') ?: 'sanwitch-release-key')
+                keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD") ?: (findProperty('MYAPP_UPLOAD_KEY_PASSWORD') ?: 'sanwitch2026pass')
             } else if (file('release.keystore').exists()) {
                 storeFile file('release.keystore')
-                storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD") ?: (findProperty('MYAPP_UPLOAD_STORE_PASSWORD') ?: 'android')
-                keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS") ?: (findProperty('MYAPP_UPLOAD_KEY_ALIAS') ?: 'androiddebugkey')
-                keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD") ?: (findProperty('MYAPP_UPLOAD_KEY_PASSWORD') ?: 'android')
+                storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD") ?: (findProperty('MYAPP_UPLOAD_STORE_PASSWORD') ?: 'sanwitch2026pass')
+                keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS") ?: (findProperty('MYAPP_UPLOAD_KEY_ALIAS') ?: 'sanwitch-release-key')
+                keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD") ?: (findProperty('MYAPP_UPLOAD_KEY_PASSWORD') ?: 'sanwitch2026pass')
             } else {
                 storeFile file('debug.keystore')
                 storePassword 'android'
