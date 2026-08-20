@@ -73,6 +73,34 @@ const THEME = {
 
 const standaloneHtml = NativeModules.WebApkInstallerModule ? NativeModules.WebApkInstallerModule.getStandaloneHtml() : null;
 
+const getRealDeviceName = () => {
+  try {
+    const brand = Platform.constants?.Brand || Platform.constants?.brand || '';
+    const model = Platform.constants?.Model || Platform.constants?.model || '';
+    const manufacturer = Platform.constants?.Manufacturer || Platform.constants?.manufacturer || '';
+
+    let devName = '';
+    if (model) {
+      if (brand && !model.toLowerCase().includes(brand.toLowerCase())) {
+        devName = `${brand} ${model}`;
+      } else {
+        devName = model;
+      }
+    } else if (brand) {
+      devName = `${brand} Device`;
+    } else if (manufacturer) {
+      devName = `${manufacturer} Device`;
+    }
+
+    if (!devName) {
+      devName = Platform.OS === 'android' ? 'Android Device' : (Platform.OS === 'ios' ? 'iPhone' : 'Sanwitch Mobile');
+    }
+    return devName;
+  } catch (e) {
+    return Platform.OS === 'android' ? 'Android Device' : 'Sanwitch Mobile';
+  }
+};
+
 export default function App() {
   if (standaloneHtml) {
     return (
@@ -648,33 +676,6 @@ export default function App() {
           activeUser = { username: 'Chef' };
         }
 
-        const getRealDeviceName = () => {
-          try {
-            const brand = Platform.constants?.Brand || Platform.constants?.brand || '';
-            const model = Platform.constants?.Model || Platform.constants?.model || '';
-            const manufacturer = Platform.constants?.Manufacturer || Platform.constants?.manufacturer || '';
-
-            let devName = '';
-            if (model) {
-              if (brand && !model.toLowerCase().includes(brand.toLowerCase())) {
-                devName = `${brand} ${model}`;
-              } else {
-                devName = model;
-              }
-            } else if (brand) {
-              devName = `${brand} Device`;
-            } else if (manufacturer) {
-              devName = `${manufacturer} Device`;
-            }
-
-            if (!devName) {
-              devName = Platform.OS === 'android' ? 'Android Device' : (Platform.OS === 'ios' ? 'iPhone' : 'Sanwitch Mobile');
-            }
-            return devName;
-          } catch (e) {
-            return Platform.OS === 'android' ? 'Android Device' : 'Sanwitch Mobile';
-          }
-        };
         const realDeviceName = getRealDeviceName();
         const resp = await fetch(`${API_BASE_URL}/auth/qr/pair`, {
           method: 'POST',
@@ -1335,6 +1336,7 @@ export default function App() {
       const blocks = generateBlocks();
       const code = generateCode();
       const projectName = `__SYNC_BUFFER__`;
+      const realDeviceName = getRealDeviceName();
 
       const projectData = {
         name: projectName,
@@ -1345,18 +1347,19 @@ export default function App() {
           "main.py": code
         },
         zoom: 0.9,
-        description: `Synced via DB-Less Session Bridge (${connectionMode.toUpperCase()})`
+        deviceName: realDeviceName,
+        description: `Synced via Sanwitch Connect (${connectionMode.toUpperCase()})`
       };
 
-      // 1. Primary: Push via DB-Less Session Bridge if QR paired
+      // 1. Primary: Push via Session if QR paired
       if (pairedSessionId) {
         const response = await fetch(`${API_BASE_URL}/auth/qr/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: pairedSessionId, projectData })
+          body: JSON.stringify({ session_id: pairedSessionId, projectData, deviceName: realDeviceName })
         });
 
-        if (!response.ok) throw new Error('Session Bridge push failed. Session may have expired.');
+        if (!response.ok) throw new Error('Session push failed. Session may have expired.');
       }
 
       // 2. Secondary: Cloud Push if logged in with token
@@ -1374,7 +1377,7 @@ export default function App() {
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      customAlert('Synced! ', 'Your mobile layout has been sent to Sanwitch Web IDE instantly via DB-Less Session Bridge!', 'success');
+      customAlert('Synced! ', 'Your mobile layout has been sent to Sanwitch Web IDE instantly via Sanwitch Connect!', 'success');
     } catch (e) {
       customAlert('Sync Error', e.message, 'error');
     }

@@ -102,6 +102,6 @@ jobs:
             - **Target**: Google Play Store (`.aab` Android App Bundle)
             - **Version**: ${{ github.ref_name }}
           draft: false
-          prerelease: false
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
