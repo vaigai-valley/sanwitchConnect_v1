@@ -82,9 +82,47 @@ Whether you are prototyping smart home automation, tuning drone avionics, or tes
 
 | Field | Recommended Selection |
 | :--- | :--- |
-| **App Category** | `Tools` or `Productivity` |
+| **App Category** | `Tools` (Primary) or `Productivity` |
 | **Content Rating** | `Everyone` (PEGI 3, USK 0, ESRB Everyone) |
-| **Tags** | `IoT`, `Developer Tools`, `Microcontroller`, `Bluetooth`, `Arduino`, `MicroPython`, `Robotics` |
+| **Console Tags** | `Developer Tools`, `Tools`, `Productivity`, `Education` |
+
+---
+
+## 🔍 App Store Optimization (ASO) Search Keywords
+
+### 🥇 1. Primary Keywords (High Search Volume)
+```text
+esp32, esp32 controller, esp8266, micropython, iot controller, iot dashboard, bluetooth controller, ble uart, arduino bluetooth, serial bluetooth terminal, micro controller, robotic controller, maker ide, block coding, pwa creator
+```
+
+### 🥈 2. Hardware & Chipset Keywords
+```text
+esp32 bluetooth, esp32 wifi, esp32 ble uart, nodemcu, wemos d1, raspberry pi pico, pico w, rp2040, stm32, atmega328p, mcp23017, ads1115, mpu6050, bme280, oled ssd1306, lcd1602
+```
+
+### 🥉 3. Feature & Protocol Keywords
+```text
+bluetooth terminal, ble gamepad, serial monitor, wifi direct controller, rest api client, websocket iot, telemetry visualizer, sensor grapher, real time charts, webapk builder, standalone pwa, block to python, drag drop block code
+```
+
+### 🎯 4. Long-Tail Search Phrases (High Conversion)
+- `esp32 bluetooth controller app`
+- `micropython mobile dashboard`
+- `esp32 wifi remote control`
+- `iot custom dashboard builder`
+- `bluetooth uart terminal for esp32`
+- `real time sensor telemetry graph`
+- `block coding for esp32 micropython`
+- `esp32 drone flight controller telemetry`
+- `arduino serial bluetooth monitor`
+- `export iot dashboard to apk pwa`
+
+### 💡 5. Competitor / Alternative Search Intent Terms
+- *Alternative to Blynk IoT*
+- *Alternative to Serial Bluetooth Terminal*
+- *Alternative to Dabble - Bluetooth Controller*
+- *Alternative to Arduino Bluetooth Controller*
+- *Alternative to MicroPython Remote*
 
 ---
 
