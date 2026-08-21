@@ -17,6 +17,7 @@
     },
     "android": {
       "package": "com.sanwitch.connect",
+      "versionCode": 1,
       "backgroundColor": "#060b19",
       "permissions": [
         "BLUETOOTH",
