@@ -88,6 +88,16 @@ Whether you are prototyping smart home automation, tuning drone avionics, or tes
 
 ---
 
+## 🎨 Graphic Assets for Google Play Console
+
+| Asset Type | Specifications | File Location |
+| :--- | :--- | :--- |
+| **App Icon** | 512 x 512 px PNG (up to 1 MB) | [`assets/icon.png`](file:///d:/vaigaivalley/euantix/BitySanwitch/sanwitch%20IDE/sanwitchIDE/mobileApp/version%201/assets/icon.png) |
+| **Feature Graphic (PNG)** | **1024 x 500 px** PNG (1.1 MB) | [`assets/feature_graphic_1024x500.png`](file:///d:/vaigaivalley/euantix/BitySanwitch/sanwitch%20IDE/sanwitchIDE/mobileApp/version%201/assets/feature_graphic_1024x500.png) |
+| **Feature Graphic (JPEG)** | **1024 x 500 px** JPEG (145 KB) | [`assets/feature_graphic_1024x500.jpg`](file:///d:/vaigaivalley/euantix/BitySanwitch/sanwitch%20IDE/sanwitchIDE/mobileApp/version%201/assets/feature_graphic_1024x500.jpg) |
+
+---
+
 ## 🔗 Legal & Policy URLs for Google Play Console
 
 | Field in Play Console | URL |
